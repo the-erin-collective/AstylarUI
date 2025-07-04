@@ -1,0 +1,55 @@
+<div class="app-container">
+  <header class="app-header">
+    <h1>{{ greeting() }}</h1>
+    <p class="subtitle">Zoneless Angular 20 with Signals & SSR</p>
+  </header>
+
+  <main class="app-main">
+    <section class="signals-demo">
+      <h2>NgRx Signals Store Demo</h2>
+      
+      <div class="counter-section">
+        <h3>Counter with State Management</h3>
+        <div class="counter-display">
+          <p>Count: <strong>{{ counterStore.count() }}</strong></p>
+          <p>Double Count: <strong>{{ counterStore.doubleCount() }}</strong></p>
+          <p>Is Positive: <strong>{{ counterStore.isPositive() ? 'Yes' : 'No' }}</strong></p>
+          <p>Is Even: <strong>{{ counterStore.isEven() ? 'Yes' : 'No' }}</strong></p>
+          <p>Last Action: <strong>{{ counterStore.lastAction() }}</strong></p>
+          <p>History Count: <strong>{{ counterStore.historyCount() }}</strong></p>
+          <p>Average: <strong>{{ counterStore.average().toFixed(2) }}</strong></p>
+        </div>
+        
+        <div class="counter-controls">
+          <button (click)="decrement()" [disabled]="counterStore.count() <= 0">-</button>
+          <button (click)="increment()">+</button>
+          <button (click)="reset()">Reset</button>
+          <button (click)="clearHistory()">Clear History</button>
+        </div>
+        
+        <div class="history-section" *ngIf="counterStore.history().length > 1">
+          <h4>History</h4>
+          <div class="history-items">
+            @for (value of counterStore.history(); track $index) {
+              <span class="history-item">{{ value }}</span>
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features-demo">
+      <h2>Signal-Based Components</h2>
+      <app-todo></app-todo>
+    </section>
+
+    <section class="router-section">
+      <h2>Router Outlet</h2>
+      <router-outlet></router-outlet>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Built with Angular 20 • Zoneless • SSR Enabled • Signals-First • NgRx Signals</p>
+  </footer>
+</div>
