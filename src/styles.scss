@@ -1,1 +1,32 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* Reset for fullscreen 3D experience */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box !important;
+}
+
+/* Remove any default Angular router outlet margins */
+router-outlet {
+  display: block;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure app root takes full space */
+app-root {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}

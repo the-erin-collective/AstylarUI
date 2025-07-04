@@ -1,4 +1,4 @@
-<div class="app-container">
+<div class="app-container" [class.site-route]="isSiteRoute()">
   <!-- Show shell content only when NOT on a site route -->
   @if (!isSiteRoute()) {
     <header class="app-header">

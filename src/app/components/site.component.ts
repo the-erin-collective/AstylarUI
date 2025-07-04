@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID } from '@angular/core';
+import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder, Vector3, StandardMaterial, Color3, Color4 } from '@babylonjs/core';
@@ -7,126 +7,93 @@ import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder, Vector3,
   selector: 'app-site',
   imports: [CommonModule],
   template: `
-    <div class="site-container">
-      <div class="site-header">
-        <h1>3D Site: {{ siteId() }}</h1>
-        <div class="site-info">
-          <span class="site-badge">{{ currentUrl() }}</span>
-          <span class="timestamp">{{ timestamp() }}</span>
+    <div class="fullscreen-container">
+      <canvas #babylonCanvas class="babylon-canvas" 
+              [style.display]="sceneLoaded() ? 'block' : 'none'"></canvas>
+      @if (!sceneLoaded()) {
+        <div class="loading-overlay">
+          <div class="loading-content">
+            <h2>🌐 Loading 3D Scene...</h2>
+            <p>Initializing Babylon.js for site: <strong>{{ siteId() }}</strong></p>
+            <div class="loading-spinner"></div>
+          </div>
         </div>
-      </div>
-      
-      <div class="babylon-container">
-        <canvas #babylonCanvas class="babylon-canvas" 
-                [style.display]="sceneLoaded() ? 'block' : 'none'"></canvas>
-        @if (!sceneLoaded()) {
-          <div class="loading-placeholder">
-            <div class="loading-content">
-              <h2>🌐 Loading 3D Scene...</h2>
-              <p>Initializing Babylon.js for site: <strong>{{ siteId() }}</strong></p>
-              <div class="loading-spinner"></div>
-            </div>
+      }
+      @if (sceneLoaded()) {
+        <div class="controls-overlay">
+          <div class="controls-info">
+            <span class="site-indicator">{{ siteId() }}</span>
+            <span class="controls-text">🖱️ Click & drag to rotate • Scroll to zoom</span>
           </div>
-        }
-        @if (sceneLoaded()) {
-          <div class="canvas-overlay">
-            <div class="controls-info">
-              <p>🖱️ Click and drag to rotate • 🖱️ Scroll to zoom</p>
-              <p>3D Scene for: <strong>{{ siteId() }}</strong></p>
-            </div>
-          </div>
-        }
-      </div>
-      
-      <div class="scene-info">
-        <h3>Scene Details</h3>
-        <p>This 3D scene is dynamically generated for site: <code>{{ siteId() }}</code></p>
-        <p>Each site can have its own unique 3D content and materials.</p>
-      </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
-    .site-container {
+    :host {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100vw;
       height: 100vh;
       margin: 0;
       padding: 0;
-      display: flex;
-      flex-direction: column;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    
-    .site-header {
-      padding: 20px;
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    }
-    
-    .site-header h1 {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 600;
-    }
-    
-    .site-info {
-      display: flex;
-      gap: 15px;
-      align-items: center;
-    }
-    
-    .site-badge {
-      background: #007bff;
-      color: white;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    
-    .timestamp {
-      font-size: 12px;
-      opacity: 0.8;
-    }
-    
-    .babylon-container {
-      flex: 1;
-      position: relative;
       overflow: hidden;
+      z-index: 1000;
+    }
+    
+    .fullscreen-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
     }
     
     .babylon-canvas {
-      width: 100%;
-      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
       display: block;
       outline: none;
+      border: none;
+      margin: 0;
+      padding: 0;
       cursor: grab;
+      background: #000;
     }
     
     .babylon-canvas:active {
       cursor: grabbing;
     }
     
-    .loading-placeholder {
+    .loading-overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      z-index: 1001;
     }
     
     .loading-content {
       text-align: center;
       color: white;
+      background: rgba(0, 0, 0, 0.3);
       padding: 40px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
     }
     
     .loading-content h2 {
@@ -136,7 +103,7 @@ import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder, Vector3,
     }
     
     .loading-content p {
-      margin: 0 0 20px 0;
+      margin: 0 0 25px 0;
       font-size: 16px;
       opacity: 0.9;
     }
@@ -145,7 +112,7 @@ import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder, Vector3,
       width: 40px;
       height: 40px;
       border: 3px solid rgba(255, 255, 255, 0.3);
-      border-top: 3px solid white;
+      border-top: 3px solid #fff;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto;
@@ -156,44 +123,46 @@ import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder, Vector3,
       100% { transform: rotate(360deg); }
     }
     
-    .canvas-overlay {
+    .controls-overlay {
       position: absolute;
       top: 20px;
       left: 20px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 15px;
-      border-radius: 8px;
+      right: 20px;
       pointer-events: none;
+      z-index: 1002;
     }
     
-    .controls-info p {
-      margin: 0 0 5px 0;
+    .controls-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 25px;
+      backdrop-filter: blur(10px);
       font-size: 14px;
     }
     
-    .scene-info {
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.95);
-      border-top: 3px solid #007bff;
+    .site-indicator {
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #4CAF50;
+      letter-spacing: 1px;
     }
     
-    .scene-info h3 {
-      margin: 0 0 10px 0;
-      color: #333;
+    .controls-text {
+      opacity: 0.8;
     }
     
-    .scene-info p {
-      margin: 5px 0;
-      color: #666;
+    /* Hide scrollbars */
+    .fullscreen-container::-webkit-scrollbar {
+      display: none;
     }
     
-    code {
-      background: #f8f9fa;
-      padding: 2px 6px;
-      border-radius: 4px;
-      color: #d63384;
-      font-weight: 500;
+    .fullscreen-container {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   `]
 })
@@ -213,10 +182,6 @@ export class SiteComponent {
   
   // Signal to track if scene is loaded
   protected sceneLoaded = signal<boolean>(false);
-  
-  // Computed signals
-  protected currentUrl = computed(() => `/site/${this.siteId()}`);
-  protected timestamp = computed(() => new Date().toLocaleString());
   
   constructor() {
     // Subscribe to route parameter changes
