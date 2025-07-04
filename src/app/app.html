@@ -1,55 +1,59 @@
 <div class="app-container">
-  <header class="app-header">
-    <h1>{{ greeting() }}</h1>
-    <p class="subtitle">Zoneless Angular 20 with Signals & SSR</p>
-  </header>
+  <!-- Show shell content only when NOT on a site route -->
+  @if (!isSiteRoute()) {
+    <header class="app-header">
+      <h1>{{ greeting() }}</h1>
+      <p class="subtitle">Zoneless Angular 20 with Signals & SSR</p>
+    </header>
 
-  <main class="app-main">
-    <section class="signals-demo">
-      <h2>NgRx Signals Store Demo</h2>
-      
-      <div class="counter-section">
-        <h3>Counter with State Management</h3>
-        <div class="counter-display">
-          <p>Count: <strong>{{ counterStore.count() }}</strong></p>
-          <p>Double Count: <strong>{{ counterStore.doubleCount() }}</strong></p>
-          <p>Is Positive: <strong>{{ counterStore.isPositive() ? 'Yes' : 'No' }}</strong></p>
-          <p>Is Even: <strong>{{ counterStore.isEven() ? 'Yes' : 'No' }}</strong></p>
-          <p>Last Action: <strong>{{ counterStore.lastAction() }}</strong></p>
-          <p>History Count: <strong>{{ counterStore.historyCount() }}</strong></p>
-          <p>Average: <strong>{{ counterStore.average().toFixed(2) }}</strong></p>
-        </div>
+    <main class="app-main">
+      <section class="router-section">
+        <h2>Dynamic Routing Demo</h2>
         
-        <div class="counter-controls">
-          <button (click)="decrement()" [disabled]="counterStore.count() <= 0">-</button>
-          <button (click)="increment()">+</button>
-          <button (click)="reset()">Reset</button>
-          <button (click)="clearHistory()">Clear History</button>
-        </div>
-        
-        <div class="history-section" *ngIf="counterStore.history().length > 1">
-          <h4>History</h4>
-          <div class="history-items">
-            @for (value of counterStore.history(); track $index) {
-              <span class="history-item">{{ value }}</span>
-            }
+        <div class="navigation-demo">
+          <h3>Site Navigation</h3>
+          <p>Test the dynamic routing by clicking on the site links below:</p>
+          
+          <div class="site-links">
+            <a routerLink="/" class="site-link home-link">
+              🏠 Home
+            </a>
+            <a routerLink="/site/dashboard" class="site-link">
+              📊 Dashboard Site
+            </a>
+            <a routerLink="/site/analytics" class="site-link">
+              📈 Analytics Site
+            </a>
+            <a routerLink="/site/settings" class="site-link">
+              ⚙️ Settings Site
+            </a>
+            <a routerLink="/site/profile" class="site-link">
+              👤 Profile Site
+            </a>
+            <a routerLink="/site/admin-123" class="site-link">
+              🔧 Admin Site
+            </a>
+          </div>
+          
+          <div class="url-example">
+            <p><strong>URL Pattern:</strong> <code>/site/{{ '{' }}site-id{{ '}' }}</code></p>
+            <p>The site ID will be automatically captured from the URL and displayed in the component.</p>
           </div>
         </div>
-      </div>
-    </section>
+        
+        <div class="router-outlet-container">
+          <router-outlet></router-outlet>
+        </div>
+      </section>
+    </main>
 
-    <section class="features-demo">
-      <h2>Signal-Based Components</h2>
-      <app-todo></app-todo>
-    </section>
-
-    <section class="router-section">
-      <h2>Router Outlet</h2>
-      <router-outlet></router-outlet>
-    </section>
-  </main>
-
-  <footer class="app-footer">
-    <p>Built with Angular 20 • Zoneless • SSR Enabled • Signals-First • NgRx Signals</p>
-  </footer>
+    <footer class="app-footer">
+      <p>Built with Angular 20 • Zoneless • SSR Enabled • Signals-First • NgRx Signals</p>
+    </footer>
+  }
+  
+  <!-- Show only router outlet for site routes -->
+  @else {
+    <router-outlet></router-outlet>
+  }
 </div>

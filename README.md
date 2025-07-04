@@ -22,12 +22,42 @@ A modern Angular 20 application built with **zoneless architecture**, **Server-S
 - **Build Tool**: Angular CLI 20
 - **Server**: Express.js (SSR)
 
+## 🔗 Dynamic Routing
+
+The application includes a dynamic routing system that demonstrates signals-based route parameter handling:
+
+### Route Structure
+```
+/site/:site-id
+```
+
+### Example URLs
+- `http://localhost:4201/site/dashboard`
+- `http://localhost:4201/site/analytics` 
+- `http://localhost:4201/site/settings`
+- `http://localhost:4201/site/profile`
+- `http://localhost:4201/site/admin-123`
+
+### Route Parameter Extraction
+The Site Component automatically reads the `site-id` parameter from the URL and makes it available as a signal:
+
+```typescript
+// Signal automatically updated when route changes
+protected siteId = signal<string>('');
+
+// Computed signal based on route parameter
+protected componentStatus = computed(() => 
+  this.siteId() ? 'Active - Site Loaded' : 'Waiting for Site ID'
+);
+```
+
 ## 📋 What's Included
 
 ### Core Components
 - **App Component** - Main application shell with signals integration
 - **Counter Store** - NgRx Signals store with computed signals and state mutations
 - **Todo Component** - Fully functional todo list demonstrating signal-based component state
+- **Site Component** - Dynamic routing component with route parameter extraction
 
 ### State Management Features
 - ✅ Signal-based reactive state
@@ -42,6 +72,7 @@ A modern Angular 20 application built with **zoneless architecture**, **Server-S
 - 🔄 Real-time counter with history tracking
 - 📝 Interactive todo list with filtering
 - 📊 Live statistics and computed values
+- 🔗 Dynamic routing with parameter extraction
 
 ## 🚦 Getting Started
 
@@ -78,7 +109,8 @@ A modern Angular 20 application built with **zoneless architecture**, **Server-S
 src/
 ├── app/
 │   ├── components/
-│   │   └── todo.component.ts      # Signal-based todo component
+│   │   ├── todo.component.ts      # Signal-based todo component
+│   │   └── site.component.ts      # Dynamic routing component
 │   ├── store/
 │   │   └── counter.store.ts       # NgRx Signals store
 │   ├── app.ts                     # Main app component

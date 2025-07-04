@@ -49,95 +49,6 @@
   gap: 3rem;
 }
 
-.signals-demo {
-  .counter-section {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 2rem;
-    border: 1px solid #e2e8f0;
-
-    h3 {
-      margin: 0 0 1.5rem 0;
-      color: #374151;
-      font-size: 1.5rem;
-    }
-
-    .counter-display {
-      margin-bottom: 2rem;
-
-      p {
-        font-size: 1.2rem;
-        margin: 0.5rem 0;
-        
-        strong {
-          color: #667eea;
-          font-weight: 600;
-        }
-      }
-    }
-
-    .counter-controls {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-
-      button {
-        padding: 0.75rem 1.5rem;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-
-        &:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-        }
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          transform: none;
-        }
-
-        &:active:not(:disabled) {
-          transform: translateY(0);
-        }
-      }
-    }
-
-    .history-section {
-      margin-top: 2rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #e2e8f0;
-
-      h4 {
-        margin: 0 0 1rem 0;
-        color: #374151;
-        font-size: 1.2rem;
-      }
-
-      .history-items {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-
-        .history-item {
-          background: #667eea;
-          color: white;
-          padding: 0.25rem 0.75rem;
-          border-radius: 16px;
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-      }
-    }
-  }
-}
-
 .router-section {
   background: #f1f5f9;
   border-radius: 12px;
@@ -148,6 +59,92 @@
     margin: 0 0 1rem 0;
     color: #374151;
     font-size: 1.5rem;
+  }
+
+  .navigation-demo {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e5e7eb;
+
+    h3 {
+      margin: 0 0 1rem 0;
+      color: #374151;
+      font-size: 1.3rem;
+    }
+
+    p {
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+    }
+
+    .site-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+
+      .site-link {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        text-align: center;
+        justify-content: center;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+
+        &.home-link {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+
+          &:hover {
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+          }
+        }
+      }
+    }
+
+    .url-example {
+      background: #f3f4f6;
+      border-radius: 6px;
+      padding: 1rem;
+      border-left: 4px solid #667eea;
+
+      p {
+        margin: 0.25rem 0;
+        font-size: 0.9rem;
+
+        code {
+          background: #e5e7eb;
+          padding: 0.2rem 0.4rem;
+          border-radius: 4px;
+          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+          color: #374151;
+        }
+      }
+    }
+  }
+
+  .router-outlet-container {
+    background: white;
+    border-radius: 8px;
+    min-height: 200px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
   }
 }
 
@@ -184,5 +181,13 @@ h2 {
 
   .counter-controls {
     justify-content: center;
+  }
+
+  .router-section {
+    .navigation-demo {
+      .site-links {
+        grid-template-columns: 1fr;
+      }
+    }
   }
 }
