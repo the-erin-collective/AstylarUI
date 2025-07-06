@@ -60,6 +60,10 @@ export class SiteDataService {
           background: 'blue'
         },
         {
+          selector: '#outerdiv:hover',
+          background: 'pink'
+        },
+        {
           selector: '#innerdiv',
           top: '25%',
           left: '25%',

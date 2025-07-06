@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Scene, Color3, Vector3, Mesh } from '@babylonjs/core';
+import { Scene, Color3, Vector3, Mesh, ActionManager, ExecuteCodeAction } from '@babylonjs/core';
 import { BabylonCameraService } from './babylon-camera.service';
 import { BabylonMeshService } from './babylon-mesh.service';
 
@@ -41,6 +41,8 @@ export class BabylonDOMService {
   private sceneWidth: number = 1920; // Default viewport width
   private sceneHeight: number = 1080; // Default viewport height
   private elements: Map<string, Mesh> = new Map();
+  private hoverStates: Map<string, boolean> = new Map();
+  private elementStyles: Map<string, { normal: StyleRule, hover?: StyleRule }> = new Map();
 
   constructor() {}
 
@@ -61,8 +63,13 @@ export class BabylonDOMService {
 
     console.log('Creating site from data:', siteData);
 
-    // Clear existing elements
+    // Clear existing elements and state
     this.clearElements();
+    this.hoverStates.clear();
+    this.elementStyles.clear();
+    
+    // Parse and organize styles
+    this.parseStyles(siteData.styles);
 
     // Create root body element that represents the full viewport/document
     const rootBodyMesh = this.createRootBodyElement(siteData.styles);
@@ -74,6 +81,33 @@ export class BabylonDOMService {
     }
 
     console.log('Site creation complete. Elements:', this.elements.size);
+  }
+  
+  private parseStyles(styles: StyleRule[]): void {
+    styles.forEach(style => {
+      if (style.selector.includes(':hover')) {
+        // This is a hover style
+        const baseSelector = style.selector.replace(':hover', '');
+        const elementId = baseSelector.replace('#', '');
+        
+        if (!this.elementStyles.has(elementId)) {
+          this.elementStyles.set(elementId, { normal: {} as StyleRule });
+        }
+        
+        this.elementStyles.get(elementId)!.hover = style;
+        console.log(`Parsed hover style for ${elementId}:`, style);
+      } else if (style.selector.startsWith('#')) {
+        // This is a normal element style
+        const elementId = style.selector.replace('#', '');
+        
+        if (!this.elementStyles.has(elementId)) {
+          this.elementStyles.set(elementId, { normal: style });
+        } else {
+          this.elementStyles.get(elementId)!.normal = style;
+        }
+        console.log(`Parsed normal style for ${elementId}:`, style);
+      }
+    });
   }
 
   private createRootBodyElement(styles: StyleRule[]): Mesh {
@@ -128,8 +162,9 @@ export class BabylonDOMService {
   private createElement(element: DOMElement, parent: Mesh, styles: StyleRule[]): Mesh {
     if (!this.scene || !this.meshService) throw new Error('Services not initialized');
 
-    // Find styles for this element
-    const style = this.findStyleForElement(element, styles);
+    // Get element styles (normal and hover)
+    const elementStyles = element.id ? this.elementStyles.get(element.id) : undefined;
+    const style = elementStyles?.normal;
     
     // Calculate dimensions and position relative to parent
     const dimensions = this.calculateDimensions(style, parent);
@@ -143,21 +178,13 @@ export class BabylonDOMService {
     // Parent the mesh so it inherits parent's transformations
     this.meshService.parentMesh(mesh, parent);
 
-    // Create material with distinct colors for visibility
-    let material;
-    
-    // Find style and apply background color
-    if (style?.background) {
-      const backgroundColor = this.parseBackgroundColor(style.background);
-      material = this.meshService.createMaterial(`${element.id}-material`, backgroundColor);
-      console.log(`Applied ${element.id} background color:`, style.background, '-> parsed:', backgroundColor);
-    } else {
-      const defaultColor = this.getColorForElement(element);
-      material = this.meshService.createMaterial(`${element.id}-material`, defaultColor);
-      console.log(`No background style for ${element.id}, using default color`);
+    // Apply material (start with normal state)
+    this.applyElementMaterial(mesh, element, false);
+
+    // Add mouse events if element has hover styles
+    if (element.id && elementStyles?.hover) {
+      this.setupMouseEvents(mesh, element.id);
     }
-    
-    mesh.material = material;
 
     console.log(`Created element ${element.id}:`, {
       position: mesh.position,
@@ -169,9 +196,54 @@ export class BabylonDOMService {
     // Store reference
     if (element.id) {
       this.elements.set(element.id, mesh);
+      this.hoverStates.set(element.id, false); // Start in normal state
     }
 
     return mesh;
+  }
+  
+  private applyElementMaterial(mesh: Mesh, element: DOMElement, isHovered: boolean): void {
+    if (!this.meshService || !element.id) return;
+    
+    const elementStyles = this.elementStyles.get(element.id);
+    if (!elementStyles) return;
+    
+    // Choose the appropriate style based on hover state
+    const activeStyle = isHovered && elementStyles.hover ? elementStyles.hover : elementStyles.normal;
+    
+    let material;
+    if (activeStyle?.background) {
+      const backgroundColor = this.parseBackgroundColor(activeStyle.background);
+      material = this.meshService.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, backgroundColor);
+      console.log(`Applied ${element.id} ${isHovered ? 'hover' : 'normal'} background color:`, activeStyle.background, '-> parsed:', backgroundColor);
+    } else {
+      const defaultColor = this.getColorForElement(element);
+      material = this.meshService.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, defaultColor);
+      console.log(`No background style for ${element.id} ${isHovered ? 'hover' : 'normal'} state, using default color`);
+    }
+    
+    mesh.material = material;
+  }
+  
+  private setupMouseEvents(mesh: Mesh, elementId: string): void {
+    if (!this.scene) return;
+    
+    // Mouse enter (hover start)
+    mesh.actionManager = new ActionManager(this.scene);
+    
+    mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
+      console.log(`Mouse enter: ${elementId}`);
+      this.hoverStates.set(elementId, true);
+      const element = { id: elementId } as DOMElement; // Minimal element object for material application
+      this.applyElementMaterial(mesh, element, true);
+    }));
+    
+    mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
+      console.log(`Mouse leave: ${elementId}`);
+      this.hoverStates.set(elementId, false);
+      const element = { id: elementId } as DOMElement; // Minimal element object for material application
+      this.applyElementMaterial(mesh, element, false);
+    }));
   }
 
   private findStyleForElement(element: DOMElement, styles: StyleRule[]): StyleRule | undefined {
@@ -349,6 +421,8 @@ export class BabylonDOMService {
       mesh.dispose();
     });
     this.elements.clear();
+    this.hoverStates.clear();
+    this.elementStyles.clear();
   }
 
   cleanup(): void {
