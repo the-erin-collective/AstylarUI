@@ -22,6 +22,13 @@ export interface StyleRule {
   width?: string;
   height?: string;
   background?: string;
+  // Support both hyphenated and camelCase for border properties
+  'border-width'?: string;
+  borderWidth?: string;
+  'border-color'?: string;
+  borderColor?: string;
+  'border-style'?: string;
+  borderStyle?: string;
 }
 
 export interface SiteData {
@@ -181,8 +188,62 @@ export class BabylonDOMService {
     // Apply material (start with normal state)
     this.applyElementMaterial(mesh, element, false);
 
+    // Add borders if specified
+    const borderElementStyles = element.id ? this.elementStyles.get(element.id) : undefined;
+    const borderProperties = this.parseBorderProperties(borderElementStyles?.normal);
+    
+    if (borderProperties.width > 0) {
+      console.log(`Creating border for ${element.id} with width ${borderProperties.width}`);
+      
+      // Create border frame (4 rectangles)
+      const borderMeshes = this.meshService.createBorderMesh(
+        `${element.id}-border`,
+        dimensions.width,
+        dimensions.height,
+        borderProperties.width
+      );
+      
+      // Position border frames around the element (same Z as element)
+      this.meshService.positionBorderFrames(
+        borderMeshes,
+        dimensions.x,
+        dimensions.y,
+        0.1, // Same Z as main element
+        dimensions.width,
+        dimensions.height,
+        borderProperties.width
+      );
+      
+      // Parent all border frames (skip if parent is undefined)
+      // borderMeshes.forEach(borderMesh => {
+      //   if (parent) this.meshService.parentMesh(borderMesh, parent);
+      // });
+      
+      // Apply border material to all frames
+      const borderMaterial = this.meshService.createMaterial(
+        `${element.id}-border-material`,
+        borderProperties.color
+      );
+      borderMeshes.forEach(borderMesh => {
+        borderMesh.material = borderMaterial;
+      });
+      
+      // Store border references for cleanup
+      if (element.id) {
+        borderMeshes.forEach((borderMesh, index) => {
+          this.elements.set(`${element.id}-border-${index}`, borderMesh);
+          
+          // Add hover events to border frames if element has hover styles
+          if (borderElementStyles?.hover && element.id) {
+            this.setupMouseEvents(borderMesh, element.id);
+          }
+        });
+        console.log(`Applied border - width: ${borderProperties.width}, color:`, borderProperties.color);
+      }
+    }
+
     // Add mouse events if element has hover styles
-    if (element.id && elementStyles?.hover) {
+    if (element.id && borderElementStyles?.hover) {
       this.setupMouseEvents(mesh, element.id);
     }
 
@@ -232,18 +293,90 @@ export class BabylonDOMService {
     mesh.actionManager = new ActionManager(this.scene);
     
     mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
-      console.log(`Mouse enter: ${elementId}`);
+      console.log(`Mouse enter: ${elementId} via ${mesh.name}`);
       this.hoverStates.set(elementId, true);
-      const element = { id: elementId } as DOMElement; // Minimal element object for material application
-      this.applyElementMaterial(mesh, element, true);
+      
+      // Update main element
+      const mainMesh = this.elements.get(elementId);
+      if (mainMesh) {
+        const element = { id: elementId } as DOMElement;
+        this.applyElementMaterial(mainMesh, element, true);
+      }
+      
+      // Update all border frames
+      for (let i = 0; i < 4; i++) {
+        const borderMesh = this.elements.get(`${elementId}-border-${i}`);
+        if (borderMesh) {
+          this.applyBorderMaterial(borderMesh, elementId, true);
+        }
+      }
     }));
     
     mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
-      console.log(`Mouse leave: ${elementId}`);
+      console.log(`Mouse leave: ${elementId} via ${mesh.name}`);
       this.hoverStates.set(elementId, false);
-      const element = { id: elementId } as DOMElement; // Minimal element object for material application
-      this.applyElementMaterial(mesh, element, false);
+      
+      // Update main element
+      const mainMesh = this.elements.get(elementId);
+      if (mainMesh) {
+        const element = { id: elementId } as DOMElement;
+        this.applyElementMaterial(mainMesh, element, false);
+      }
+      
+      // Update all border frames
+      for (let i = 0; i < 4; i++) {
+        const borderMesh = this.elements.get(`${elementId}-border-${i}`);
+        if (borderMesh) {
+          this.applyBorderMaterial(borderMesh, elementId, false);
+        }
+      }
     }));
+  }
+  
+  private applyBorderMaterial(borderMesh: Mesh, elementId: string, isHovered: boolean): void {
+    if (!this.meshService) return;
+    
+    const elementStyles = this.elementStyles.get(elementId);
+    if (!elementStyles) {
+      console.log(`No element styles found for ${elementId}`);
+      return;
+    }
+    
+    // Get normal style for base properties
+    const normalStyle = elementStyles.normal;
+    const hoverStyle = elementStyles.hover;
+    
+    // For border properties, use hover values if available, otherwise fall back to normal
+    const borderWidth = isHovered && hoverStyle?.borderWidth ? hoverStyle.borderWidth :
+                       isHovered && hoverStyle?.['border-width'] ? hoverStyle['border-width'] :
+                       normalStyle?.borderWidth || normalStyle?.['border-width'];
+    
+    const borderColor = isHovered && hoverStyle?.borderColor ? hoverStyle.borderColor :
+                       isHovered && hoverStyle?.['border-color'] ? hoverStyle['border-color'] :
+                       normalStyle?.borderColor || normalStyle?.['border-color'];
+    
+    const borderStyle = isHovered && hoverStyle?.borderStyle ? hoverStyle.borderStyle :
+                       isHovered && hoverStyle?.['border-style'] ? hoverStyle['border-style'] :
+                       normalStyle?.borderStyle || normalStyle?.['border-style'];
+    
+    const borderProperties = {
+      width: this.parseBorderWidth(borderWidth),
+      color: this.parseBackgroundColor(borderColor),
+      style: borderStyle || 'solid'
+    };
+    
+    console.log(`Applying border material for ${elementId}, isHovered: ${isHovered}, borderWidth: ${borderProperties.width}, borderColor:`, borderProperties.color);
+    
+    if (borderProperties.width > 0) {
+      const borderMaterial = this.meshService.createMaterial(
+        `${elementId}-border-material-${isHovered ? 'hover' : 'normal'}`,
+        borderProperties.color
+      );
+      borderMesh.material = borderMaterial;
+      console.log(`Applied ${elementId} border ${isHovered ? 'hover' : 'normal'} color:`, borderProperties.color);
+    } else {
+      console.log(`Border width is 0 for ${elementId}, skipping material application`);
+    }
   }
 
   private findStyleForElement(element: DOMElement, styles: StyleRule[]): StyleRule | undefined {
@@ -308,6 +441,30 @@ export class BabylonDOMService {
     const b = parseInt(hex.substring(4, 6), 16) / 255;
     
     return new Color3(r, g, b);
+  }
+  
+  private parseBorderProperties(style: StyleRule | undefined) {
+    if (!style) {
+      return { width: 0, color: new Color3(0, 0, 0), style: 'solid' };
+    }
+    
+    // Support both camelCase and hyphenated properties (prefer camelCase)
+    const borderWidth = style.borderWidth || style['border-width'];
+    const borderColor = style.borderColor || style['border-color'];
+    const borderStyle = style.borderStyle || style['border-style'];
+    
+    return {
+      width: this.parseBorderWidth(borderWidth),
+      color: this.parseBackgroundColor(borderColor),
+      style: borderStyle || 'solid'
+    };
+  }
+
+  private parseBorderWidth(width?: string): number {
+    if (!width) return 0;
+    // Handle "2px", "0.1", etc. - convert to world units
+    const numericValue = parseFloat(width.replace('px', ''));
+    return numericValue * 0.01; // scale factor to convert to world units
   }
 
   private calculateDimensions(style: StyleRule | undefined, parent: Mesh): { 

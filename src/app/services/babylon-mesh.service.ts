@@ -24,6 +24,71 @@ export class BabylonMeshService {
     }, this.scene);
   }
 
+  createBorderMesh(name: string, elementWidth: number, elementHeight: number, borderWidth: number): Mesh[] {
+    if (!this.scene) {
+      throw new Error('Mesh service not initialized');
+    }
+
+    // Create 4 border rectangles: top, bottom, left, right
+    const borders: Mesh[] = [];
+    
+    // Top border
+    const topBorder = MeshBuilder.CreatePlane(`${name}-top`, {
+      width: elementWidth + (borderWidth * 2),
+      height: borderWidth
+    }, this.scene);
+    borders.push(topBorder);
+    
+    // Bottom border
+    const bottomBorder = MeshBuilder.CreatePlane(`${name}-bottom`, {
+      width: elementWidth + (borderWidth * 2),
+      height: borderWidth
+    }, this.scene);
+    borders.push(bottomBorder);
+    
+    // Left border
+    const leftBorder = MeshBuilder.CreatePlane(`${name}-left`, {
+      width: borderWidth,
+      height: elementHeight
+    }, this.scene);
+    borders.push(leftBorder);
+    
+    // Right border
+    const rightBorder = MeshBuilder.CreatePlane(`${name}-right`, {
+      width: borderWidth,
+      height: elementHeight
+    }, this.scene);
+    borders.push(rightBorder);
+    
+    return borders;
+  }
+
+  positionBorderFrames(borders: Mesh[], centerX: number, centerY: number, centerZ: number, elementWidth: number, elementHeight: number, borderWidth: number): void {
+    if (borders.length !== 4) return;
+    
+    const [topBorder, bottomBorder, leftBorder, rightBorder] = borders;
+    
+    // Position top border (above element)
+    topBorder.position.x = centerX;
+    topBorder.position.y = centerY + (elementHeight / 2) + (borderWidth / 2);
+    topBorder.position.z = centerZ;
+    
+    // Position bottom border (below element)
+    bottomBorder.position.x = centerX;
+    bottomBorder.position.y = centerY - (elementHeight / 2) - (borderWidth / 2);
+    bottomBorder.position.z = centerZ;
+    
+    // Position left border (left of element)
+    leftBorder.position.x = centerX - (elementWidth / 2) - (borderWidth / 2);
+    leftBorder.position.y = centerY;
+    leftBorder.position.z = centerZ;
+    
+    // Position right border (right of element)
+    rightBorder.position.x = centerX + (elementWidth / 2) + (borderWidth / 2);
+    rightBorder.position.y = centerY;
+    rightBorder.position.z = centerZ;
+  }
+
   createMaterial(name: string, diffuseColor: Color3, emissiveColor?: Color3): StandardMaterial {
     if (!this.scene) {
       throw new Error('Mesh service not initialized');

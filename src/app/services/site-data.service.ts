@@ -57,11 +57,15 @@ export class SiteDataService {
           left: '15%',
           height: '70%',
           width: '70%',
-          background: 'blue'
+          background: 'blue',
+          borderWidth: '10px',
+          borderColor: 'white',
+          borderStyle: 'solid'
         },
         {
           selector: '#outerdiv:hover',
-          background: 'pink'
+          background: 'pink',
+          borderColor: 'black'
         },
         {
           selector: '#innerdiv',
