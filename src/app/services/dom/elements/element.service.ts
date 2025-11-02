@@ -956,6 +956,73 @@ export class ElementService {
     }
   }
 
+  private applyTransformsSmooth(mesh: Mesh, transforms: TransformData, duration: number = 200): void {
+    console.log(`🔄 Applying smooth transforms to ${mesh.name}:`, transforms);
+
+    // Store initial values
+    const initialPosition = mesh.position.clone();
+    const initialRotation = mesh.rotation.clone();
+    const initialScaling = mesh.scaling.clone();
+
+    // Store the mesh's original position (before any transforms) if not already stored
+    if (!mesh.metadata) {
+      mesh.metadata = {};
+    }
+    if (!mesh.metadata.originalPosition) {
+      mesh.metadata.originalPosition = initialPosition.clone();
+    }
+    if (!mesh.metadata.originalRotation) {
+      mesh.metadata.originalRotation = new Vector3(0, 0, 0);
+    }
+    if (!mesh.metadata.originalScaling) {
+      mesh.metadata.originalScaling = new Vector3(1, 1, 1);
+    }
+
+    // Calculate target values based on original position + transform
+    const targetPosition = new Vector3(
+      mesh.metadata.originalPosition.x + transforms.translate.x,
+      mesh.metadata.originalPosition.y - transforms.translate.y, // Y is inverted in BabylonJS
+      mesh.metadata.originalPosition.z + transforms.translate.z
+    );
+    const targetRotation = new Vector3(
+      transforms.rotate.x,
+      transforms.rotate.y,
+      transforms.rotate.z
+    );
+    const targetScaling = new Vector3(
+      transforms.scale.x,
+      transforms.scale.y,
+      transforms.scale.z
+    );
+
+    // Simple linear interpolation animation
+    const startTime = Date.now();
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Ease-out function for smoother animation
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+
+      // Interpolate position
+      mesh.position = Vector3.Lerp(initialPosition, targetPosition, easeOut);
+
+      // Interpolate rotation
+      mesh.rotation = Vector3.Lerp(initialRotation, targetRotation, easeOut);
+
+      // Interpolate scaling
+      mesh.scaling = Vector3.Lerp(initialScaling, targetScaling, easeOut);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        console.log(`✅ Smooth transform animation completed for ${mesh.name}`);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }
+
   private createImageElement(render: BabylonRender, element: DOMElement, style: StyleRule, dimensions: any, borderRadius: number): Mesh {
     if (!render.scene) {
       throw new Error('Scene not initialized');
@@ -1916,8 +1983,6 @@ export class ElementService {
   }
 
   private setupMouseEvents(dom: BabylonDOM, render: BabylonRender, mesh: Mesh, elementId: string): void {
-    let needsRecreation = false;
-
     if (!render.scene) {
       throw new Error('Scene not initialized');
     }
@@ -1942,15 +2007,24 @@ export class ElementService {
       console.log(`🌒 Mouse over for ${elementId} - boxShadow in hover style:`, elementStyles?.hover?.boxShadow);
       console.log(`🌒 Mouse over for ${elementId} - boxShadow in merged hover style:`, hoverMergedStyle.boxShadow);
 
+      // Check if we need to recreate geometry (border radius or polygon type changes)
+      const normalRadius = this.parseBorderRadius(baseMergedStyle?.borderRadius);
       const hoverRadius = this.parseBorderRadius(hoverMergedStyle?.borderRadius);
+      const normalPolygonType = this.parsePolygonType(baseMergedStyle?.polygonType) || 'rectangle';
+      const hoverPolygonType = this.parsePolygonType(hoverMergedStyle?.polygonType) || 'rectangle';
+
+      const needsGeometryUpdate = (normalRadius !== hoverRadius) || (normalPolygonType !== hoverPolygonType);
+
       const safeHoverRadius = isNaN(hoverRadius) ? 0 : hoverRadius;
       const dimensions = dom.context.elementDimensions.get(elementId);
-      const pixelToWorldScale = render.actions.camera.getPixelToWorldScale(); // <-- moved here
-      if (dimensions) {
+      const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
+
+      if (dimensions && needsGeometryUpdate) {
         const worldBorderRadius = safeHoverRadius * pixelToWorldScale;
         const worldWidth = dimensions.width * pixelToWorldScale;
         const worldHeight = dimensions.height * pixelToWorldScale;
-        const polygonType = this.parsePolygonType(hoverMergedStyle?.polygonType) || 'rectangle';
+        const polygonType = hoverPolygonType;
+
         // Update mesh geometry for hover border radius
         const vertexData = render.actions.mesh.generatePolygonVertexData(
           polygonType,
@@ -1959,6 +2033,7 @@ export class ElementService {
           worldBorderRadius
         );
         vertexData.applyToMesh(mainMesh, true);
+
         // Remove old border meshes
         for (let i = 0; i < 4; i++) {
           const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
@@ -1968,6 +2043,7 @@ export class ElementService {
             console.log(`[ELEMENT HOVER DEBUG] Disposed old border mesh for hover: ${elementId}-border-${i}`);
           }
         }
+
         // Create new border meshes for hover
         const borderWidth = this.parseBorderWidth(render, hoverMergedStyle?.borderWidth);
         const borderColor = render.actions.style.parseBackgroundColor(hoverMergedStyle?.borderColor);
@@ -2020,19 +2096,24 @@ export class ElementService {
           dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
           console.log(`[ELEMENT HOVER DEBUG] Created hover border mesh: ${elementId}-border-${index}`);
         });
+
         // Calculate worldBorderRadius and polygonType for shadow
         const shadowBorderRadius = safeHoverRadius * pixelToWorldScale;
-        const shadowPolygonType = this.parsePolygonType(hoverMergedStyle?.polygonType) || 'rectangle';
+        const shadowPolygonType = hoverPolygonType;
         // Ensure parent is a Mesh
         const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
         // Add or update shadow mesh for hover
         this.updateShadowMesh(dom, render, elementId, hoverMergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(hoverMergedStyle.transform) || undefined);
       }
+
       dom.context.hoverStates.set(elementId, true);
       this.applyElementMaterial(dom, render, mainMesh, element, true, baseMergedStyle);
+
+      // Apply transforms smoothly without recreating geometry
       const transform = this.parseTransform(hoverMergedStyle?.transform);
       if (transform) {
-        this.applyTransforms(mainMesh, transform);
+        this.applyTransformsSmooth(mainMesh, transform, 150); // 150ms smooth animation
+
         // For borders, we want them to inherit position but not scaling
         for (let i = 0; i < 4; i++) {
           const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
@@ -2040,7 +2121,7 @@ export class ElementService {
             // Apply only translation and rotation, not scaling
             const borderTransform = { ...transform };
             borderTransform.scale = { x: 1, y: 1, z: 1 }; // Reset scaling for borders
-            this.applyTransforms(borderMesh, borderTransform);
+            this.applyTransformsSmooth(borderMesh, borderTransform, 150);
           }
         }
 
@@ -2051,6 +2132,15 @@ export class ElementService {
           console.log(`🌒 Element transform: scale=(${transform.scale.x}, ${transform.scale.y}), rotation=(${transform.rotate.x}, ${transform.rotate.y}, ${transform.rotate.z})`);
         }
       }
+
+      // Update shadow for hover state even if geometry doesn't change
+      if (dimensions && !needsGeometryUpdate) {
+        const shadowBorderRadius = safeHoverRadius * pixelToWorldScale;
+        const shadowPolygonType = hoverPolygonType;
+        const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
+        this.updateShadowMesh(dom, render, elementId, hoverMergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(hoverMergedStyle.transform) || undefined);
+      }
+
       // After all style/geometry updates, log the mesh rotation and transform
       if (hoverMergedStyle.transform) {
         console.log(`[HOVER DEBUG] ${elementId} transform string:`, hoverMergedStyle.transform);
@@ -2075,15 +2165,26 @@ export class ElementService {
 
       console.log(`🌒 Mouse out for ${elementId} - boxShadow in normal style:`, normalStyle.boxShadow);
       console.log(`🌒 Mouse out for ${elementId} - boxShadow in merged style:`, mergedStyle.boxShadow);
-      const normalRadius = this.parseBorderRadius(normalStyle?.borderRadius);
+
+      // Check if we need to recreate geometry (border radius or polygon type changes)
+      const hoverMergedStyle = elementStyles?.hover ? { ...mergedStyle, ...elementStyles.hover } : mergedStyle;
+      const normalRadius = this.parseBorderRadius(mergedStyle?.borderRadius);
+      const hoverRadius = this.parseBorderRadius(hoverMergedStyle?.borderRadius);
+      const normalPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+      const hoverPolygonType = this.parsePolygonType(hoverMergedStyle?.polygonType) || 'rectangle';
+
+      const needsGeometryUpdate = (normalRadius !== hoverRadius) || (normalPolygonType !== hoverPolygonType);
+
       const safeNormalRadius = isNaN(normalRadius) ? 0 : normalRadius;
       const dimensions = dom.context.elementDimensions.get(elementId);
-      const pixelToWorldScale = render.actions.camera.getPixelToWorldScale(); // <-- moved here
-      if (dimensions) {
+      const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
+
+      if (dimensions && needsGeometryUpdate) {
         const worldBorderRadius = safeNormalRadius * pixelToWorldScale;
         const worldWidth = dimensions.width * pixelToWorldScale;
         const worldHeight = dimensions.height * pixelToWorldScale;
-        const polygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+        const polygonType = normalPolygonType;
+
         // Update mesh geometry for normal border radius
         const vertexData = render.actions.mesh.generatePolygonVertexData(
           polygonType,
@@ -2092,6 +2193,7 @@ export class ElementService {
           worldBorderRadius
         );
         vertexData.applyToMesh(mainMesh, true);
+
         // Remove old border meshes
         for (let i = 0; i < 4; i++) {
           const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
@@ -2101,6 +2203,7 @@ export class ElementService {
             console.log(`[ELEMENT HOVER DEBUG] Disposed old border mesh for normal: ${elementId}-border-${i}`);
           }
         }
+
         // Create new border meshes for normal
         const borderWidth = this.parseBorderWidth(render, mergedStyle.borderWidth);
         const borderColor = render.actions.style.parseBackgroundColor(mergedStyle.borderColor);
@@ -2153,24 +2256,28 @@ export class ElementService {
           dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
           console.log(`[ELEMENT HOVER DEBUG] Created normal border mesh: ${elementId}-border-${index}`);
         });
+
         // Calculate worldBorderRadius and polygonType for shadow
         const shadowBorderRadius = safeNormalRadius * pixelToWorldScale;
-        const shadowPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+        const shadowPolygonType = normalPolygonType;
         // Ensure parent is a Mesh
         const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
         // Add or update shadow mesh for normal
         this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
       }
+
       dom.context.hoverStates.set(elementId, false);
       this.applyElementMaterial(dom, render, mainMesh, element, false, mergedStyle);
+
+      // Apply transforms smoothly without recreating geometry
       const transform = this.parseTransform(mergedStyle?.transform);
       if (transform) {
-        this.applyTransforms(mainMesh, transform);
+        this.applyTransformsSmooth(mainMesh, transform, 150); // 150ms smooth animation
         // Also apply to all border meshes and parent them to the main mesh
         for (let i = 0; i < 4; i++) {
           const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
           if (borderMesh) {
-            this.applyTransforms(borderMesh, transform);
+            this.applyTransformsSmooth(borderMesh, transform, 150);
             // Parent border mesh to main mesh for transform inheritance
             render.actions.mesh.parentMesh(borderMesh, mainMesh);
           }
@@ -2183,21 +2290,19 @@ export class ElementService {
           console.log(`🌒 Element transform: scale=(${transform.scale.x}, ${transform.scale.y}), rotation=(${transform.rotate.x}, ${transform.rotate.y}, ${transform.rotate.z})`);
         }
       } else {
-        mainMesh.scaling.x = 1;
-        mainMesh.scaling.y = 1;
-        mainMesh.scaling.z = 1;
-        mainMesh.rotation.x = 0;
-        mainMesh.rotation.y = 0;
-        mainMesh.rotation.z = 0;
+        // Smoothly reset transforms to default values
+        const resetTransform: TransformData = {
+          translate: { x: 0, y: 0, z: 0 },
+          rotate: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 }
+        };
+
+        this.applyTransformsSmooth(mainMesh, resetTransform, 150);
+
         for (let i = 0; i < 4; i++) {
           const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
           if (borderMesh) {
-            borderMesh.scaling.x = 1;
-            borderMesh.scaling.y = 1;
-            borderMesh.scaling.z = 1;
-            borderMesh.rotation.x = 0;
-            borderMesh.rotation.y = 0;
-            borderMesh.rotation.z = 0;
+            this.applyTransformsSmooth(borderMesh, resetTransform, 150);
           }
         }
 
@@ -2205,20 +2310,21 @@ export class ElementService {
         const shadowMesh = dom.context.elements.get(`${elementId}-shadow`);
         if (shadowMesh) {
           console.log(`🌒 RESET: Shadow for ${elementId} will automatically reset transforms via parenting`);
+          console.log(`🌒 RESET: Reset shadow transforms and shader uniforms for ${elementId}`);
+          console.log(`🌒 Element position: (${mainMesh.position.x.toFixed(3)}, ${mainMesh.position.y.toFixed(3)}, ${mainMesh.position.z.toFixed(3)})`);
+          console.log(`🌒 Shadow position: (${shadowMesh.position.x.toFixed(3)}, ${shadowMesh.position.y.toFixed(3)}, ${shadowMesh.position.z.toFixed(3)})`);
         }
-
-        // Position shadow behind element with proper depth separation
-        const currentShadowX = shadowMesh.position.x;
-        const currentShadowY = shadowMesh.position.y;
-        shadowMesh.position.set(currentShadowX, currentShadowY, -0.01);
-
-        console.log(`🌒 RESET: Reset shadow transforms and shader uniforms for ${elementId}`);
-        console.log(`🌒 Element position: (${mainMesh.position.x.toFixed(3)}, ${mainMesh.position.y.toFixed(3)}, ${mainMesh.position.z.toFixed(3)})`);
-        console.log(`🌒 Shadow position: (${shadowMesh.position.x.toFixed(3)}, ${shadowMesh.position.y.toFixed(3)}, ${shadowMesh.position.z.toFixed(3)})`);
       }
-    }
+
+      // Update shadow for normal state even if geometry doesn't change
+      if (dimensions && !needsGeometryUpdate) {
+        const shadowBorderRadius = safeNormalRadius * pixelToWorldScale;
+        const shadowPolygonType = normalPolygonType;
+        const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
+        this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
+      }
     }));
-}
+  }
 
   /**
    * Converts a padding object from world units to pixels using the camera scale factor.
@@ -2227,176 +2333,176 @@ export class ElementService {
    * @returns The padding object in pixels.
    */
   private convertPaddingToPixels(padding: { top: number; right: number; bottom: number; left: number }, render: BabylonRender): { top: number; right: number; bottom: number; left: number } {
-  const scale = render.actions.camera.getPixelToWorldScale();
-  if (!scale || scale === 0) return { ...padding };
-  return {
-    top: Math.round(padding.top / scale),
-    right: Math.round(padding.right / scale),
-    bottom: Math.round(padding.bottom / scale),
-    left: Math.round(padding.left / scale)
-  };
-}
+    const scale = render.actions.camera.getPixelToWorldScale();
+    if (!scale || scale === 0) return { ...padding };
+    return {
+      top: Math.round(padding.top / scale),
+      right: Math.round(padding.right / scale),
+      bottom: Math.round(padding.bottom / scale),
+      left: Math.round(padding.left / scale)
+    };
+  }
 
   // Helper to parse RGBA color and multiply alpha
   private getBoxShadowColorWithOpacity(color: string, styleOpacity: number): string {
-  // Try to parse rgba/hsla or hex
-  const rgbaRegex = /rgba?\(([^)]+)\)/;
-  const match = color.match(rgbaRegex);
-  if (match) {
-    const parts = match[1].split(',').map(p => p.trim());
-    let r = parseFloat(parts[0]);
-    let g = parseFloat(parts[1]);
-    let b = parseFloat(parts[2]);
-    let a = parts[3] !== undefined ? parseFloat(parts[3]) : 1;
-    a = Math.max(0, Math.min(1, a * styleOpacity));
-    return `rgba(${r},${g},${b},${a})`;
+    // Try to parse rgba/hsla or hex
+    const rgbaRegex = /rgba?\(([^)]+)\)/;
+    const match = color.match(rgbaRegex);
+    if (match) {
+      const parts = match[1].split(',').map(p => p.trim());
+      let r = parseFloat(parts[0]);
+      let g = parseFloat(parts[1]);
+      let b = parseFloat(parts[2]);
+      let a = parts[3] !== undefined ? parseFloat(parts[3]) : 1;
+      a = Math.max(0, Math.min(1, a * styleOpacity));
+      return `rgba(${r},${g},${b},${a})`;
+    }
+    // Hex or named color fallback: just return as is (no alpha multiplication)
+    return color;
   }
-  // Hex or named color fallback: just return as is (no alpha multiplication)
-  return color;
-}
 
   // Helper to create or update the shadow mesh for an element
-  private updateShadowMesh(dom: BabylonDOM, render: BabylonRender, elementId: string, style: StyleRule, parent: Mesh, dimensions: any, zPosition: number, borderRadius: number, polygonType: string, transform ?: TransformData) {
-  console.log(`🌒 updateShadowMesh called for ${elementId} with boxShadow: "${style?.boxShadow}"`);
+  private updateShadowMesh(dom: BabylonDOM, render: BabylonRender, elementId: string, style: StyleRule, parent: Mesh, dimensions: any, zPosition: number, borderRadius: number, polygonType: string, transform?: TransformData) {
+    console.log(`🌒 updateShadowMesh called for ${elementId} with boxShadow: "${style?.boxShadow}"`);
 
-  const boxShadow = this.parseBoxShadow(style?.boxShadow);
-  const existingShadow = dom.context.elements.get(`${elementId}-shadow`);
+    const boxShadow = this.parseBoxShadow(style?.boxShadow);
+    const existingShadow = dom.context.elements.get(`${elementId}-shadow`);
 
-  console.log(`🌒 Parsed boxShadow for ${elementId}:`, boxShadow);
+    console.log(`🌒 Parsed boxShadow for ${elementId}:`, boxShadow);
 
-  // Check if this is initial creation or hover update
-  const isHoverState = dom.context.hoverStates.get(elementId) || false;
-  console.log(`🌒 Shadow update context for ${elementId}: ${isHoverState ? 'HOVER' : 'NORMAL'} state`);
+    // Check if this is initial creation or hover update
+    const isHoverState = dom.context.hoverStates.get(elementId) || false;
+    console.log(`🌒 Shadow update context for ${elementId}: ${isHoverState ? 'HOVER' : 'NORMAL'} state`);
 
-  // If no box shadow is needed, remove existing shadow
-  if (!boxShadow) {
-    if (existingShadow) {
+    // If no box shadow is needed, remove existing shadow
+    if (!boxShadow) {
+      if (existingShadow) {
+        existingShadow.dispose();
+        dom.context.elements.delete(`${elementId}-shadow`);
+        console.log(`🌒 Removed shadow for ${elementId} (no box-shadow style)`);
+      } else {
+        console.log(`🌒 No shadow to remove for ${elementId} (no box-shadow style and no existing shadow)`);
+      }
+      return;
+    }
+
+    const scaleFactor = render.actions.camera.getPixelToWorldScale();
+    const worldWidth = dimensions.width * scaleFactor;
+    const worldHeight = dimensions.height * scaleFactor;
+    const scaledOffsetX = boxShadow.offsetX * scaleFactor;
+    const scaledOffsetY = boxShadow.offsetY * scaleFactor;
+    const scaledBlur = boxShadow.blur * scaleFactor;
+
+    // Multiply color alpha by style opacity
+    const styleOpacity = render.actions.style.parseOpacity(style.opacity);
+    const shadowColor = this.getBoxShadowColorWithOpacity(boxShadow.color, styleOpacity);
+
+    console.log(`🌒 Shadow parameters for ${elementId}:`, {
+      originalBlur: boxShadow.blur,
+      scaledBlur: scaledBlur,
+      originalColor: boxShadow.color,
+      finalColor: shadowColor,
+      styleOpacity: styleOpacity,
+      worldSize: `${worldWidth.toFixed(1)}x${worldHeight.toFixed(1)}`
+    });
+
+    // Check if we can reuse existing shadow
+    let needsRecreation = !existingShadow;
+
+    if (existingShadow && existingShadow.metadata && existingShadow.metadata.shadowParams) {
+      const lastParams = existingShadow.metadata.shadowParams;
+
+      // More precise parameter comparison
+      const widthChanged = Math.abs(lastParams.width - worldWidth) > 0.001;
+      const heightChanged = Math.abs(lastParams.height - worldHeight) > 0.001;
+      const blurChanged = Math.abs(lastParams.blur - scaledBlur) > 0.001;
+      const colorChanged = lastParams.color !== shadowColor;
+      const radiusChanged = Math.abs(lastParams.borderRadius - borderRadius) > 0.001;
+      const typeChanged = lastParams.polygonType !== polygonType;
+
+      const paramChanged = widthChanged || heightChanged || blurChanged || colorChanged || radiusChanged || typeChanged;
+      needsRecreation = paramChanged;
+
+      if (!paramChanged) {
+        console.log(`🌒 ✅ Reusing existing shadow for ${elementId} (all parameters identical)`);
+      } else {
+        console.log(`🌒 ❌ Shadow parameters changed for ${elementId}:`, {
+          widthChanged: widthChanged ? `${lastParams.width} → ${worldWidth}` : 'unchanged',
+          heightChanged: heightChanged ? `${lastParams.height} → ${worldHeight}` : 'unchanged',
+          blurChanged: blurChanged ? `${lastParams.blur} → ${scaledBlur}` : 'unchanged',
+          colorChanged: colorChanged ? `${lastParams.color} → ${shadowColor}` : 'unchanged',
+          radiusChanged: radiusChanged ? `${lastParams.borderRadius} → ${borderRadius}` : 'unchanged',
+          typeChanged: typeChanged ? `${lastParams.polygonType} → ${polygonType}` : 'unchanged'
+        });
+      }
+    } else {
+      console.log(`🌒 🆕 No existing shadow metadata for ${elementId}, creating new shadow`);
+    }
+
+    // Remove old shadow if recreating
+    if (needsRecreation && existingShadow) {
       existingShadow.dispose();
       dom.context.elements.delete(`${elementId}-shadow`);
-      console.log(`🌒 Removed shadow for ${elementId} (no box-shadow style)`);
-    } else {
-      console.log(`🌒 No shadow to remove for ${elementId} (no box-shadow style and no existing shadow)`);
+      console.log(`🌒 Disposed existing shadow for ${elementId}`);
     }
-    return;
-  }
 
-  const scaleFactor = render.actions.camera.getPixelToWorldScale();
-  const worldWidth = dimensions.width * scaleFactor;
-  const worldHeight = dimensions.height * scaleFactor;
-  const scaledOffsetX = boxShadow.offsetX * scaleFactor;
-  const scaledOffsetY = boxShadow.offsetY * scaleFactor;
-  const scaledBlur = boxShadow.blur * scaleFactor;
-
-  // Multiply color alpha by style opacity
-  const styleOpacity = render.actions.style.parseOpacity(style.opacity);
-  const shadowColor = this.getBoxShadowColorWithOpacity(boxShadow.color, styleOpacity);
-
-  console.log(`🌒 Shadow parameters for ${elementId}:`, {
-    originalBlur: boxShadow.blur,
-    scaledBlur: scaledBlur,
-    originalColor: boxShadow.color,
-    finalColor: shadowColor,
-    styleOpacity: styleOpacity,
-    worldSize: `${worldWidth.toFixed(1)}x${worldHeight.toFixed(1)}`
-  });
-
-  // Check if we can reuse existing shadow
-  let needsRecreation = !existingShadow;
-
-  if (existingShadow && existingShadow.metadata && existingShadow.metadata.shadowParams) {
-    const lastParams = existingShadow.metadata.shadowParams;
-
-    // More precise parameter comparison
-    const widthChanged = Math.abs(lastParams.width - worldWidth) > 0.001;
-    const heightChanged = Math.abs(lastParams.height - worldHeight) > 0.001;
-    const blurChanged = Math.abs(lastParams.blur - scaledBlur) > 0.001;
-    const colorChanged = lastParams.color !== shadowColor;
-    const radiusChanged = Math.abs(lastParams.borderRadius - borderRadius) > 0.001;
-    const typeChanged = lastParams.polygonType !== polygonType;
-
-    const paramChanged = widthChanged || heightChanged || blurChanged || colorChanged || radiusChanged || typeChanged;
-    needsRecreation = paramChanged;
-
-    if (!paramChanged) {
-      console.log(`🌒 ✅ Reusing existing shadow for ${elementId} (all parameters identical)`);
-    } else {
-      console.log(`🌒 ❌ Shadow parameters changed for ${elementId}:`, {
-        widthChanged: widthChanged ? `${lastParams.width} → ${worldWidth}` : 'unchanged',
-        heightChanged: heightChanged ? `${lastParams.height} → ${worldHeight}` : 'unchanged',
-        blurChanged: blurChanged ? `${lastParams.blur} → ${scaledBlur}` : 'unchanged',
-        colorChanged: colorChanged ? `${lastParams.color} → ${shadowColor}` : 'unchanged',
-        radiusChanged: radiusChanged ? `${lastParams.borderRadius} → ${borderRadius}` : 'unchanged',
-        typeChanged: typeChanged ? `${lastParams.polygonType} → ${polygonType}` : 'unchanged'
-      });
+    // Get the element mesh for parenting and positioning
+    const elementMesh = dom.context.elements.get(elementId);
+    if (!elementMesh) {
+      console.warn(`🌒 Could not find element mesh for shadow positioning: ${elementId}`);
+      return;
     }
-  } else {
-    console.log(`🌒 🆕 No existing shadow metadata for ${elementId}, creating new shadow`);
+
+    let shadowMesh: Mesh;
+
+    if (needsRecreation) {
+      // Create new shadow
+      shadowMesh = render.actions.mesh.createShadow(
+        `${elementId}-shadow`,
+        worldWidth,
+        worldHeight,
+        scaledOffsetX,
+        scaledOffsetY,
+        scaledBlur,
+        shadowColor,
+        polygonType,
+        borderRadius
+      );
+
+      // Store shadow parameters for future comparison
+      shadowMesh.metadata = {
+        shadowParams: {
+          width: worldWidth,
+          height: worldHeight,
+          blur: scaledBlur,
+          color: shadowColor,
+          borderRadius: borderRadius,
+          polygonType: polygonType
+        }
+      };
+
+      // Parent shadow to the element itself so it follows the element's position and transforms
+      render.actions.mesh.parentMesh(shadowMesh, elementMesh);
+      dom.context.elements.set(`${elementId}-shadow`, shadowMesh);
+
+      console.log(`🌒 Created shadow for ${elementId} (${worldWidth.toFixed(1)}x${worldHeight.toFixed(1)}) blur=${scaledBlur.toFixed(1)} color=${shadowColor}`);
+    } else {
+      shadowMesh = existingShadow!;
+    }
+
+    // Set shadow position relative to parent element (only once during creation)
+    if (needsRecreation) {
+      const shadowX = scaledOffsetX; // Offset from element position
+      const shadowY = -scaledOffsetY; // Negative because CSS Y is inverted
+
+      // Position shadow relative to element (parenting will handle world positioning)
+      shadowMesh.position.set(shadowX, shadowY, -0.01); // Behind element in local space
+
+      console.log(`🌒 Set initial shadow offset for ${elementId}: (${shadowX.toFixed(3)}, ${shadowY.toFixed(3)}, -0.01)`);
+    }
+
+    // Since shadow is parented to element, it will automatically inherit all transforms and position changes
+    // No need to manually apply transforms - parenting handles this automatically
+    console.log(`🌒 Shadow will automatically follow element ${elementId} via parenting`);
   }
-
-  // Remove old shadow if recreating
-  if (needsRecreation && existingShadow) {
-    existingShadow.dispose();
-    dom.context.elements.delete(`${elementId}-shadow`);
-    console.log(`🌒 Disposed existing shadow for ${elementId}`);
-  }
-
-  // Get the element mesh for parenting and positioning
-  const elementMesh = dom.context.elements.get(elementId);
-  if (!elementMesh) {
-    console.warn(`🌒 Could not find element mesh for shadow positioning: ${elementId}`);
-    return;
-  }
-
-  let shadowMesh: Mesh;
-
-  if (needsRecreation) {
-    // Create new shadow
-    shadowMesh = render.actions.mesh.createShadow(
-      `${elementId}-shadow`,
-      worldWidth,
-      worldHeight,
-      scaledOffsetX,
-      scaledOffsetY,
-      scaledBlur,
-      shadowColor,
-      polygonType,
-      borderRadius
-    );
-
-    // Store shadow parameters for future comparison
-    shadowMesh.metadata = {
-      shadowParams: {
-        width: worldWidth,
-        height: worldHeight,
-        blur: scaledBlur,
-        color: shadowColor,
-        borderRadius: borderRadius,
-        polygonType: polygonType
-      }
-    };
-
-    // Parent shadow to the element itself so it follows the element's position and transforms
-    render.actions.mesh.parentMesh(shadowMesh, elementMesh);
-    dom.context.elements.set(`${elementId}-shadow`, shadowMesh);
-
-    console.log(`🌒 Created shadow for ${elementId} (${worldWidth.toFixed(1)}x${worldHeight.toFixed(1)}) blur=${scaledBlur.toFixed(1)} color=${shadowColor}`);
-  } else {
-    shadowMesh = existingShadow!;
-  }
-
-  // Set shadow position relative to parent element (only once during creation)
-  if (needsRecreation) {
-    const shadowX = scaledOffsetX; // Offset from element position
-    const shadowY = -scaledOffsetY; // Negative because CSS Y is inverted
-
-    // Position shadow relative to element (parenting will handle world positioning)
-    shadowMesh.position.set(shadowX, shadowY, -0.01); // Behind element in local space
-
-    console.log(`🌒 Set initial shadow offset for ${elementId}: (${shadowX.toFixed(3)}, ${shadowY.toFixed(3)}, -0.01)`);
-  }
-
-  // Since shadow is parented to element, it will automatically inherit all transforms and position changes
-  // No need to manually apply transforms - parenting handles this automatically
-  console.log(`🌒 Shadow will automatically follow element ${elementId} via parenting`);
-}
 } 
