@@ -8,4 +8,7 @@ export interface SiteData {
     id?: string;
     children: DOMElement[];
   };
+  meta?: {
+    description?: string;
+  };
 }

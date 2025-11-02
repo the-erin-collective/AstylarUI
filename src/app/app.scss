@@ -56,6 +56,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative; // For absolute positioning of description area
 
   h2 {
     margin: 0 0 0.5rem 0;
@@ -67,12 +68,13 @@
     background: white;
     border-radius: 8px;
     padding: 1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 160px; // Add space for larger description area
     border: 1px solid #e5e7eb;
-    flex: 1;
+    flex: 1; // Take all available space
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0; // Ensure flex child can shrink
 
     h3 {
       margin: 0 0 0.5rem 0;
@@ -90,8 +92,8 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 0.75rem;
-      margin-bottom: 1rem;
-      max-height: 450px;
+      margin-bottom: 0.5rem;
+      max-height: 400px;
       overflow-y: auto;
       padding: 0.5rem;
       border: 1px solid #e5e7eb;
@@ -162,26 +164,78 @@
       border-radius: 6px;
       border: 1px solid #e5e7eb;
     }
+  }
 
-    .url-example {
-      background: #f3f4f6;
-      border-radius: 6px;
-      padding: 0.75rem;
-      border-left: 4px solid #667eea;
+  // Description area - positioned absolutely to not affect layout
+  .description-area {
+    position: fixed; // Changed from absolute to fixed to completely remove from layout flow
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 4rem);
+    max-width: 1168px; // Match container max-width minus padding
+    height: 140px; // Further increased height for better description display
+    display: flex;
+    align-items: stretch;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    padding: 1rem;
+    z-index: 1000; // Higher z-index to ensure it appears above everything
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); // Add shadow for better visibility
+  }
 
-      p {
-        margin: 0.1rem 0;
-        font-size: 0.8rem;
+  .site-description {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid #0ea5e9;
+    border-left: 4px solid #0284c7;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.1);
+    animation: fadeInUp 0.2s ease-out;
+    flex: 1;
 
-        code {
-          background: #e5e7eb;
-          padding: 0.1rem 0.3rem;
-          border-radius: 4px;
-          font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-          color: #374151;
-          font-size: 0.75rem;
-        }
+    h4 {
+      margin: 0 0 0.5rem 0;
+      color: #0c4a6e;
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      &::before {
+        content: "📝";
+        font-size: 1.1rem;
       }
+    }
+
+    p {
+      margin: 0;
+      color: #0f172a;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      font-style: italic;
+    }
+  }
+
+  .placeholder-description {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+
+    p {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.9rem;
+      font-style: italic;
+      text-align: center;
     }
   }
 }
@@ -193,6 +247,18 @@ h2 {
   font-weight: 600;
   margin: 0 0 2rem 0;
   color: #1f2937;
+}
+
+// Animation for site description
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 // Responsive design
@@ -215,6 +281,11 @@ h2 {
       .site-links {
         grid-template-columns: 1fr;
       }
+    }
+
+    .description-area {
+      width: calc(100% - 2rem);
+      max-width: none;
     }
   }
 }

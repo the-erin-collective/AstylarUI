@@ -8,6 +8,9 @@ export class SiteDataService {
 
   private siteData: { [key: string]: SiteData } = {
     dashboard: {
+      meta: {
+        description: 'Advanced features test site showcasing overlapping elements with different types, hover states, and complex styling'
+      },
       styles: [
         {
           selector: 'root',
@@ -333,6 +336,9 @@ export class SiteDataService {
 
     // IMAGE ELEMENTS TEST SITE
     images: {
+      meta: {
+        description: 'Image rendering test site with different aspect ratios, hover effects, and circular images'
+      },
       styles: [
         {
           selector: 'root',
@@ -1074,6 +1080,9 @@ export class SiteDataService {
     },
 
     flexbox: {
+      meta: {
+        description: 'Comprehensive flexbox layout test site demonstrating various justify-content, align-items, and flex-direction configurations'
+      },
       styles: [
         {
           selector: 'root',
@@ -4802,6 +4811,10 @@ export class SiteDataService {
 
   getSiteData(siteName: string): SiteData | undefined {
     return this.siteData[siteName];
+  }
+
+  getSiteMeta(siteName: string): { description?: string } | undefined {
+    return this.siteData[siteName]?.meta;
   }
 
   hasSiteData(siteName: string): boolean {

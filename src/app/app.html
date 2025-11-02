@@ -3,32 +3,38 @@
   @if (!isSiteRoute()) {
     <main class="app-main">
       <section class="router-section">
-        <h2>Dynamic Routing Demo</h2>
-        
         <div class="navigation-demo">
           <h3>Site Navigation</h3>
-          <p>Test the dynamic routing by clicking on the site links below:</p>
           
           <div class="site-links">
             <a routerLink="/" class="site-link home-link">
               🏠 Home
             </a>
             @for (siteName of availableSites(); track siteName) {
-              <a [routerLink]="'/site/' + siteName" class="site-link">
+              <a [routerLink]="'/site/' + siteName" 
+                 class="site-link"
+                 (mouseenter)="onSiteHover(siteName)"
+                 (mouseleave)="onSiteLeave()">
                 {{ getSiteDisplayName(siteName) }}
               </a>
             }
           </div>
-          @if (availableSites().length > 6) {
-            <p class="scroll-hint">
-              📜 Scroll in the links area above to see all {{ availableSites().length }} available sites
-            </p>
-          }
           
-          <div class="url-example">
-            <p><strong>URL Pattern:</strong> <code>/site/{{ '{' }}site-id{{ '}' }}</code></p>
-            <p>The site ID will be automatically captured from the URL and displayed in the component.</p>
-          </div>
+
+        </div>
+        
+        <!-- Description display area - moved outside navigation-demo -->
+        <div class="description-area">
+          @if (hoveredSiteDescription()) {
+            <div class="site-description">
+              <h4>Site Description</h4>
+              <p>{{ hoveredSiteDescription() }}</p>
+            </div>
+          } @else {
+            <div class="placeholder-description">
+              <p>Hover over a site link above to see its description</p>
+            </div>
+          }
         </div>
       </section>
     </main>
