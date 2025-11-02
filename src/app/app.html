@@ -1,11 +1,6 @@
 <div class="app-container" [class.site-route]="isSiteRoute()">
   <!-- Show shell content only when NOT on a site route -->
   @if (!isSiteRoute()) {
-    <header class="app-header">
-      <h1>{{ greeting() }}</h1>
-      <p class="subtitle">Zoneless Angular 20 with Signals & SSR</p>
-    </header>
-
     <main class="app-main">
       <section class="router-section">
         <h2>Dynamic Routing Demo</h2>
@@ -18,22 +13,17 @@
             <a routerLink="/" class="site-link home-link">
               🏠 Home
             </a>
-            <a routerLink="/site/dashboard" class="site-link">
-              📊 Dashboard Site
-            </a>
-            <a routerLink="/site/analytics" class="site-link">
-              📈 Analytics Site
-            </a>
-            <a routerLink="/site/settings" class="site-link">
-              ⚙️ Settings Site
-            </a>
-            <a routerLink="/site/profile" class="site-link">
-              👤 Profile Site
-            </a>
-            <a routerLink="/site/admin-123" class="site-link">
-              🔧 Admin Site
-            </a>
+            @for (siteName of availableSites(); track siteName) {
+              <a [routerLink]="'/site/' + siteName" class="site-link">
+                {{ getSiteDisplayName(siteName) }}
+              </a>
+            }
           </div>
+          @if (availableSites().length > 6) {
+            <p class="scroll-hint">
+              📜 Scroll in the links area above to see all {{ availableSites().length }} available sites
+            </p>
+          }
           
           <div class="url-example">
             <p><strong>URL Pattern:</strong> <code>/site/{{ '{' }}site-id{{ '}' }}</code></p>
@@ -46,10 +36,6 @@
         </div>
       </section>
     </main>
-
-    <footer class="app-footer">
-      <p>Built with Angular 20 • Zoneless • SSR Enabled • Signals-First • NgRx Signals</p>
-    </footer>
   }
   
   <!-- Show only router outlet for site routes -->
