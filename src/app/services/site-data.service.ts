@@ -197,6 +197,9 @@ export class SiteDataService {
 
     // LIST ELEMENTS TEST SITE
     lists: {
+      meta: {
+        description: 'List elements test site showcasing unordered and ordered lists with automatic item stacking, different backgrounds, and spacing controls'
+      },
       styles: [
         {
           selector: 'root',
@@ -323,6 +326,9 @@ export class SiteDataService {
 
     // Add other required sites with minimal data
     settings: {
+      meta: {
+        description: 'Settings page with minimal content - dark blue-gray background with no visible elements'
+      },
       styles: [
         {
           selector: 'root',
@@ -424,6 +430,9 @@ export class SiteDataService {
     },
 
     links: {
+      meta: {
+        description: 'Interactive link elements test site with various link types including relative navigation, external links, onclick handlers, and different hover effects with scaling and color changes'
+      },
       styles: [
         {
           selector: 'root',
@@ -602,6 +611,9 @@ export class SiteDataService {
     },
 
     about: {
+      meta: {
+        description: 'About page with minimal content - dark blue-gray background with no visible elements'
+      },
       styles: [
         {
           selector: 'root',
@@ -615,6 +627,9 @@ export class SiteDataService {
 
     // ADVANCED FLEXBOX FEATURES TEST SITE
     'flexbox-advanced': {
+      meta: {
+        description: 'Advanced flexbox features test site demonstrating align-content with multi-line wrapping, flex-grow/shrink distribution, align-self variations, order property, and complex nested layouts'
+      },
       styles: [
         {
           selector: 'root',
@@ -1681,6 +1696,9 @@ export class SiteDataService {
 
     // FLEX-WRAP TEST SITE
     flexwrap: {
+      meta: {
+        description: 'Flexbox wrapping test site showcasing flex-wrap, wrap-reverse, column wrapping with gaps, and comparison with nowrap overflow behavior'
+      },
       styles: [
         {
           selector: 'root',
@@ -2048,8 +2066,10 @@ export class SiteDataService {
     },
 
 
-    flexgrowshrink:
-    {
+    flexgrowshrink: {
+      meta: {
+        description: 'Flexbox grow and shrink test site demonstrating flex-grow distribution, flex-shrink reduction, and mixed flex properties with different container widths'
+      },
       root: {
         children: [
           {
@@ -2239,6 +2259,9 @@ export class SiteDataService {
 
     // FLEXBOX GAP FEATURES TEST SITE
     flexgap: {
+      meta: {
+        description: 'Flexbox gap properties test site demonstrating basic gap, separate row/column gaps, column layouts with gaps, gap interaction with justify-content, and comparison with no-gap layouts'
+      },
       styles: [
         {
           selector: 'root',
@@ -2641,6 +2664,9 @@ export class SiteDataService {
     },
     // Flexbox test scenes
     'flexbox-align-content': {
+      meta: {
+        description: 'Flexbox align-content test site showing all alignment options (flex-start, flex-end, center, space-between, space-around, space-evenly, stretch) with wrapped multi-line layouts'
+      },
       styles: [
         {
           selector: 'root',
@@ -2871,6 +2897,9 @@ export class SiteDataService {
     },
 
     'flexbox-flex-item-sizing': {
+      meta: {
+        description: 'Flexbox item sizing test site demonstrating flex-grow expansion, flex-shrink compression, and flex-basis initial sizing with different values and combinations'
+      },
       styles: [
         {
           selector: 'root',
@@ -3042,6 +3071,9 @@ export class SiteDataService {
     },
 
     'flexbox-align-self': {
+      meta: {
+        description: 'Flexbox align-self test site showing individual item alignment overrides (auto, flex-start, flex-end, center, baseline, stretch) within different container alignments'
+      },
       styles: [
         {
           selector: 'root',
@@ -3289,6 +3321,9 @@ export class SiteDataService {
     },
 
     'flexbox-order': {
+      meta: {
+        description: 'Flexbox order property test site demonstrating visual reordering of flex items with positive, negative, and zero order values different from DOM order'
+      },
       styles: [
         {
           selector: 'root',
@@ -3430,6 +3465,9 @@ export class SiteDataService {
     },
 
     'flexbox-debug-simple': {
+      meta: {
+        description: 'Simple flexbox debug test site with bright colored elements (red container, blue/green/yellow items) for easy visual debugging of flex layout issues'
+      },
       styles: [
         {
           selector: 'root',
@@ -3486,6 +3524,9 @@ export class SiteDataService {
     },
 
     'flex-test': {
+      meta: {
+        description: 'Comprehensive flex test site with multiple containers showing space-between, center, and column layouts with rounded borders, gaps, and various flex-basis values'
+      },
       styles: [
         {
           selector: 'root',
@@ -3684,6 +3725,9 @@ export class SiteDataService {
       }
     },
     tabletest: {
+      meta: {
+        description: 'Basic table test site with two tables - one content-sized with fixed cell dimensions, another container-sized that stretches to fill available space'
+      },
       styles: [
         // Container styles
         {
@@ -3875,6 +3919,9 @@ export class SiteDataService {
 
     // Complex table test site with various features
     'tablecomplex': {
+      meta: {
+        description: 'Complex table test site featuring thead/tbody/tfoot sections, alternating row colors, bordered cells with different styling, and a smaller content-based table'
+      },
       styles: [
         // Container styles
         {
@@ -4294,6 +4341,9 @@ export class SiteDataService {
 
     // Complete table features test site
     'table-complete': {
+      meta: {
+        description: 'Complete table features test site with caption, colgroup, thead/tbody/tfoot, colspan/rowspan cells, and comprehensive table structure demonstration'
+      },
       styles: [
         // Container
         {
@@ -4604,6 +4654,9 @@ export class SiteDataService {
 
     // Simple table test for basic functionality
     'table-simple': {
+      meta: {
+        description: 'Simple table test site with bright colored cells (red headers, green data cells) in a basic 3x3 grid layout for easy visual verification'
+      },
       styles: [
         {
           selector: '#simple-container',
