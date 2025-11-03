@@ -30,13 +30,13 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         // No difference from global default
     },
     section: {
-        // No difference from global default
+        background: '#34495e', // Default section background (dark blue-gray)
     },
     article: {
-        // No difference from global default
+        background: '#27ae60', // Default article background (green)
     },
     header: {
-        // No difference from global default
+        background: '#3498db', // Default header background (blue)
     },
     footer: {
         // No difference from global default

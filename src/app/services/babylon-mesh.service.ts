@@ -931,8 +931,9 @@ export class BabylonMeshService {
     const material = new StandardMaterial(name, this.scene);
     material.diffuseColor = diffuseColor;
 
-    // Completely eliminate emissive color to prevent edge bleeding
-    material.emissiveColor = new Color3(0, 0, 0);
+    // Add slight emissive color to match HTML/CSS brightness
+    // This makes colors appear more vibrant and closer to web rendering
+    material.emissiveColor = diffuseColor.scale(0.3); // 30% of diffuse color as emissive
 
     material.backFaceCulling = false;
 
