@@ -58,6 +58,25 @@ export interface StyleRule {
   target?: string;
   onclick?: string;
 
+  // Text properties
+  color?: string;
+  fontFamily?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  fontStyle?: string;
+  textAlign?: string;
+  verticalAlign?: string;
+  lineHeight?: string;
+  letterSpacing?: string;
+  wordSpacing?: string;
+  whiteSpace?: string;
+  wordWrap?: string;
+  textOverflow?: string;
+  textShadow?: string;
+  textDecoration?: string;
+  textTransform?: string;
+  textStroke?: string;
+
   // Flexbox
   display?: string;
   flexDirection?: string;

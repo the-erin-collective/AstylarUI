@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Scene, MeshBuilder, StandardMaterial, Color3, Vector3, Vector2, Mesh, Material, VertexData, PolygonMeshBuilder, DynamicTexture, ShaderMaterial, Effect } from '@babylonjs/core';
+import { Scene, MeshBuilder, StandardMaterial, Color3, Vector3, Vector2, Mesh, Material, VertexData, PolygonMeshBuilder, DynamicTexture, ShaderMaterial, Effect, Texture } from '@babylonjs/core';
 import { BabylonCameraService } from './babylon-camera.service';
 import { CoordinateTransformService } from './coordinate-transform.service';
 import roundPolygon, { getSegments } from 'round-polygon';
@@ -1553,4 +1553,274 @@ export class BabylonMeshService {
       console.error(`❌ Error creating mesh with border radius:`, error);
       throw error;
     }
-  }}
+  }
+
+  // ===== TEXT MESH CREATION METHODS =====
+
+  /**
+   * Creates a text mesh with proper dimensions and positioning
+   * @param name - Name for the text mesh
+   * @param texture - BabylonJS texture containing the rendered text
+   * @param width - Width of the text plane in world units
+   * @param height - Height of the text plane in world units
+   * @returns Text mesh with applied texture and material
+   */
+  createTextMesh(name: string, texture: Texture, width: number, height: number): Mesh {
+    if (!this.scene) {
+      throw new Error('Mesh service not initialized');
+    }
+
+    console.log(`📝 Creating text mesh: ${name} (${width.toFixed(3)} x ${height.toFixed(3)})`);
+
+    try {
+      // Create a plane mesh for the text
+      const textPlane = MeshBuilder.CreatePlane(name, {
+        width: width,
+        height: height
+      }, this.scene);
+
+      // Create material for text rendering
+      const textMaterial = this.createTextMaterial(`${name}_material`, texture);
+      textPlane.material = textMaterial;
+
+      // Configure mesh properties for text rendering
+      textPlane.billboardMode = Mesh.BILLBOARDMODE_NONE;
+      textPlane.renderingGroupId = 1; // Render after background elements
+
+      console.log(`✅ Created text mesh: ${name} with texture material`);
+      return textPlane;
+    } catch (error) {
+      console.error(`❌ Error creating text mesh: ${name}`, error);
+      throw new Error(`Failed to create text mesh: ${error}`);
+    }
+  }
+
+  /**
+   * Creates a material specifically for text rendering with proper alpha support
+   * @param name - Name for the material
+   * @param texture - Text texture to apply
+   * @returns StandardMaterial configured for text rendering
+   */
+  createTextMaterial(name: string, texture: Texture): StandardMaterial {
+    if (!this.scene) {
+      throw new Error('Mesh service not initialized');
+    }
+
+    const material = new StandardMaterial(name, this.scene);
+    
+    // Apply the text texture
+    material.diffuseTexture = texture;
+    
+    // Configure material for text rendering
+    material.useAlphaFromDiffuseTexture = true;
+    material.transparencyMode = Material.MATERIAL_ALPHABLEND;
+    material.backFaceCulling = false;
+    
+    // Disable lighting effects for consistent text appearance
+    material.disableLighting = true;
+    material.emissiveTexture = texture; // Use texture as emissive for consistent brightness
+    
+    // Remove specular and other effects
+    material.specularColor = new Color3(0, 0, 0);
+    material.roughness = 1.0;
+
+    console.log(`🎨 Created text material: ${name} with alpha support`);
+    return material;
+  }
+
+  /**
+   * Updates an existing text mesh with new texture content
+   * @param textMesh - The text mesh to update
+   * @param newTexture - New texture containing updated text
+   * @param newWidth - Optional new width for the mesh
+   * @param newHeight - Optional new height for the mesh
+   */
+  updateTextMesh(textMesh: Mesh, newTexture: Texture, newWidth?: number, newHeight?: number): void {
+    if (!this.scene) {
+      throw new Error('Mesh service not initialized');
+    }
+
+    console.log(`🔄 Updating text mesh: ${textMesh.name}`);
+
+    try {
+      // Update material texture
+      if (textMesh.material && textMesh.material instanceof StandardMaterial) {
+        const material = textMesh.material as StandardMaterial;
+        
+        // Dispose old texture if it exists
+        if (material.diffuseTexture) {
+          material.diffuseTexture.dispose();
+        }
+        if (material.emissiveTexture && material.emissiveTexture !== material.diffuseTexture) {
+          material.emissiveTexture.dispose();
+        }
+        
+        // Apply new texture
+        material.diffuseTexture = newTexture;
+        material.emissiveTexture = newTexture;
+      }
+
+      // Update mesh dimensions if provided
+      if (newWidth !== undefined && newHeight !== undefined) {
+        // Recreate the plane geometry with new dimensions
+        const newVertexData = this.createPlaneVertexData(newWidth, newHeight);
+        newVertexData.applyToMesh(textMesh, true);
+        textMesh.refreshBoundingInfo();
+        
+        console.log(`📏 Updated text mesh dimensions: ${newWidth.toFixed(3)} x ${newHeight.toFixed(3)}`);
+      }
+
+      console.log(`✅ Successfully updated text mesh: ${textMesh.name}`);
+    } catch (error) {
+      console.error(`❌ Error updating text mesh: ${textMesh.name}`, error);
+      throw new Error(`Failed to update text mesh: ${error}`);
+    }
+  }
+
+  /**
+   * Creates vertex data for a plane with specified dimensions
+   * @param width - Width of the plane
+   * @param height - Height of the plane
+   * @returns VertexData for the plane
+   */
+  private createPlaneVertexData(width: number, height: number): VertexData {
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+
+    const positions = [
+      -halfWidth, halfHeight, 0,   // Top-left
+      halfWidth, halfHeight, 0,    // Top-right
+      halfWidth, -halfHeight, 0,   // Bottom-right
+      -halfWidth, -halfHeight, 0   // Bottom-left
+    ];
+
+    const indices = [
+      0, 1, 2,  // First triangle
+      0, 2, 3   // Second triangle
+    ];
+
+    const normals = [
+      0, 0, 1,  // Top-left
+      0, 0, 1,  // Top-right
+      0, 0, 1,  // Bottom-right
+      0, 0, 1   // Bottom-left
+    ];
+
+    const uvs = [
+      0, 0,  // Top-left
+      1, 0,  // Top-right
+      1, 1,  // Bottom-right
+      0, 1   // Bottom-left
+    ];
+
+    const vertexData = new VertexData();
+    vertexData.positions = positions;
+    vertexData.indices = indices;
+    vertexData.normals = normals;
+    vertexData.uvs = uvs;
+
+    return vertexData;
+  }
+
+  /**
+   * Properly disposes of a text mesh and its associated resources
+   * @param textMesh - The text mesh to dispose
+   */
+  disposeTextMesh(textMesh: Mesh): void {
+    console.log(`🗑️ Disposing text mesh: ${textMesh.name}`);
+
+    try {
+      // Dispose material and textures
+      if (textMesh.material) {
+        const material = textMesh.material;
+        
+        if (material instanceof StandardMaterial) {
+          // Dispose textures
+          if (material.diffuseTexture) {
+            material.diffuseTexture.dispose();
+          }
+          if (material.emissiveTexture && material.emissiveTexture !== material.diffuseTexture) {
+            material.emissiveTexture.dispose();
+          }
+        }
+        
+        // Dispose material
+        material.dispose();
+      }
+
+      // Dispose geometry
+      if (textMesh.geometry) {
+        textMesh.geometry.dispose();
+      }
+
+      // Dispose mesh
+      textMesh.dispose();
+
+      console.log(`✅ Successfully disposed text mesh and resources`);
+    } catch (error) {
+      console.error(`❌ Error disposing text mesh: ${textMesh.name}`, error);
+    }
+  }
+
+  /**
+   * Positions a text mesh at the specified coordinates
+   * @param textMesh - The text mesh to position
+   * @param x - X coordinate in world space
+   * @param y - Y coordinate in world space
+   * @param z - Z coordinate in world space
+   */
+  positionTextMesh(textMesh: Mesh, x: number, y: number, z: number): void {
+    // Use the existing positionMesh method which handles coordinate transformation
+    this.positionMesh(textMesh, x, y, z);
+    console.log(`📍 Positioned text mesh: ${textMesh.name} at (${x.toFixed(3)}, ${y.toFixed(3)}, ${z.toFixed(3)})`);
+  }
+
+  /**
+   * Sets the parent of a text mesh for hierarchical transformations
+   * @param textMesh - The text mesh to parent
+   * @param parentMesh - The parent mesh
+   */
+  parentTextMesh(textMesh: Mesh, parentMesh: Mesh): void {
+    this.parentMesh(textMesh, parentMesh);
+    console.log(`🔗 Parented text mesh: ${textMesh.name} to ${parentMesh.name}`);
+  }
+
+  /**
+   * Updates text mesh material properties for dynamic styling
+   * @param textMesh - The text mesh to update
+   * @param opacity - New opacity value (0-1)
+   * @param color - Optional color tint (Color3)
+   */
+  updateTextMeshMaterial(textMesh: Mesh, opacity?: number, color?: Color3): void {
+    if (!textMesh.material || !(textMesh.material instanceof StandardMaterial)) {
+      console.warn(`⚠️ Text mesh ${textMesh.name} does not have a StandardMaterial`);
+      return;
+    }
+
+    const material = textMesh.material as StandardMaterial;
+
+    try {
+      // Update opacity
+      if (opacity !== undefined) {
+        material.alpha = Math.max(0, Math.min(1, opacity));
+        
+        // Update transparency mode based on opacity
+        if (material.alpha < 1.0) {
+          material.transparencyMode = Material.MATERIAL_ALPHABLEND;
+        } else {
+          material.transparencyMode = Material.MATERIAL_OPAQUE;
+        }
+        
+        console.log(`🎨 Updated text mesh opacity: ${textMesh.name} = ${material.alpha.toFixed(2)}`);
+      }
+
+      // Update color tint
+      if (color) {
+        material.diffuseColor = color;
+        console.log(`🎨 Updated text mesh color: ${textMesh.name}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error updating text mesh material: ${textMesh.name}`, error);
+    }
+  }
+}

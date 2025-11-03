@@ -4859,6 +4859,326 @@ export class SiteDataService {
           }
         ]
       }
+    },
+
+    // Multi-line text rendering test site
+    'text-multiline': {
+      meta: {
+        description: 'Multi-line text rendering test site demonstrating text wrapping, white-space handling, text overflow with ellipsis, and line positioning'
+      },
+      styles: [
+        {
+          selector: 'root',
+          background: '#f8f9fa'
+        },
+
+        // === TEST 1: Normal Text Wrapping ===
+        {
+          selector: '#normal-wrap-container',
+          top: '5%',
+          left: '5%',
+          width: '40%',
+          height: '15%',
+          background: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#007bff',
+          borderStyle: 'solid',
+          padding: '10px'
+        },
+
+        // === TEST 2: No-wrap Text ===
+        {
+          selector: '#nowrap-container',
+          top: '25%',
+          left: '5%',
+          width: '40%',
+          height: '15%',
+          background: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#28a745',
+          borderStyle: 'solid',
+          padding: '10px'
+        },
+
+        // === TEST 3: Text with Ellipsis Overflow ===
+        {
+          selector: '#ellipsis-container',
+          top: '45%',
+          left: '5%',
+          width: '40%',
+          height: '15%',
+          background: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#ffc107',
+          borderStyle: 'solid',
+          padding: '10px'
+        },
+
+        // === TEST 4: Pre-formatted Text ===
+        {
+          selector: '#pre-container',
+          top: '65%',
+          left: '5%',
+          width: '40%',
+          height: '25%',
+          background: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#6f42c1',
+          borderStyle: 'solid',
+          padding: '10px'
+        },
+
+        // === TEST 5: Different Line Heights ===
+        {
+          selector: '#lineheight-container',
+          top: '5%',
+          left: '55%',
+          width: '40%',
+          height: '20%',
+          background: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#dc3545',
+          borderStyle: 'solid',
+          padding: '10px'
+        },
+
+        // === TEST 6: Text Alignment Variations ===
+        {
+          selector: '#alignment-container',
+          top: '30%',
+          left: '55%',
+          width: '40%',
+          height: '25%',
+          background: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#17a2b8',
+          borderStyle: 'solid',
+          padding: '10px'
+        },
+
+        // === TEST 7: Break-word Behavior ===
+        {
+          selector: '#breakword-container',
+          top: '60%',
+          left: '55%',
+          width: '40%',
+          height: '20%',
+          background: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#fd7e14',
+          borderStyle: 'solid',
+          padding: '10px'
+        }
+      ],
+      root: {
+        children: [
+          // === TEST 1: Normal Text Wrapping ===
+          {
+            type: 'div',
+            id: 'normal-wrap-container',
+            textContent: 'This is a long text that should automatically wrap to multiple lines when it exceeds the container width. The text should break at word boundaries and create multiple lines with proper spacing.',
+            style: {
+              fontSize: '14px',
+              fontFamily: 'Arial, sans-serif',
+              color: '#333333',
+              whiteSpace: 'normal',
+              wordWrap: 'normal',
+              textAlign: 'left',
+              lineHeight: '1.4'
+            }
+          },
+
+          // === TEST 2: No-wrap Text ===
+          {
+            type: 'div',
+            id: 'nowrap-container',
+            textContent: 'This text should not wrap even if it exceeds the container width because white-space is set to nowrap.',
+            style: {
+              fontSize: '14px',
+              fontFamily: 'Arial, sans-serif',
+              color: '#333333',
+              whiteSpace: 'nowrap',
+              textAlign: 'left',
+              lineHeight: '1.4'
+            }
+          },
+
+          // === TEST 3: Text with Ellipsis Overflow ===
+          {
+            type: 'div',
+            id: 'ellipsis-container',
+            textContent: 'This is a very long text that should be truncated with ellipsis when it overflows the container boundaries both horizontally and vertically.',
+            style: {
+              fontSize: '14px',
+              fontFamily: 'Arial, sans-serif',
+              color: '#333333',
+              whiteSpace: 'normal',
+              textOverflow: 'ellipsis',
+              textAlign: 'left',
+              lineHeight: '1.4'
+            }
+          },
+
+          // === TEST 4: Pre-formatted Text ===
+          {
+            type: 'div',
+            id: 'pre-container',
+            textContent: 'This   text   has   multiple   spaces\nand line breaks\n    that should be\n        preserved exactly\nas they appear in the source.',
+            style: {
+              fontSize: '12px',
+              fontFamily: 'Courier New, monospace',
+              color: '#333333',
+              whiteSpace: 'pre',
+              textAlign: 'left',
+              lineHeight: '1.2'
+            }
+          },
+
+          // === TEST 5: Different Line Heights ===
+          {
+            type: 'div',
+            id: 'lineheight-container',
+            textContent: 'This text demonstrates different line height settings. The lines should have increased spacing between them for better readability and visual separation.',
+            style: {
+              fontSize: '14px',
+              fontFamily: 'Arial, sans-serif',
+              color: '#333333',
+              whiteSpace: 'normal',
+              textAlign: 'left',
+              lineHeight: '2.0'
+            }
+          },
+
+          // === TEST 6: Text Alignment Variations ===
+          {
+            type: 'div',
+            id: 'alignment-container',
+            textContent: 'This text is center-aligned and should wrap properly while maintaining the center alignment for each line. Multiple lines should all be centered within the container.',
+            style: {
+              fontSize: '14px',
+              fontFamily: 'Arial, sans-serif',
+              color: '#333333',
+              whiteSpace: 'normal',
+              textAlign: 'center',
+              lineHeight: '1.5'
+            }
+          },
+
+          // === TEST 7: Break-word Behavior ===
+          {
+            type: 'div',
+            id: 'breakword-container',
+            textContent: 'This text contains verylongwordsthatexceedthecontainerwidthandshouldbebrokenatnecessarypoints when word-wrap is set to break-word.',
+            style: {
+              fontSize: '14px',
+              fontFamily: 'Arial, sans-serif',
+              color: '#333333',
+              whiteSpace: 'normal',
+              wordWrap: 'break-word',
+              textAlign: 'left',
+              lineHeight: '1.4'
+            }
+          }
+        ]
+      }
+    },
+
+    // TEXT RENDERING TEST SITE
+    'text-basic': {
+      meta: {
+        description: 'Basic text rendering test with various fonts, sizes, and colors'
+      },
+      styles: [
+        {
+          selector: 'root',
+          background: '#f8f9fa'
+        },
+        // Title text
+        {
+          selector: '#title',
+          top: '10%',
+          left: '10%',
+          width: '80%',
+          height: '15%',
+          background: '#343a40',
+          color: '#ffffff',
+          fontSize: '32px',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          borderRadius: '8px'
+        },
+        // Subtitle text
+        {
+          selector: '#subtitle',
+          top: '30%',
+          left: '10%',
+          width: '80%',
+          height: '10%',
+          background: '#6c757d',
+          color: '#ffffff',
+          fontSize: '18px',
+          textAlign: 'center',
+          fontStyle: 'italic'
+        },
+        // Body text
+        {
+          selector: '#body-text',
+          top: '45%',
+          left: '10%',
+          width: '35%',
+          height: '40%',
+          background: '#ffffff',
+          color: '#212529',
+          fontSize: '14px',
+          textAlign: 'left',
+          borderWidth: '1px',
+          borderColor: '#dee2e6',
+          borderStyle: 'solid',
+          borderRadius: '4px'
+        },
+        // Styled text
+        {
+          selector: '#styled-text',
+          top: '45%',
+          left: '55%',
+          width: '35%',
+          height: '40%',
+          background: '#e3f2fd',
+          color: '#1976d2',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          textAlign: 'right',
+          textDecoration: 'underline',
+          borderWidth: '2px',
+          borderColor: '#2196f3',
+          borderStyle: 'solid',
+          borderRadius: '8px'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'title',
+            textContent: 'Text Rendering Test'
+          },
+          {
+            type: 'div',
+            id: 'subtitle',
+            textContent: 'Testing basic text display capabilities in BJSUI'
+          },
+          {
+            type: 'div',
+            id: 'body-text',
+            textContent: 'This is a longer text block to test multi-line text rendering and wrapping capabilities. The text should wrap properly within the element boundaries and maintain proper spacing and alignment.'
+          },
+          {
+            type: 'div',
+            id: 'styled-text',
+            textContent: 'This text demonstrates various styling options including bold weight, underline decoration, and right alignment.'
+          }
+        ]
+      }
     }
   };
 

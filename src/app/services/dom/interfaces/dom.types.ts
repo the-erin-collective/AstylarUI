@@ -1,4 +1,5 @@
 import { Mesh } from "@babylonjs/core";
+import * as BABYLON from "@babylonjs/core";
 import { DOMElement } from "../../../types/dom-element";
 import { StyleRule } from "../../../types/style-rule";
 import { BabylonRender } from "./render.types";
@@ -28,6 +29,10 @@ export interface BabylonDOMActions {
     calculateElementPosition: (element: DOMElement) => { x: number; y: number; z: number };
     applyPositioning: (element: DOMElement, mesh: Mesh, render: BabylonRender) => void;
     updateElementPosition: (elementId: string, newPosition: { x: number; y: number; z: number }) => void;
+    // Text rendering delegates
+    handleTextContent: (dom: BabylonDOM, render: BabylonRender, element: DOMElement, mesh: Mesh, styles: StyleRule[]) => void;
+    updateTextContent: (dom: BabylonDOM, render: BabylonRender, elementId: string, newContent: string) => void;
+    validateTextElement: (element: DOMElement) => { isValid: boolean; errors: string[] };
 }
 
 export interface BabylonDOMContext {
@@ -37,6 +42,10 @@ export interface BabylonDOMContext {
     elementTypes: Map<string, string>;
     elementDimensions: Map<string, { width: number, height: number, padding: { top: number; right: number; bottom: number; left: number } }>;
     originalBorderRadius?: Map<string, number>;
+    // Text rendering context
+    textMeshes: Map<string, Mesh>;
+    textTextures: Map<string, BABYLON.Texture>;
+    textContent: Map<string, string>;
 }
 
 export interface BabylonDOM {

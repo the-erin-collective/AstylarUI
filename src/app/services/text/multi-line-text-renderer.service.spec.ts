@@ -1,0 +1,120 @@
+import { TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { MultiLineTextRendererService } from './multi-line-text-renderer.service';
+import { TextStyleProperties } from '../../types/text-rendering';
+
+describe('MultiLineTextRendererService', () => {
+  let service: MultiLineTextRendererService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection()]
+    });
+    service = TestBed.inject(MultiLineTextRendererService);
+  });
+
+  it('should be created', () => {
+    expect(service).toBeTruthy();
+  });
+
+  it('should wrap text correctly for normal white-space', () => {
+    const style: TextStyleProperties = {
+      fontFamily: 'Arial',
+      fontSize: 16,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      color: '#000000',
+      textAlign: 'left',
+      verticalAlign: 'baseline',
+      lineHeight: 1.2,
+      letterSpacing: 0,
+      wordSpacing: 0,
+      whiteSpace: 'normal',
+      wordWrap: 'normal',
+      textOverflow: 'clip',
+      textDecoration: 'none',
+      textTransform: 'none'
+    };
+
+    const text = 'This is a long text that should wrap to multiple lines when the width is limited';
+    const maxWidth = 100; // Small width to force wrapping
+    
+    const lines = service.wrapText(text, maxWidth, style);
+    
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines[0].text).toBeTruthy();
+    expect(lines[0].width).toBeGreaterThan(0);
+  });
+
+  it('should handle nowrap white-space correctly', () => {
+    const style: TextStyleProperties = {
+      fontFamily: 'Arial',
+      fontSize: 16,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      color: '#000000',
+      textAlign: 'left',
+      verticalAlign: 'baseline',
+      lineHeight: 1.2,
+      letterSpacing: 0,
+      wordSpacing: 0,
+      whiteSpace: 'nowrap',
+      wordWrap: 'normal',
+      textOverflow: 'clip',
+      textDecoration: 'none',
+      textTransform: 'none'
+    };
+
+    const text = 'This is a long text that should not wrap even with limited width';
+    const maxWidth = 50; // Very small width
+    
+    const lines = service.wrapText(text, maxWidth, style);
+    
+    expect(lines.length).toBe(1);
+    expect(lines[0].text).toBe(text);
+  });
+
+  it('should calculate line positions correctly', () => {
+    const style: TextStyleProperties = {
+      fontFamily: 'Arial',
+      fontSize: 16,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      color: '#000000',
+      textAlign: 'left',
+      verticalAlign: 'top',
+      lineHeight: 1.5,
+      letterSpacing: 0,
+      wordSpacing: 0,
+      whiteSpace: 'normal',
+      wordWrap: 'normal',
+      textOverflow: 'clip',
+      textDecoration: 'none',
+      textTransform: 'none'
+    };
+
+    const lines = [
+      { text: 'Line 1', width: 50, y: 0 },
+      { text: 'Line 2', width: 60, y: 0 },
+      { text: 'Line 3', width: 40, y: 0 }
+    ];
+
+    const positionedLines = service.calculateLinePositions(lines, style);
+    
+    expect(positionedLines.length).toBe(3);
+    expect(positionedLines[0].y).toBe(16); // fontSize
+    expect(positionedLines[1].y).toBe(40); // fontSize + (fontSize * lineHeight)
+    expect(positionedLines[2].y).toBe(64); // fontSize + 2 * (fontSize * lineHeight)
+  });
+
+  it('should handle white-space processing correctly', () => {
+    const normalText = service.handleWhiteSpace('  Multiple   spaces  \n  and  newlines  ', 'normal');
+    expect(normalText).toBe('Multiple spaces and newlines');
+
+    const preText = service.handleWhiteSpace('  Multiple   spaces  \n  and  newlines  ', 'pre');
+    expect(preText).toBe('  Multiple   spaces  \n  and  newlines  ');
+
+    const nowrapText = service.handleWhiteSpace('  Multiple   spaces  \n  and  newlines  ', 'nowrap');
+    expect(nowrapText).toBe('Multiple spaces and newlines');
+  });
+});

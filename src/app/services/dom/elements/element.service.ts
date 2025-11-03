@@ -591,6 +591,12 @@ export class ElementService {
       }
 
       console.log(`[ELEMENT DIM DEBUG] Stored elementDimensions for ${element.id}: ${JSON.stringify({ width: dimensions.width, height: dimensions.height, padding: pixelPadding })}`);
+      
+      // Handle text content if present
+      if (element.textContent && element.textContent.trim() !== '') {
+        console.log(`📝 Element ${element.id} has text content, delegating to text rendering`);
+        dom.actions.handleTextContent(dom, render, element, mesh, styles);
+      }
     }
 
     return mesh;
