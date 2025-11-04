@@ -100,16 +100,39 @@ export class TextRenderingService implements TextCacheManager {
         this.textCanvasRenderer.applyTextEffects(canvas, effects, textContent, textStyle);
       }
       
-      // Convert canvas to BabylonJS texture
-      const texture = new BABYLON.Texture(`text-texture-${Date.now()}`, this.scene, {
-        noMipmap: true,
-        samplingMode: BABYLON.Texture.LINEAR_LINEAR,
-        format: BABYLON.Engine.TEXTUREFORMAT_RGBA,
-        invertY: false
-      });
+      // Create a new texture with the same dimensions as the canvas
+      const texture = new BABYLON.DynamicTexture(
+        `text-texture-${Date.now()}`,
+        { width: canvas.width, height: canvas.height },
+        this.scene,
+        false, // No mipmaps for text
+        BABYLON.Texture.TRILINEAR_SAMPLINGMODE,
+        BABYLON.Engine.TEXTUREFORMAT_RGBA,
+        false // Don't invert Y in the texture
+      );
       
-      // Update texture from canvas data URL
-      texture.updateURL(canvas.toDataURL('image/png'));
+      // Get the texture context
+      const textureContext = texture.getContext();
+      
+      // Clear the texture with transparent background
+      textureContext.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Manually flip the canvas vertically and horizontally
+      textureContext.save();
+      textureContext.translate(canvas.width, canvas.height);
+      textureContext.scale(-1, -1);
+      
+      // Draw the canvas content with the transformation
+      textureContext.drawImage(canvas, 0, 0);
+      textureContext.restore();
+      
+      // Update the texture
+      texture.hasAlpha = true;
+      texture.update(false);
+      
+      // Ensure proper texture wrapping
+      texture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+      texture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
       
       // Cache the texture if caching is enabled
       if (this.options.enableCaching) {
