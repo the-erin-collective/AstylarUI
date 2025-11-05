@@ -206,29 +206,59 @@ export class BabylonDOMService {
       // Get merged style for text properties (including inheritance)
       const textStyle = this.getInheritedTextStyle(element, styles);
       
-      // Calculate maximum width for text wrapping based on element dimensions
+      // Derive available content box (CSS px)
       const elementDims = dom.context.elementDimensions.get(element.id);
-      const maxWidth = elementDims ? elementDims.width - (elementDims.padding.left + elementDims.padding.right) : undefined;
+      const paddingPx = elementDims?.padding ?? { top: 0, right: 0, bottom: 0, left: 0 };
+      const availableWidthPx = elementDims
+        ? Math.max(0, elementDims.width - (paddingPx.left + paddingPx.right))
+        : undefined;
+      const availableHeightPx = elementDims
+        ? Math.max(0, elementDims.height - (paddingPx.top + paddingPx.bottom))
+        : undefined;
 
-      // Render text to texture
-      const textTexture = this.textRenderingService.renderTextToTexture(element, element.textContent, textStyle, maxWidth);
+      // Render text to texture using available width for wrapping
+      const textTexture = this.textRenderingService.renderTextToTexture(
+        element,
+        element.textContent,
+        textStyle,
+        availableWidthPx
+      );
       
-      // Calculate text dimensions for mesh sizing
+      // Measure text dimensions (CSS px)
       const textStyleProperties = this.textRenderingService['parseElementTextStyle'](element, textStyle);
-      const textDimensions = this.textRenderingService.calculateTextDimensions(element.textContent, textStyleProperties, maxWidth);
-      
+      const measuredDimensions = this.textRenderingService.calculateTextDimensions(
+        element.textContent,
+        textStyleProperties,
+        availableWidthPx
+      );
+
+      // Clamp to available content box
+      const targetWidthPx = availableWidthPx !== undefined
+        ? Math.min(measuredDimensions.width, availableWidthPx)
+        : measuredDimensions.width;
+      const targetHeightPx = availableHeightPx !== undefined
+        ? Math.min(measuredDimensions.height, availableHeightPx)
+        : measuredDimensions.height;
+
+      const finalDimensions = {
+        width: targetWidthPx,
+        height: targetHeightPx,
+        rawWidth: measuredDimensions.width,
+        rawHeight: measuredDimensions.height
+      };
+
       // Create text mesh using BabylonMeshService
-      const textMesh = this.createTextMesh(element.id, textTexture, textDimensions, render);
+      const textMesh = this.createTextMesh(element.id, textTexture, finalDimensions, render);
       
       // Position text mesh relative to parent element
-      this.positionTextMesh(textMesh, mesh, textDimensions, textStyle);
+      this.positionTextMesh(textMesh, mesh, finalDimensions, textStyle, paddingPx, elementDims, render);
       
       // Store text rendering context
       dom.context.textMeshes.set(element.id, textMesh);
       dom.context.textTextures.set(element.id, textTexture);
       dom.context.textContent.set(element.id, element.textContent);
       
-      console.log(`✅ Text rendering complete for ${element.id}: ${textDimensions.width.toFixed(2)}x${textDimensions.height.toFixed(2)}`);
+      console.log(`✅ Text rendering complete for ${element.id}: ${finalDimensions.width.toFixed(2)}x${finalDimensions.height.toFixed(2)} (raw: ${finalDimensions.rawWidth.toFixed(2)}x${finalDimensions.rawHeight.toFixed(2)})`);
     } catch (error) {
       console.error(`❌ Error handling text content for ${element.id}:`, error);
     }
@@ -447,49 +477,79 @@ export class BabylonDOMService {
    * @param dimensions - Text dimensions
    * @param style - Text style for alignment
    */
-  private positionTextMesh(textMesh: Mesh, parentMesh: Mesh, dimensions: any, style?: StyleRule): void {
+  private positionTextMesh(
+    textMesh: Mesh,
+    parentMesh: Mesh,
+    dimensions: { width: number; height: number },
+    style?: StyleRule,
+    paddingPx: { top: number; right: number; bottom: number; left: number } = { top: 0, right: 0, bottom: 0, left: 0 },
+    elementDims?: { width: number; height: number; padding: { top: number; right: number; bottom: number; left: number } },
+    render?: BabylonRender
+  ): void {
     // Parent text mesh to element mesh
     textMesh.parent = parentMesh;
 
-    // Calculate text alignment offset
-    let offsetX = 0;
-    let offsetY = 0;
+    const scale = render?.actions.camera.getPixelToWorldScale() || 1;
 
-    // Horizontal alignment
-    const textAlign = style?.textAlign || 'left';
-    if (textAlign === 'center') {
-      offsetX = 0; // Already centered
-    } else if (textAlign === 'right') {
-      // Get parent dimensions to calculate right alignment
-      const parentDims = parentMesh.getBoundingInfo().boundingBox;
-      const parentWidth = parentDims.maximum.x - parentDims.minimum.x;
-      offsetX = (parentWidth / 2) - (dimensions.width / 2);
-    } else { // left alignment
-      const parentDims = parentMesh.getBoundingInfo().boundingBox;
-      const parentWidth = parentDims.maximum.x - parentDims.minimum.x;
-      offsetX = -(parentWidth / 2) + (dimensions.width / 2);
+    const parentBounds = parentMesh.getBoundingInfo().boundingBox;
+    const parentWidthWorld = parentBounds.maximum.x - parentBounds.minimum.x;
+    const parentHeightWorld = parentBounds.maximum.y - parentBounds.minimum.y;
+
+    const parentWidthPx = elementDims?.width ?? (parentWidthWorld / scale);
+    const parentHeightPx = elementDims?.height ?? (parentHeightWorld / scale);
+
+    const effectivePadding = {
+      top: paddingPx.top ?? 0,
+      right: paddingPx.right ?? 0,
+      bottom: paddingPx.bottom ?? 0,
+      left: paddingPx.left ?? 0
+    };
+
+    const contentWidthPx = Math.max(0, parentWidthPx - (effectivePadding.left + effectivePadding.right));
+    const contentHeightPx = Math.max(0, parentHeightPx - (effectivePadding.top + effectivePadding.bottom));
+
+    const textWidthPx = dimensions.width;
+    const textHeightPx = dimensions.height;
+
+    const textAlign = (style?.textAlign ?? 'left').toLowerCase();
+    let offsetXPx: number;
+    switch (textAlign) {
+      case 'right':
+        offsetXPx = (parentWidthPx / 2) - effectivePadding.right - (textWidthPx / 2);
+        break;
+      case 'center':
+        offsetXPx = (-parentWidthPx / 2) + effectivePadding.left + (contentWidthPx / 2);
+        break;
+      default: // left alignment
+        offsetXPx = (-parentWidthPx / 2) + effectivePadding.left + (textWidthPx / 2);
+        break;
     }
 
-    // Vertical alignment (default to top-left like CSS)
-    const verticalAlign = style?.verticalAlign || 'top';
-    if (verticalAlign === 'middle') {
-      offsetY = 0; // Already centered
-    } else if (verticalAlign === 'bottom') {
-      const parentDims = parentMesh.getBoundingInfo().boundingBox;
-      const parentHeight = parentDims.maximum.y - parentDims.minimum.y;
-      offsetY = -(parentHeight / 2) + (dimensions.height / 2);
-    } else { // top alignment
-      const parentDims = parentMesh.getBoundingInfo().boundingBox;
-      const parentHeight = parentDims.maximum.y - parentDims.minimum.y;
-      offsetY = (parentHeight / 2) - (dimensions.height / 2);
+    const verticalAlign = (style?.verticalAlign ?? 'top').toLowerCase();
+    let offsetYPx: number;
+    switch (verticalAlign) {
+      case 'bottom':
+        offsetYPx = (-parentHeightPx / 2) + effectivePadding.bottom + (textHeightPx / 2);
+        break;
+      case 'middle':
+      case 'center':
+        offsetYPx = (parentHeightPx / 2) - effectivePadding.top - (contentHeightPx / 2);
+        break;
+      case 'baseline':
+        // Approximate baseline as bottom alignment for now
+        offsetYPx = (-parentHeightPx / 2) + effectivePadding.bottom + (textHeightPx / 2);
+        break;
+      default: // top alignment
+        offsetYPx = (parentHeightPx / 2) - effectivePadding.top - (textHeightPx / 2);
+        break;
     }
 
     // Position text mesh relative to parent (slightly in front to avoid z-fighting)
-    textMesh.position.x = offsetX;
-    textMesh.position.y = offsetY;
+    textMesh.position.x = offsetXPx * scale;
+    textMesh.position.y = offsetYPx * scale;
     textMesh.position.z = 0.001; // Slightly in front of parent element
 
-    console.log(`📍 Positioned text mesh at offset (${offsetX.toFixed(3)}, ${offsetY.toFixed(3)}, 0.001) with alignment: ${textAlign}/${verticalAlign}`);
+    console.log(`📍 Positioned text mesh at offset (${textMesh.position.x.toFixed(3)}, ${textMesh.position.y.toFixed(3)}, 0.001) with alignment: ${textAlign}/${verticalAlign}`);
   }
 
   cleanup(): void {
