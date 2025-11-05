@@ -206,15 +206,46 @@ export class BabylonDOMService {
       // Get merged style for text properties (including inheritance)
       const textStyle = this.getInheritedTextStyle(element, styles);
       
-      // Derive available content box (CSS px)
-      const elementDims = dom.context.elementDimensions.get(element.id);
-      const paddingPx = elementDims?.padding ?? { top: 0, right: 0, bottom: 0, left: 0 };
-      const availableWidthPx = elementDims
-        ? Math.max(0, elementDims.width - (paddingPx.left + paddingPx.right))
+      const storedDims = dom.context.elementDimensions.get(element.id);
+
+      // Fallback to parent mesh bounding box if we don't have stored dimensions yet
+      let fallbackDims: { width: number; height: number; padding: { top: number; right: number; bottom: number; left: number } } | undefined;
+      if (!storedDims && render) {
+        const scale = render.actions.camera.getPixelToWorldScale();
+        const bounds = mesh.getBoundingInfo().boundingBox;
+        const worldWidth = bounds.maximum.x - bounds.minimum.x;
+        const worldHeight = bounds.maximum.y - bounds.minimum.y;
+        const widthPx = worldWidth / scale;
+        const heightPx = worldHeight / scale;
+        fallbackDims = {
+          width: widthPx,
+          height: heightPx,
+          padding: { top: 0, right: 0, bottom: 0, left: 0 }
+        };
+        console.log(`[TEXT DEBUG] ${element.id}: using fallback element dimensions from mesh bounds: ${widthPx.toFixed(2)}x${heightPx.toFixed(2)}px`);
+      }
+
+      const resolvedDims = storedDims ?? fallbackDims ?? {
+        width: 0,
+        height: 0,
+        padding: { top: 0, right: 0, bottom: 0, left: 0 }
+      };
+
+      if (storedDims) {
+        console.log(`[TEXT DEBUG] ${element.id}: using stored element dimensions: ${storedDims.width.toFixed(2)}x${storedDims.height.toFixed(2)}px with padding`, storedDims.padding);
+      } else if (!fallbackDims) {
+        console.warn(`[TEXT DEBUG] ${element.id}: no stored or fallback dimensions available; proceeding with zeros`);
+      }
+
+      const paddingPx = resolvedDims.padding ?? { top: 0, right: 0, bottom: 0, left: 0 };
+      const availableWidthPx = resolvedDims.width > 0
+        ? Math.max(0, resolvedDims.width - (paddingPx.left + paddingPx.right))
         : undefined;
-      const availableHeightPx = elementDims
-        ? Math.max(0, elementDims.height - (paddingPx.top + paddingPx.bottom))
+      const availableHeightPx = resolvedDims.height > 0
+        ? Math.max(0, resolvedDims.height - (paddingPx.top + paddingPx.bottom))
         : undefined;
+
+      console.log(`[TEXT DEBUG] ${element.id}: available content box ${availableWidthPx ?? -1}x${availableHeightPx ?? -1}px (padding L:${paddingPx.left}, R:${paddingPx.right}, T:${paddingPx.top}, B:${paddingPx.bottom})`);
 
       // Render text to texture using available width for wrapping
       const textTexture = this.textRenderingService.renderTextToTexture(
@@ -232,33 +263,39 @@ export class BabylonDOMService {
         availableWidthPx
       );
 
-      // Clamp to available content box
-      const targetWidthPx = availableWidthPx !== undefined
-        ? Math.min(measuredDimensions.width, availableWidthPx)
-        : measuredDimensions.width;
-      const targetHeightPx = availableHeightPx !== undefined
-        ? Math.min(measuredDimensions.height, availableHeightPx)
-        : measuredDimensions.height;
+      console.log(`[TEXT DEBUG] ${element.id}: measured text dimensions ${measuredDimensions.width.toFixed(2)}x${measuredDimensions.height.toFixed(2)}px`);
 
-      const finalDimensions = {
-        width: targetWidthPx,
-        height: targetHeightPx,
+      const textureDimensions = {
+        width: measuredDimensions.width,
+        height: measuredDimensions.height
+      };
+
+      // Determine layout dimensions for positioning within the parent box
+      const layoutDimensions = {
+        width: availableWidthPx !== undefined
+          ? Math.min(measuredDimensions.width, availableWidthPx)
+          : measuredDimensions.width,
+        height: availableHeightPx !== undefined
+          ? Math.min(measuredDimensions.height, availableHeightPx)
+          : measuredDimensions.height,
         rawWidth: measuredDimensions.width,
         rawHeight: measuredDimensions.height
       };
 
-      // Create text mesh using BabylonMeshService
-      const textMesh = this.createTextMesh(element.id, textTexture, finalDimensions, render);
+      console.log(`[TEXT DEBUG] ${element.id}: layout dimensions ${layoutDimensions.width.toFixed(2)}x${layoutDimensions.height.toFixed(2)}px (raw ${layoutDimensions.rawWidth.toFixed(2)}x${layoutDimensions.rawHeight.toFixed(2)}px)`);
+
+      // Create text mesh using BabylonMeshService (texture size)
+      const textMesh = this.createTextMesh(element.id, textTexture, textureDimensions, render);
       
-      // Position text mesh relative to parent element
-      this.positionTextMesh(textMesh, mesh, finalDimensions, textStyle, paddingPx, elementDims, render);
+      // Position text mesh relative to parent element using layout dimensions
+      this.positionTextMesh(textMesh, mesh, layoutDimensions, textStyle, paddingPx, resolvedDims, render);
       
       // Store text rendering context
       dom.context.textMeshes.set(element.id, textMesh);
       dom.context.textTextures.set(element.id, textTexture);
       dom.context.textContent.set(element.id, element.textContent);
       
-      console.log(`✅ Text rendering complete for ${element.id}: ${finalDimensions.width.toFixed(2)}x${finalDimensions.height.toFixed(2)} (raw: ${finalDimensions.rawWidth.toFixed(2)}x${finalDimensions.rawHeight.toFixed(2)})`);
+      console.log(`✅ Text rendering complete for ${element.id}: ${layoutDimensions.width.toFixed(2)}x${layoutDimensions.height.toFixed(2)} (raw: ${layoutDimensions.rawWidth.toFixed(2)}x${layoutDimensions.rawHeight.toFixed(2)})`);
     } catch (error) {
       console.error(`❌ Error handling text content for ${element.id}:`, error);
     }
@@ -498,6 +535,8 @@ export class BabylonDOMService {
     const parentWidthPx = elementDims?.width ?? (parentWidthWorld / scale);
     const parentHeightPx = elementDims?.height ?? (parentHeightWorld / scale);
 
+    console.log(`[TEXT POS DEBUG] Parent mesh bounds for ${parentMesh.name}: world ${parentWidthWorld.toFixed(3)}x${parentHeightWorld.toFixed(3)}, px ${parentWidthPx.toFixed(2)}x${parentHeightPx.toFixed(2)} (scale ${scale.toFixed(6)})`);
+
     const effectivePadding = {
       top: paddingPx.top ?? 0,
       right: paddingPx.right ?? 0,
@@ -510,6 +549,8 @@ export class BabylonDOMService {
 
     const textWidthPx = dimensions.width;
     const textHeightPx = dimensions.height;
+
+    console.log(`[TEXT POS DEBUG] Content box: ${contentWidthPx.toFixed(2)}x${contentHeightPx.toFixed(2)}px, text ${textWidthPx.toFixed(2)}x${textHeightPx.toFixed(2)}px, padding`, effectivePadding);
 
     const textAlign = (style?.textAlign ?? 'left').toLowerCase();
     let offsetXPx: number;
@@ -524,6 +565,10 @@ export class BabylonDOMService {
         offsetXPx = (-parentWidthPx / 2) + effectivePadding.left + (textWidthPx / 2);
         break;
     }
+
+    // Clamp horizontal offset so text stays within content box
+    const halfParentWidthPx = parentWidthPx / 2;
+    offsetXPx = Math.max(-halfParentWidthPx + effectivePadding.left + (textWidthPx / 2), Math.min(halfParentWidthPx - effectivePadding.right - (textWidthPx / 2), offsetXPx));
 
     const verticalAlign = (style?.verticalAlign ?? 'top').toLowerCase();
     let offsetYPx: number;
@@ -543,6 +588,10 @@ export class BabylonDOMService {
         offsetYPx = (parentHeightPx / 2) - effectivePadding.top - (textHeightPx / 2);
         break;
     }
+
+    // Clamp vertical offset so text stays within content box
+    const halfParentHeightPx = parentHeightPx / 2;
+    offsetYPx = Math.max(-halfParentHeightPx + effectivePadding.bottom + (textHeightPx / 2), Math.min(halfParentHeightPx - effectivePadding.top - (textHeightPx / 2), offsetYPx));
 
     // Position text mesh relative to parent (slightly in front to avoid z-fighting)
     textMesh.position.x = offsetXPx * scale;

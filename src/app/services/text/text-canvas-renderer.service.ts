@@ -289,9 +289,9 @@ export class TextCanvasRendererService {
   private calculateLineX(lineWidth: number, canvasWidth: number, textAlign: TextStyleProperties['textAlign']): number {
     switch (textAlign) {
       case 'center':
-        return (canvasWidth - lineWidth) / 2;
+        return canvasWidth / 2;
       case 'right':
-        return canvasWidth - lineWidth;
+        return canvasWidth;
       case 'left':
       case 'justify': // For now, treat justify as left-aligned
       default:
