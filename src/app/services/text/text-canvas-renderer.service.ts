@@ -5,13 +5,14 @@ import {
   TextBounds, 
   TextEffects, 
   TextShadowEffect,
-  TextLine 
+  TextLine,
+  TextLayoutMetrics,
+  TextLineMetrics,
+  TextCharacterMetrics
 } from '../../types/text-rendering';
-import { MultiLineTextRendererService } from './multi-line-text-renderer.service';
 
+import { MultiLineTextRendererService } from './multi-line-text-renderer.service';
 /**
- * TextCanvasRenderer Service
- * 
  * Handles off-screen canvas rendering of text using browser's native text capabilities.
  * This service creates and manages HTML5 canvas elements for text rendering, applies
  * text styling, effects, and provides accurate text measurement capabilities.
@@ -107,6 +108,144 @@ export class TextCanvasRendererService {
       // Render the main text
       ctx.fillText(line.text, x, line.y);
     });
+  }
+
+  calculateLayoutMetrics(text: string, style: TextStyleProperties, maxWidth?: number): TextLayoutMetrics {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('Failed to get 2D rendering context for layout metrics');
+    }
+
+    this.applyTextStylingToContext(ctx, style);
+
+    const transformedText = this.applyTextTransform(text, style.textTransform);
+    const wrappedLines = maxWidth
+      ? this.multiLineTextRenderer.wrapText(transformedText, maxWidth, style)
+      : [{ text: transformedText, width: ctx.measureText(transformedText).width, y: 0 }];
+
+    const linesWithPositions = this.multiLineTextRenderer.calculateLinePositions([...wrappedLines], style, undefined);
+
+    if (!linesWithPositions.length) {
+      linesWithPositions.push({ text: '', width: 0, y: style.fontSize });
+    }
+
+    const letterSpacing = style.letterSpacing ?? 0;
+    const wordSpacing = style.wordSpacing ?? 0;
+    const approxAscent = style.fontSize * 0.8;
+    const approxDescent = style.fontSize * 0.2;
+
+    const lineMetrics: TextLineMetrics[] = [];
+    const characterMetrics: TextCharacterMetrics[] = [];
+
+    let globalIndex = 0;
+    let minTop = Number.POSITIVE_INFINITY;
+    let maxBottom = Number.NEGATIVE_INFINITY;
+    let maxLineWidth = 0;
+    let maxWidthWithSpacing = 0;
+    let maxAscent = 0;
+    let maxDescent = 0;
+    const renderedLines: string[] = [];
+
+    linesWithPositions.forEach((line, lineIndex) => {
+      renderedLines.push(line.text);
+
+      const lineStartIndex = globalIndex;
+      const lineMeasure = ctx.measureText(line.text);
+      let cursorX = 0;
+      let lineAscent = lineMeasure.actualBoundingBoxAscent ?? approxAscent;
+      let lineDescent = lineMeasure.actualBoundingBoxDescent ?? approxDescent;
+
+      const characters = Array.from(line.text);
+
+      characters.forEach((char, charIndex) => {
+        const glyphMetrics = ctx.measureText(char);
+        const width = glyphMetrics.width;
+        const advanceSpacing = (charIndex < characters.length - 1 ? letterSpacing : 0) + (char === ' ' ? wordSpacing : 0);
+
+        lineAscent = Math.max(lineAscent, glyphMetrics.actualBoundingBoxAscent ?? approxAscent);
+        lineDescent = Math.max(lineDescent, glyphMetrics.actualBoundingBoxDescent ?? approxDescent);
+
+        characterMetrics.push({
+          index: globalIndex,
+          char,
+          lineIndex,
+          column: charIndex,
+          x: cursorX,
+          width,
+          advance: width + advanceSpacing,
+          isLineBreak: false
+        });
+
+        cursorX += width + advanceSpacing;
+        globalIndex += 1;
+      });
+
+      const lineEndIndex = globalIndex;
+      const widthWithoutSpacing = characters.length
+        ? characterMetrics[characterMetrics.length - 1].x + characterMetrics[characterMetrics.length - 1].width
+        : 0;
+      const widthWithSpacing = characters.length ? cursorX : 0;
+
+      const baseline = line.y;
+      const top = baseline - lineAscent;
+      const bottom = baseline + lineDescent;
+
+      minTop = Math.min(minTop, top);
+      maxBottom = Math.max(maxBottom, bottom);
+      maxLineWidth = Math.max(maxLineWidth, widthWithoutSpacing);
+      maxWidthWithSpacing = Math.max(maxWidthWithSpacing, widthWithSpacing);
+      maxAscent = Math.max(maxAscent, lineAscent);
+      maxDescent = Math.max(maxDescent, lineDescent);
+
+      lineMetrics.push({
+        index: lineIndex,
+        text: line.text,
+        startIndex: lineStartIndex,
+        endIndex: lineEndIndex,
+        width: widthWithoutSpacing,
+        widthWithSpacing,
+        height: style.fontSize * style.lineHeight,
+        baseline,
+        ascent: lineAscent,
+        descent: lineDescent,
+        top,
+        bottom,
+        x: 0,
+        y: baseline,
+        actualLeft: lineMeasure.actualBoundingBoxLeft ?? 0,
+        actualRight: lineMeasure.actualBoundingBoxRight ?? widthWithoutSpacing
+      });
+
+      if (lineIndex < linesWithPositions.length - 1) {
+        characterMetrics.push({
+          index: globalIndex,
+          char: '\n',
+          lineIndex,
+          column: characters.length,
+          x: widthWithSpacing,
+          width: 0,
+          advance: 0,
+          isLineBreak: true
+        });
+        globalIndex += 1;
+      }
+    });
+
+    const totalHeight = (isFinite(minTop) && isFinite(maxBottom)) ? (maxBottom - minTop) : style.fontSize * style.lineHeight;
+
+    return {
+      text,
+      transformedText: renderedLines.join('\n'),
+      totalWidth: Math.max(maxLineWidth, maxWidthWithSpacing),
+      totalHeight,
+      lineHeight: style.fontSize * style.lineHeight,
+      ascent: maxAscent,
+      descent: maxDescent,
+      lines: lineMetrics,
+      characters: characterMetrics
+    };
   }
 
   /**

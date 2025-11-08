@@ -76,6 +76,7 @@ export interface StyleRule {
   textDecoration?: string;
   textTransform?: string;
   textStroke?: string;
+  cursor?: string;
 
   // Flexbox
   display?: string;

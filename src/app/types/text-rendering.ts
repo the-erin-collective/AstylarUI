@@ -55,6 +55,8 @@ export interface TextLine {
   text: string;
   width: number;
   y: number;
+  startIndex?: number;
+  endIndex?: number;
 }
 
 /**
@@ -73,6 +75,81 @@ export interface TextDimensions {
     right: number;
     bottom: number;
   };
+}
+
+export interface TextLineMetrics {
+  index: number;
+  text: string;
+  startIndex: number;
+  endIndex: number;
+  width: number;
+  widthWithSpacing: number;
+  height: number;
+  baseline: number;
+  ascent: number;
+  descent: number;
+  top: number;
+  bottom: number;
+  x: number;
+  y: number;
+  actualLeft: number;
+  actualRight: number;
+}
+
+export interface TextCharacterMetrics {
+  index: number;
+  char: string;
+  lineIndex: number;
+  column: number;
+  x: number;
+  width: number;
+  advance: number;
+  isLineBreak?: boolean;
+}
+
+export interface TextLayoutMetrics {
+  text: string;
+  transformedText: string;
+  totalWidth: number;
+  totalHeight: number;
+  lineHeight: number;
+  ascent: number;
+  descent: number;
+  lines: TextLineMetrics[];
+  characters: TextCharacterMetrics[];
+}
+
+export interface TextLayoutWorldMetrics {
+  totalWidth: number;
+  totalHeight: number;
+  lineHeight: number;
+  ascent: number;
+  descent: number;
+  lines: Array<Omit<TextLineMetrics, 'width' | 'widthWithSpacing' | 'height' | 'baseline' | 'ascent' | 'descent' | 'top' | 'bottom' | 'x' | 'y'> & {
+    width: number;
+    widthWithSpacing: number;
+    height: number;
+    baseline: number;
+    ascent: number;
+    descent: number;
+    top: number;
+    bottom: number;
+    x: number;
+    y: number;
+    actualLeft: number;
+    actualRight: number;
+  }>;
+  characters: Array<Omit<TextCharacterMetrics, 'x' | 'width' | 'advance'> & {
+    x: number;
+    width: number;
+    advance: number;
+  }>;
+}
+
+export interface StoredTextLayoutMetrics {
+  scale: number;
+  css: TextLayoutMetrics;
+  world: TextLayoutWorldMetrics;
 }
 
 /**

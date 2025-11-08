@@ -2,6 +2,7 @@ import { Mesh } from "@babylonjs/core";
 import * as BABYLON from "@babylonjs/core";
 import { DOMElement } from "../../../types/dom-element";
 import { StyleRule } from "../../../types/style-rule";
+import { StoredTextLayoutMetrics } from "../../../types/text-rendering";
 import { BabylonRender } from "./render.types";
 
 export interface BabylonDOMActions {
@@ -46,9 +47,10 @@ export interface BabylonDOMContext {
     textMeshes: Map<string, Mesh>;
     textTextures: Map<string, BABYLON.Texture>;
     textContent: Map<string, string>;
+    textMetrics: Map<string, StoredTextLayoutMetrics>;
 }
 
 export interface BabylonDOM {
     actions: BabylonDOMActions;
     context: BabylonDOMContext;
-} 
+}

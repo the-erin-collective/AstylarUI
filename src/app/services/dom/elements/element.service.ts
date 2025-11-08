@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
 import { DOMElement } from '../../../types/dom-element';
-import { ActionManager, Color3, ExecuteCodeAction, Material, Mesh, PointerEventTypes, StandardMaterial, Texture, Vector3, ShaderMaterial, Vector2 } from '@babylonjs/core';
+import { ActionManager, Color3, ExecuteCodeAction, Material, Mesh, PointerEventTypes, StandardMaterial, Texture, Vector3, ShaderMaterial, Vector2, PointerInfo, Observer } from '@babylonjs/core';
+
 import { StyleRule } from '../../../types/style-rule';
 import { BabylonDOM } from '../interfaces/dom.types';
 import { TransformData } from '../../../types/transform-data';
 import { BabylonRender } from '../interfaces/render.types';
 import { StyleDefaultsService } from '../style-defaults.service';
 import { StackingContextManager } from '../positioning/stacking-context.manager';
+import { PointerInteractionService } from '../interaction/pointer-interaction.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +16,8 @@ import { StackingContextManager } from '../positioning/stacking-context.manager'
 export class ElementService {
   constructor(
     private styleDefaults: StyleDefaultsService,
-    private stackingContextManager: StackingContextManager
+    private stackingContextManager: StackingContextManager,
+    private pointerInteractionService: PointerInteractionService
   ) { }
 
   public processChildren(dom: BabylonDOM, render: BabylonRender, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement?: DOMElement): void {
@@ -180,6 +183,8 @@ export class ElementService {
   }
 
   public createElement(dom: BabylonDOM, render: BabylonRender, element: DOMElement, parent: Mesh, styles: StyleRule[], flexPosition?: { x: number; y: number; z: number }, flexSize?: { width: number; height: number }): Mesh {
+    this.ensurePointerObserver(render);
+
     // Debug all div creation to see if content divs are being processed - MOVED TO TOP
     if (element.type === 'div') {
       console.log(`[DIV-DEBUG] ${element.id || 'no-id'} class: ${element.class || 'none'} parent: ${parent?.name || 'none'} - ENTERING createElement`);
@@ -1150,6 +1155,10 @@ export class ElementService {
     if (!render.scene) {
       throw new Error('Scene not initialized');
     }
+
+    // Ensure pointer observer is set up
+    this.ensurePointerObserver(render);
+
     // Store the anchor data on the mesh for later retrieval
     mesh.metadata = {
       ...mesh.metadata,
@@ -1195,15 +1204,56 @@ export class ElementService {
     console.log(`✅ Anchor interaction setup complete for ${elementId}`);
   }
 
+  private ensurePointerObserver(render: BabylonRender): void {
+    const scene = render.scene;
+    if (!scene) {
+      return;
+    }
+
+    type SceneMetadata = Record<string, unknown> & { pointerInteractionObserver?: Observer<PointerInfo> };
+    const metadata = (scene.metadata as SceneMetadata | undefined) ?? {};
+    if (metadata.pointerInteractionObserver) {
+      scene.metadata = metadata;
+      return;
+    }
+
+    const observer: Observer<PointerInfo> = scene.onPointerObservable.add((pointerInfo: PointerInfo) => {
+      switch (pointerInfo.type) {
+        case PointerEventTypes.POINTERDOWN:
+          this.pointerInteractionService.handlePointerDown(pointerInfo, render);
+          break;
+        case PointerEventTypes.POINTERMOVE:
+          this.pointerInteractionService.handlePointerMove(pointerInfo, render);
+          break;
+        case PointerEventTypes.POINTERUP:
+          this.pointerInteractionService.handlePointerUp(pointerInfo, render);
+          break;
+      }
+
+      const pointerEvent = pointerInfo.event as PointerEvent | MouseEvent | null | undefined;
+      if (pointerEvent && (pointerEvent.type === 'pointerout' || pointerEvent.type === 'pointerleave')) {
+        this.pointerInteractionService.handlePointerOut();
+      }
+    });
+
+    metadata.pointerInteractionObserver = observer;
+    scene.metadata = metadata;
+  }
+
   private handleOnClick(onclickValue: string, elementId: string): void {
     console.log(`🖱️ Executing onclick for ${elementId}: ${onclickValue}`);
 
-    // For now, just log the onclick value
-    // In the future, this could be extended to handle custom callback functions
-    console.log(`[ONCLICK] ${elementId}: ${onclickValue}`);
+    if (!onclickValue) {
+      return;
+    }
 
-    // You could extend this to parse and execute specific actions
-    // For example: if (onclickValue.startsWith('console.log')) { ... }
+    try {
+      // eslint-disable-next-line no-new-func
+      const handler = new Function(onclickValue);
+      handler();
+    } catch (error) {
+      console.error(`❌ Failed to execute onclick handler for ${elementId}:`, error);
+    }
   }
 
   private isValidUrl(url: string): boolean {

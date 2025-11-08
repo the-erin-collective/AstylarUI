@@ -23,6 +23,7 @@ const globalDefaultStyle: Partial<StyleRule> = {
     flexShrink: '1',
     flexBasis: 'auto',
     alignSelf: 'auto',
+    cursor: 'default',
 };
 
 const defaults: { [key: string]: Partial<StyleRule> } = {
@@ -115,6 +116,7 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         borderWidth: '1px',
         borderStyle: 'solid',
         borderColor: '#1976d2',
+        cursor: 'pointer',
         // color: '#fff', // Not used, but would be default
     },
     'a:visited': {

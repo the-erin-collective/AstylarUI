@@ -15,6 +15,9 @@ import { DOMElement } from '../../types/dom-element';
 import { generateElementId } from './utils/element-id.util';
 import { PositioningIntegrationService } from './positioning/positioning-integration.service';
 import { TextRenderingService } from '../text/text-rendering.service';
+import { StoredTextLayoutMetrics } from '../../types/text-rendering';
+import { TextInteractionRegistryService } from './interaction/text-interaction-registry.service';
+import { TextHighlightMeshFactory } from './interaction/text-highlight-mesh.factory';
 
 @Injectable({
   providedIn: 'root'
@@ -32,6 +35,7 @@ export class BabylonDOMService {
   private textMeshes: Map<string, Mesh> = new Map();
   private textTextures: Map<string, BABYLON.Texture> = new Map();
   private textContent: Map<string, string> = new Map();
+  private textMetrics: Map<string, StoredTextLayoutMetrics> = new Map();
 
   constructor( 
     private flexService: FlexService, 
@@ -41,7 +45,9 @@ export class BabylonDOMService {
     private styleService: StyleService, 
     private tableService: TableService,
     private positioningIntegration: PositioningIntegrationService,
-    private textRenderingService: TextRenderingService
+    private textRenderingService: TextRenderingService,
+    private textInteractionRegistry: TextInteractionRegistryService,
+    private textHighlightFactory: TextHighlightMeshFactory
   ) { }
 
   public render?: BabylonRender;
@@ -75,7 +81,8 @@ export class BabylonDOMService {
         // Text rendering context
         textMeshes: this.textMeshes,
         textTextures: this.textTextures,
-        textContent: this.textContent
+        textContent: this.textContent,
+        textMetrics: this.textMetrics
       }
     };
   }
@@ -151,6 +158,9 @@ export class BabylonDOMService {
     });
     this.textTextures.clear();
     this.textContent.clear();
+    this.textMetrics.clear();
+    this.textInteractionRegistry.clear();
+    this.textHighlightFactory.clearAllHighlights();
   }
 
   /**
@@ -294,7 +304,16 @@ export class BabylonDOMService {
       dom.context.textMeshes.set(element.id, textMesh);
       dom.context.textTextures.set(element.id, textTexture);
       dom.context.textContent.set(element.id, element.textContent);
-      
+      const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
+      const storedMetrics = this.textRenderingService.createStoredLayoutMetrics(
+        element.textContent,
+        textStyleProperties,
+        pixelToWorldScale,
+        availableWidthPx
+      );
+      this.textMetrics.set(element.id, storedMetrics);
+      this.textInteractionRegistry.register(element.id, textMesh, textStyle, storedMetrics, element.textContent);
+
       console.log(`✅ Text rendering complete for ${element.id}: ${layoutDimensions.width.toFixed(2)}x${layoutDimensions.height.toFixed(2)} (raw: ${layoutDimensions.rawWidth.toFixed(2)}x${layoutDimensions.rawHeight.toFixed(2)})`);
     } catch (error) {
       console.error(`❌ Error handling text content for ${element.id}:`, error);
@@ -360,7 +379,25 @@ export class BabylonDOMService {
       // Update stored context
       dom.context.textTextures.set(elementId, newTextTexture);
       dom.context.textContent.set(elementId, newContent);
-      
+      const textStyleProperties = this.textRenderingService['parseElementTextStyle'](mockElement, textStyle);
+      const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
+      const storedMetrics = this.textRenderingService.createStoredLayoutMetrics(
+        newContent,
+        textStyleProperties,
+        pixelToWorldScale,
+        maxWidth
+      );
+      this.textMetrics.set(elementId, storedMetrics);
+      this.textInteractionRegistry.updateMetrics(elementId, storedMetrics);
+      this.textInteractionRegistry.updateStyle(elementId, textStyle);
+      existingTextMesh.metadata = {
+        ...(existingTextMesh.metadata || {}),
+        textDimensions: {
+          width: storedMetrics.css.totalWidth,
+          height: storedMetrics.css.totalHeight
+        }
+      };
+
       console.log(`✅ Text content updated for ${elementId}`);
     } catch (error) {
       console.error(`❌ Error updating text content for ${elementId}:`, error);
@@ -500,7 +537,13 @@ export class BabylonDOMService {
     material.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Slight emissive for visibility
 
     textMesh.material = material;
-    textMesh.isPickable = false; // Text meshes should not interfere with element picking
+    textMesh.isPickable = true;
+    textMesh.metadata = {
+      ...(textMesh.metadata || {}),
+      isTextMesh: true,
+      elementId,
+      textDimensions: dimensions
+    };
 
     console.log(`🎨 Created text mesh: ${textMesh.name} (${worldWidth.toFixed(3)}x${worldHeight.toFixed(3)} world units)`);
 

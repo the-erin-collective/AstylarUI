@@ -3,6 +3,7 @@ import { RouterOutlet, RouterLink, Router, NavigationEnd } from '@angular/router
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
 import { SiteDataService } from './services/site-data.service';
+import { TextSelectionKeyboardService } from './services/dom/interaction/text-selection-keyboard.service';
 
 @Component({
   selector: 'app-root',
@@ -13,6 +14,8 @@ import { SiteDataService } from './services/site-data.service';
 export class App {
   private router = inject(Router);
   private siteDataService = inject(SiteDataService);
+  // Instantiate keyboard service to enable global text selection shortcuts
+  private readonly textSelectionKeyboard = inject(TextSelectionKeyboardService);
   
   // Local signals for app-level state
   protected name = signal('Angular 20 Signals App');
