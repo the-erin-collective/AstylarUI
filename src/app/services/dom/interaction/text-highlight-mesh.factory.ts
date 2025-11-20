@@ -220,7 +220,7 @@ export class TextHighlightMeshFactory {
 
       mesh.scaling.x = segment.width;
       mesh.scaling.y = segment.height;
-      mesh.position.x = isMultiLine ? -segment.centerX : segment.centerX;
+      mesh.position.x = -segment.centerX;  // Negate because X is flipped in selection controller
       mesh.position.y = segment.centerY;
       mesh.position.z = HIGHLIGHT_Z_OFFSET;
     });
