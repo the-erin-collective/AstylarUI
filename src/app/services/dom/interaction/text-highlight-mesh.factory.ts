@@ -209,6 +209,8 @@ export class TextHighlightMeshFactory {
       mesh?.dispose();
     }
 
+    const isMultiLine = segments.length > 1;
+
     segments.forEach((segment, index) => {
       let mesh = existing.meshes[index];
       if (!mesh) {
@@ -218,7 +220,7 @@ export class TextHighlightMeshFactory {
 
       mesh.scaling.x = segment.width;
       mesh.scaling.y = segment.height;
-      mesh.position.x = segment.centerX;
+      mesh.position.x = isMultiLine ? -segment.centerX : segment.centerX;
       mesh.position.y = segment.centerY;
       mesh.position.z = HIGHLIGHT_Z_OFFSET;
     });

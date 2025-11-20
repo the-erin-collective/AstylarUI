@@ -194,7 +194,9 @@ export class TextSelectionControllerService {
     }
 
     const totalWidth = this.resolveTotalWidth(metrics.characters, metrics.totalWidth);
-    const clampedX = clamp(position.x, 0, totalWidth);
+
+    // Flip X coordinate because the input coordinate system is horizontally flipped
+    const flippedX = totalWidth - position.x;
 
     const lines = metrics.lines;
     const minTop = lines.reduce((min, line) => Math.min(min, line.top), Infinity);
@@ -211,7 +213,8 @@ export class TextSelectionControllerService {
     }
 
     const lineOffset = this.resolveLineOffset(entry, targetLine, totalWidth);
-    const relativeX = clamp(clampedX - lineOffset, 0, totalWidth);
+    const lineWidth = targetLine.width ?? totalWidth;
+    const relativeX = clamp(flippedX - lineOffset, 0, lineWidth);
 
     const lineCharacters = metrics.characters.filter(
       (character) => character.lineIndex === targetLine.index && !character.isLineBreak
@@ -230,10 +233,24 @@ export class TextSelectionControllerService {
       if (relativeX <= nextBoundary) {
         const widthForComparison = character.width || character.advance;
         const midpoint = character.x + widthForComparison / 2;
-        return relativeX < midpoint ? character.index : character.index + 1;
+        const result = relativeX < midpoint ? character.index : character.index + 1;
+        console.log('[Selection] getCaretIndexForPoint', {
+          position,
+          lineIndex: targetLine.index,
+          relativeX,
+          character: entry.text?.[character.index],
+          characterIndex: character.index,
+          result
+        });
+        return result;
       }
     }
 
+    console.log('[Selection] getCaretIndexForPoint - end of line', {
+      position,
+      lineIndex: targetLine.index,
+      result: targetLine.endIndex
+    });
     return targetLine.endIndex;
   }
 
