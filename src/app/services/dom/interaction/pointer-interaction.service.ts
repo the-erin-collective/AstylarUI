@@ -9,7 +9,7 @@ export class PointerInteractionService {
   constructor(
     private textInteractionRegistry: TextInteractionRegistryService,
     private textSelectionController: TextSelectionControllerService
-  ) {}
+  ) { }
 
   handlePointerDown(pointerInfo: PointerInfo, render: BabylonRender): void {
     if (!this.isPrimaryButton(pointerInfo)) {
@@ -27,6 +27,8 @@ export class PointerInteractionService {
   }
 
   handlePointerMove(pointerInfo: PointerInfo, render: BabylonRender): void {
+    this.updateCursor(pointerInfo, render);
+
     if (!this.textSelectionController.snapshot.isPointerDown) {
       return;
     }
@@ -42,6 +44,25 @@ export class PointerInteractionService {
     }
 
     this.textSelectionController.updateSelection(entry, cssPoint);
+  }
+
+  private updateCursor(pointerInfo: PointerInfo, render: BabylonRender): void {
+    const canvas = render.scene?.getEngine().getRenderingCanvas();
+    if (!canvas) return;
+
+    const mesh = this.resolvePreferredMesh(pointerInfo, render);
+
+    if (mesh) {
+      if (mesh.metadata?.isTextMesh) {
+        canvas.style.cursor = 'text';
+      } else if (mesh.metadata?.cursor) {
+        canvas.style.cursor = mesh.metadata.cursor;
+      } else {
+        canvas.style.cursor = 'default';
+      }
+    } else {
+      canvas.style.cursor = 'default';
+    }
   }
 
   handlePointerUp(pointerInfo: PointerInfo, render: BabylonRender): void {

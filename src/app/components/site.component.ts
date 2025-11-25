@@ -74,12 +74,8 @@ import { StyleDefaultsService } from '../services/dom/style-defaults.service';
       border: none;
       margin: 0;
       padding: 0;
-      cursor: grab;
+      cursor: default;
       background: #000;
-    }
-    
-    .babylon-canvas:active {
-      cursor: grabbing;
     }
     
     .loading-overlay {

@@ -359,6 +359,13 @@ export class ElementService {
     }
     console.log(`[ELEMENT DEBUG] [BABYLON MESH DEBUG] Created mesh for ${element.id} (type: ${element.type}, polygon: ${polygonType}, meshId: ${meshId}) with dimensions: width=${worldWidth}, height=${worldHeight}, borderRadius=${borderRadius}`);
 
+    // Store cursor style and element ID in metadata for pointer interaction
+    mesh.metadata = {
+      ...(mesh.metadata || {}),
+      cursor: style.cursor,
+      elementId: element.id
+    };
+
     // Check if element needs CSS positioning (relative, absolute, fixed)
     const needsPositioning = typeof dom.actions.calculateElementPosition === 'function' &&
       style?.position &&
@@ -596,7 +603,7 @@ export class ElementService {
       }
 
       console.log(`[ELEMENT DIM DEBUG] Stored elementDimensions for ${element.id}: ${JSON.stringify({ width: dimensions.width, height: dimensions.height, padding: pixelPadding })}`);
-      
+
       // Handle text content if present
       if (element.textContent && element.textContent.trim() !== '') {
         console.log(`📝 Element ${element.id} has text content, delegating to text rendering`);
