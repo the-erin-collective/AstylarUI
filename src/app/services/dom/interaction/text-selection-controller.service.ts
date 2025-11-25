@@ -74,14 +74,17 @@ export class TextSelectionControllerService {
     const anchorIndex = this.state.anchorIndex ?? caretIndex;
     const range = this.createRange(anchorIndex, caretIndex);
 
-    return this.updateState({
+    // Always update state during drag to ensure real-time highlighting
+    const nextState: TextSelectionState = {
       elementId: entry.elementId,
       anchorIndex,
       focusIndex: caretIndex,
       range,
       isPointerDown: true,
       hasSelection: range !== null && range.start !== range.end
-    });
+    };
+
+    return this.updateState(nextState);
   }
 
   finalizeSelection(): TextSelectionState {

@@ -29,7 +29,9 @@ export class PointerInteractionService {
   handlePointerMove(pointerInfo: PointerInfo, render: BabylonRender): void {
     this.updateCursor(pointerInfo, render);
 
-    if (!this.textSelectionController.snapshot.isPointerDown) {
+    const isPointerDown = this.textSelectionController.snapshot.isPointerDown;
+
+    if (!isPointerDown) {
       return;
     }
 
@@ -138,14 +140,38 @@ export class PointerInteractionService {
 
   private toCssPoint(pointerInfo: PointerInfo, entry: TextInteractionEntry): CssPoint | undefined {
     const metrics = entry.metrics;
-    const pickInfo = pointerInfo.pickInfo;
-    if (!metrics || !pickInfo?.pickedPoint) {
+    if (!metrics) {
       return undefined;
+    }
+
+    const pickInfo = pointerInfo.pickInfo;
+    let pickedPoint = pickInfo?.pickedPoint;
+
+    // If we don't have a picked point (common during drag), perform a manual ray cast
+    if (!pickedPoint) {
+      const scene = entry.mesh.getScene();
+      const nativeEvent = pointerInfo.event as PointerEvent | MouseEvent | undefined;
+
+      if (scene && nativeEvent && typeof nativeEvent.clientX === 'number' && typeof nativeEvent.clientY === 'number') {
+        const ray = scene.createPickingRay(nativeEvent.clientX, nativeEvent.clientY, Matrix.Identity(), scene.activeCamera);
+        const hit = ray.intersectsMesh(entry.mesh);
+
+        if (hit.hit && hit.pickedPoint) {
+          pickedPoint = hit.pickedPoint;
+          console.log('[toCssPoint] Manual ray cast successful:', pickedPoint);
+        } else {
+          console.log('[toCssPoint] Manual ray cast failed');
+          return undefined;
+        }
+      } else {
+        console.log('[toCssPoint] Cannot perform manual ray cast - missing scene or event data');
+        return undefined;
+      }
     }
 
     const inverse = new Matrix();
     entry.mesh.getWorldMatrix().invertToRef(inverse);
-    const localPoint = Vector3.TransformCoordinates(pickInfo.pickedPoint, inverse);
+    const localPoint = Vector3.TransformCoordinates(pickedPoint, inverse);
 
     const bounding = entry.mesh.getBoundingInfo();
     const width = bounding.maximum.x - bounding.minimum.x;

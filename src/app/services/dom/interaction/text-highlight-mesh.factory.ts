@@ -1,7 +1,8 @@
-import { DestroyRef, effect, inject, Injectable } from '@angular/core';
+import { DestroyRef, inject, Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Color3, Mesh, MeshBuilder, Scene, StandardMaterial } from '@babylonjs/core';
-import { TextSelectionState } from './text-selection-controller.service';
-import { TextInteractionEntry } from './text-interaction-registry.service';
+import { TextSelectionControllerService, TextSelectionState } from './text-selection-controller.service';
+import { TextInteractionEntry, TextInteractionRegistryService } from './text-interaction-registry.service';
 import { TextSelectionStore } from '../../../store/text-selection.store';
 
 interface HighlightSegment {
@@ -24,19 +25,25 @@ const HIGHLIGHT_Z_OFFSET = 0.0005;
 export class TextHighlightMeshFactory {
   private readonly selectionStore = inject(TextSelectionStore);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly textSelectionController = inject(TextSelectionControllerService);
+  private readonly textInteractionRegistry = inject(TextInteractionRegistryService);
 
   private readonly highlightRecords = new Map<string, HighlightMeshes>();
   private currentElementId?: string;
 
-  private readonly selectionEffect = effect(() => {
-    const state = this.selectionStore.state();
-    const entry = this.selectionStore.activeEntry();
-    this.applySelection(state, entry);
-  });
-
   constructor() {
+    // Subscribe directly to the controller's observable for immediate updates during drag
+    this.textSelectionController.selection$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((state) => {
+        console.log('[TextHighlight] Subscription received state update:', state);
+        const entry = state.elementId
+          ? this.textInteractionRegistry.getByElementId(state.elementId)
+          : undefined;
+        this.applySelection(state, entry);
+      });
+
     this.destroyRef.onDestroy(() => {
-      this.selectionEffect.destroy();
       this.clearAllHighlights();
     });
   }
@@ -50,6 +57,15 @@ export class TextHighlightMeshFactory {
   }
 
   private applySelection(state: TextSelectionState, entry?: TextInteractionEntry): void {
+    console.log('[TextHighlight] applySelection called:', {
+      hasRange: !!state.range,
+      rangeStart: state.range?.start,
+      rangeEnd: state.range?.end,
+      isPointerDown: state.isPointerDown,
+      hasEntry: !!entry,
+      hasMetrics: !!entry?.metrics
+    });
+
     if (!state.range || state.range.start === state.range.end || !entry || !entry.metrics) {
       this.clearCurrentHighlights();
       return;
