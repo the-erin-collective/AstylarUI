@@ -193,25 +193,15 @@ export class PointerInteractionService {
     const cssWidth = cssMetrics?.totalWidth ?? 0;
     const cssHeight = cssMetrics?.totalHeight ?? 0;
 
-    // The text mesh represents the actual rendered text content.
-    // We need to find the ACTUAL content width by looking at character positions,
-    // NOT line.width which represents the container width.
-    let actualContentWidth = 0;
-    if (cssMetrics?.characters && cssMetrics.characters.length > 0) {
-      // Find the rightmost character position
-      for (const char of cssMetrics.characters) {
-        const charEnd = char.x + char.advance;
-        if (charEnd > actualContentWidth) {
-          actualContentWidth = charEnd;
-        }
-      }
-    } else {
-      // Fallback to totalWidth if no characters
-      actualContentWidth = cssWidth;
-    }
+    // The text mesh represents the actual rendered text content, not the CSS container.
+    // However, TextSelectionController expects coordinates in Container Space (0..totalWidth).
+    // So we map normalized click coordinates (0-1 across mesh) to the Container Width.
 
-    // Map normalized coordinates (0-1 across mesh) to actual content width in CSS space
-    let x = normalizedX * actualContentWidth;
+    // Calculate the container width (max line width or total width)
+    const maxLineWidth = cssMetrics?.lines.reduce((max, line) => Math.max(max, line.width ?? 0), 0) ?? cssWidth;
+
+    // Map normalized coordinates to CSS container width
+    let x = normalizedX * maxLineWidth;
 
     return {
       x,

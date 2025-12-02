@@ -186,9 +186,20 @@ export class TextHighlightMeshFactory {
       const widthWorld = Math.max(widthCss * scale, MIN_SEGMENT_WIDTH);
 
       // Character x positions in CSS metrics are relative to line start (x=0)
-      // We don't need to add lineOffset here because the positions are already line-relative
-      const startXWorld = lineStartCaret * scale;
-      const endXWorld = lineEndCaret * scale;
+      // We need to add lineOffset if text is aligned (center/right)
+      const textAlign = entry.style?.textAlign?.toLowerCase() ?? 'left';
+      const totalWidth = cssMetrics.totalWidth ?? 0;
+      const lineWidth = line.width ?? 0;
+      let lineOffset = 0;
+
+      if (textAlign === 'right') {
+        lineOffset = totalWidth - lineWidth;
+      } else if (textAlign === 'center' || textAlign === 'middle') {
+        lineOffset = (totalWidth - lineWidth) / 2;
+      }
+
+      const startXWorld = (lineStartCaret + lineOffset) * scale;
+      const endXWorld = (lineEndCaret + lineOffset) * scale;
 
       // Calculate center position directly from start and end positions
       // Map from text content coordinate system to text mesh coordinate system
