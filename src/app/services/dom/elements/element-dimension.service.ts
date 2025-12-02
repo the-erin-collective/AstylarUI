@@ -39,69 +39,81 @@ export class ElementDimensionService {
         const parentHeight = parentDims.height;
         const parentPadding = parentDims.padding;
 
+        // Calculate the parent's content area (excluding padding)
+        const contentWidth = parentWidth - parentPadding.left - parentPadding.right;
+        const contentHeight = parentHeight - parentPadding.top - parentPadding.bottom;
+
         // Parse padding and margin
         const padding = this.parsePadding(render, style, undefined);
         const margin = this.parseMargin(style);
 
-        // Default dimensions
-        let width = parentWidth;
-        let height = parentHeight;
+        // Default dimensions - use content area, not full parent dimensions
+        let width = contentWidth;
+        let height = contentHeight;
         let x = 0;
         let y = 0;
 
         if (style) {
-            // Calculate width
+            // Calculate width - percentages are relative to parent's content width
             if (style.width) {
                 if (typeof style.width === 'string' && style.width.endsWith('px')) {
                     width = parseFloat(style.width);
                 } else if (typeof style.width === 'string' && style.width.endsWith('%')) {
                     const widthPercent = parseFloat(style.width);
-                    width = (parentWidth * widthPercent) / 100;
+                    width = (contentWidth * widthPercent) / 100;
                 } else {
                     width = parseFloat(style.width);
                 }
             }
 
-            // Calculate height
+            // Calculate height - percentages are relative to parent's content height
             if (style.height) {
                 if (typeof style.height === 'string' && style.height.endsWith('px')) {
                     height = parseFloat(style.height);
                 } else if (typeof style.height === 'string' && style.height.endsWith('%')) {
                     const heightPercent = parseFloat(style.height);
-                    height = (parentHeight * heightPercent) / 100;
+                    height = (contentHeight * heightPercent) / 100;
                 } else {
                     height = parseFloat(style.height);
                 }
             }
 
             // Calculate position - CSS uses top-left origin, BabylonJS uses center origin
+            // Position is calculated relative to the content area, then offset by padding
             if (style.left !== undefined) {
                 if (typeof style.left === 'string' && style.left.endsWith('px')) {
-                    x = -(parentWidth / 2) + parseFloat(style.left) + (width / 2);
-                    console.log(`[ElementDimension] Calculated X (px): ${x} (parentW=${parentWidth}, left=${style.left}, width=${width})`);
+                    // Position within content area, then offset by left padding
+                    x = -(parentWidth / 2) + parentPadding.left + parseFloat(style.left) + (width / 2);
+                    console.log(`[ElementDimension] Calculated X (px): ${x} (parentW=${parentWidth}, contentW=${contentWidth}, paddingLeft=${parentPadding.left}, left=${style.left}, width=${width})`);
                 } else if (typeof style.left === 'string' && style.left.endsWith('%')) {
                     const leftPercent = parseFloat(style.left);
-                    const leftPixels = (parentWidth * leftPercent) / 100;
-                    x = -(parentWidth / 2) + leftPixels + (width / 2);
-                    console.log(`[ElementDimension] Calculated X (%): ${x} (parentW=${parentWidth}, left=${style.left}, leftPx=${leftPixels}, width=${width})`);
+                    const leftPixels = (contentWidth * leftPercent) / 100;
+                    x = -(parentWidth / 2) + parentPadding.left + leftPixels + (width / 2);
+                    console.log(`[ElementDimension] Calculated X (%): ${x} (parentW=${parentWidth}, contentW=${contentWidth}, paddingLeft=${parentPadding.left}, left=${style.left}, leftPx=${leftPixels}, width=${width})`);
                 } else {
-                    x = -(parentWidth / 2) + parseFloat(style.left) + (width / 2);
-                    console.log(`[ElementDimension] Calculated X (val): ${x} (parentW=${parentWidth}, left=${style.left}, width=${width})`);
+                    x = -(parentWidth / 2) + parentPadding.left + parseFloat(style.left) + (width / 2);
+                    console.log(`[ElementDimension] Calculated X (val): ${x} (parentW=${parentWidth}, contentW=${contentWidth}, paddingLeft=${parentPadding.left}, left=${style.left}, width=${width})`);
                 }
             } else {
-                console.log(`[ElementDimension] No left style for ${style.selector}, x defaults to 0`);
+                // No left specified, center horizontally within content area
+                x = -(parentWidth / 2) + parentPadding.left + (contentWidth / 2);
+                console.log(`[ElementDimension] No left style for ${style.selector}, x centered in content area: ${x}`);
             }
 
             if (style.top !== undefined) {
                 if (typeof style.top === 'string' && style.top.endsWith('px')) {
-                    y = (parentHeight / 2) - parseFloat(style.top) - (height / 2);
+                    // Position within content area, then offset by top padding
+                    y = (parentHeight / 2) - parentPadding.top - parseFloat(style.top) - (height / 2);
                 } else if (typeof style.top === 'string' && style.top.endsWith('%')) {
                     const topPercent = parseFloat(style.top);
-                    const topPixels = (parentHeight * topPercent) / 100;
-                    y = (parentHeight / 2) - topPixels - (height / 2);
+                    const topPixels = (contentHeight * topPercent) / 100;
+                    y = (parentHeight / 2) - parentPadding.top - topPixels - (height / 2);
                 } else {
-                    y = (parentHeight / 2) - parseFloat(style.top) - (height / 2);
+                    y = (parentHeight / 2) - parentPadding.top - parseFloat(style.top) - (height / 2);
                 }
+            } else {
+                // No top specified, center vertically within content area
+                y = (parentHeight / 2) - parentPadding.top - (contentHeight / 2);
             }
         }
 
