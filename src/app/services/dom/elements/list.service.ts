@@ -217,6 +217,19 @@ export class ListService {
     // Get the container's dimensions from our element dimensions cache
     const containerDimensions = parentId ? dom.context.elementDimensions.get(parentId) : undefined;
     const containerPadding = containerDimensions?.padding || { left: 0, right: 0, top: 0, bottom: 0 };
+    const containerWidth = containerDimensions?.width || 0;
+
+    // Calculate indentation and width
+    const indentation = 25; // Space for bullet point (12px offset + 6px size + margin)
+
+    let widthStyle = '85%'; // Fallback
+    if (containerWidth > 0) {
+      const availableWidth = containerWidth - containerPadding.left - containerPadding.right - indentation;
+      // Ensure we don't go negative or too small
+      const finalWidth = Math.max(availableWidth, 10);
+      widthStyle = `${finalWidth}px`;
+      console.log(`📏 Calculated list item width: ${widthStyle} (container=${containerWidth}, indent=${indentation})`);
+    }
 
     // Create auto-positioned style - modify the explicit style to add automatic positioning
     const autoPositionedStyle: StyleRule = {
@@ -224,8 +237,8 @@ export class ListService {
       ...typeDefaults,
       ...explicitStyle,
       top: `${yOffset}px`,              // Automatic Y positioning
-      left: `${containerPadding.left}px`, // Offset by container's left padding
-      width: '85%',                     // Use most of container width
+      left: `${containerPadding.left + indentation}px`, // Offset by container's left padding + indentation
+      width: widthStyle,                     // Calculated width
       ...(explicitStyle?.height ? {} : (automaticHeight ? { height: `${automaticHeight}px` } : {})), // Only use automatic height if not explicitly set
     };
 

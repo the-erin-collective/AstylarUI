@@ -215,7 +215,6 @@ export class SiteDataService {
           height: '85%',
           background: 'rgba(52, 73, 94, 0.3)', // Semi-transparent background to see the container
           borderRadius: '8px',
-          padding: '20px',
           listItemSpacing: '4px' // Reduced spacing to fit more items
         },
 
