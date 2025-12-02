@@ -58,6 +58,7 @@ export class TextSelectionControllerService {
 
     this.activeEntry = entry;
     this.pointerActive = true;
+    console.log('[TextSelectionController] Begin selection:', nextState);
     return this.updateState(nextState);
   }
 
@@ -84,6 +85,7 @@ export class TextSelectionControllerService {
       hasSelection: range !== null && range.start !== range.end
     };
 
+    console.log('[TextSelectionController] Update selection:', nextState);
     return this.updateState(nextState);
   }
 
@@ -93,13 +95,16 @@ export class TextSelectionControllerService {
     }
 
     this.pointerActive = false;
-    return this.updateState({
+    const finalState = {
       ...this.state,
       isPointerDown: false,
       hasSelection:
         this.state.range !== null &&
         this.state.range.start !== this.state.range.end
-    });
+    };
+
+    console.log('[TextSelectionController] Finalize selection:', finalState);
+    return this.updateState(finalState);
   }
 
   moveSelectionWithKeyboard(
@@ -198,9 +203,6 @@ export class TextSelectionControllerService {
 
     const totalWidth = this.resolveTotalWidth(metrics.characters, metrics.totalWidth);
 
-    // Flip X coordinate because the input coordinate system is horizontally flipped
-    const flippedX = totalWidth - position.x;
-
     const lines = metrics.lines;
     const minTop = lines.reduce((min, line) => Math.min(min, line.top), Infinity);
     const maxBottom = lines.reduce((max, line) => Math.max(max, line.bottom), -Infinity);
@@ -217,7 +219,7 @@ export class TextSelectionControllerService {
 
     const lineOffset = this.resolveLineOffset(entry, targetLine, totalWidth);
     const lineWidth = targetLine.width ?? totalWidth;
-    const relativeX = clamp(flippedX - lineOffset, 0, lineWidth);
+    const relativeX = clamp(position.x - lineOffset, 0, lineWidth);
 
     const lineCharacters = metrics.characters.filter(
       (character) => character.lineIndex === targetLine.index && !character.isLineBreak
@@ -294,6 +296,7 @@ export class TextSelectionControllerService {
 
     const start = Math.min(anchor, focus);
     const end = Math.max(anchor, focus);
+    console.log(`[TextSelectionController] createRange: anchor=${anchor}, focus=${focus} -> start=${start}, end=${end}`);
     return { start, end };
   }
 
@@ -396,6 +399,7 @@ export class TextSelectionControllerService {
   }
 
   private updateState(nextState: TextSelectionState): TextSelectionState {
+    console.log('[TextSelectionController] Updating state:', nextState);
     this.state = nextState;
     this.stateSubject.next(this.state);
     return this.state;

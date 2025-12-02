@@ -18,7 +18,7 @@ export class ListService {
       console.log(`📐 List item spacing:`, listItemSpacing);
 
       // Calculate automatic item height based on container size and number of items
-      const containerHeight = this.getContainerAvailableHeight(dom, render,parent);
+      const containerHeight = this.getContainerAvailableHeight(dom, render, parent);
       const parentId = this.getElementIdFromMeshName(parent.name);
       console.log(`[LIST CONTAINER DEBUG] Container: ${parentId}, height: ${containerHeight}, itemCount: ${children.length}, spacing: ${listItemSpacing}`);
       const automaticItemHeight = this.calculateAutomaticItemHeight(containerHeight, children.length, listItemSpacing);
@@ -32,7 +32,7 @@ export class ListService {
 
         try {
           // Create the list item with automatic positioning and height
-          const listItemMesh = this.createListItem(dom, render,child, parent, styles, currentY, index, listType, automaticItemHeight, parentId || undefined);
+          const listItemMesh = this.createListItem(dom, render, child, parent, styles, currentY, index, listType, automaticItemHeight, parentId || undefined);
           console.log(`✅ Created list item mesh:`, listItemMesh.name, `Position:`, listItemMesh.position);
           console.log(`📏 Item ${index + 1} final position: x=${listItemMesh.position.x}, y=${listItemMesh.position.y}, z=${listItemMesh.position.z}`);
 
@@ -51,7 +51,7 @@ export class ListService {
           // Process nested children if any
           if (child.children && child.children.length > 0) {
             console.log(`🔄 List item ${child.id} has ${child.children.length} sub-children`);
-            this.processListChildren(dom, render,child.children, listItemMesh, styles, child.type as 'ul' | 'ol' );
+            this.processListChildren(dom, render, child.children, listItemMesh, styles, child.type as 'ul' | 'ol');
           }
         } catch (error) {
           console.error(`❌ Error processing list item ${child.type}#${child.id}:`, error);
@@ -76,7 +76,7 @@ export class ListService {
     }
   }
 
-  
+
   private getContainerAvailableHeight(dom: BabylonDOM, render: BabylonRender, parentMesh: Mesh): number {
     // Get the container's actual content height (excluding padding)
     const parentId = this.getElementIdFromMeshName(parentMesh.name);
@@ -101,10 +101,10 @@ export class ListService {
       }
     }
 
-   return 0;
+    return 0;
   }
 
-  
+
   private getElementIdFromMeshName(meshName: string): string | null {
     // Extract element ID from mesh name patterns
     console.log(`🔍 Extracting ID from mesh name: "${meshName}"`);
@@ -132,8 +132,7 @@ export class ListService {
     return meshName;
   }
 
-  
-  private addListIndicator(render: BabylonRender, listItemMesh: Mesh, listType: 'ul' | 'ol', index: number, style: StyleRule): void {
+  private addListIndicator(dom: BabylonDOM, render: BabylonRender, listItemMesh: Mesh, listType: 'ul' | 'ol', index: number, style: StyleRule): void {
 
     console.log(`🔘 Adding ${listType} indicator for item ${index + 1}`);
     const scaleFactor = render.actions.camera.getPixelToWorldScale();
@@ -165,7 +164,25 @@ export class ListService {
     }
 
     // Position indicator to the left of the list item
-    const indicatorX = -2; // Position to the left
+    // Get element dimensions to find left edge
+    const elementId = listItemMesh.metadata?.elementId;
+    let halfWidth = 0;
+
+    if (elementId) {
+      const dims = dom.context.elementDimensions.get(elementId);
+      if (dims) {
+        halfWidth = (dims.width * scaleFactor) / 2;
+      }
+    }
+
+    // Fallback if no dimensions found (shouldn't happen for created elements)
+    if (halfWidth === 0) {
+      const bounds = listItemMesh.getBoundingInfo().boundingBox;
+      halfWidth = (bounds.maximum.x - bounds.minimum.x) / 2;
+    }
+
+    const indicatorOffsetPx = 12; // 12px padding between indicator and item
+    const indicatorX = -halfWidth - (indicatorOffsetPx * scaleFactor);
     const indicatorY = 0;  // Center vertically with list item
     const indicatorZ = 0.001; // Slightly in front
 
@@ -232,8 +249,28 @@ export class ListService {
       dom.context.elementStyles.set(element.id, tempStyles);
     }
 
+    // Store dimensions for the new list item so addListIndicator can use them
+    if (element.id) {
+      const bounds = listItemMesh.getBoundingInfo().boundingBox;
+      const width = bounds.maximum.x - bounds.minimum.x;
+      const height = bounds.maximum.y - bounds.minimum.y;
+
+      // Convert back to pixels (approx)
+      const scaleFactor = render.actions.camera.getPixelToWorldScale();
+      const widthPx = width / scaleFactor;
+      const heightPx = height / scaleFactor;
+
+      console.log(`[ListService] Storing dimensions for ${element.id}: width=${widthPx}px, height=${heightPx}px`);
+
+      dom.context.elementDimensions.set(element.id, {
+        width: widthPx,
+        height: heightPx,
+        padding: { top: 0, right: 0, bottom: 0, left: 0 } // List items usually don't have padding logic yet
+      });
+    }
+
     // Add bullet point or number indicator
-    this.addListIndicator(render,listItemMesh, listType, index, autoPositionedStyle);
+    this.addListIndicator(dom, render, listItemMesh, listType, index, autoPositionedStyle);
 
     return listItemMesh;
   }
@@ -285,4 +322,4 @@ export class ListService {
     }
     return 4; // Default spacing in pixels
   }
-} 
+}

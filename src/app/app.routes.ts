@@ -1,21 +1,13 @@
 import { Routes } from '@angular/router';
-import { SiteComponent } from './components/site.component';
 import { HomeComponent } from './components/home.component';
+import { TodoComponent } from './components/todo.component';
+import { SiteComponent } from './components/site.component';
+import { TextTestComponent } from './components/text-test.component';
 
 export const routes: Routes = [
-  {
-    path: '',
-    component: HomeComponent,
-    title: 'Angular 20 Signals App'
-  },
-  {
-    path: 'site/:site-id',
-    component: SiteComponent,
-    title: 'Site'
-  },
-  {
-    path: '**',
-    redirectTo: '',
-    pathMatch: 'full'
-  }
+  { path: '', component: HomeComponent, title: 'Home' },
+  { path: 'todo', component: TodoComponent, title: 'Todo List' },
+  { path: 'site/:siteId', component: SiteComponent, title: 'Site Details' },
+  { path: 'text-test', component: TextTestComponent, title: 'Text Selection Test' },
+  { path: '**', redirectTo: '' }
 ];

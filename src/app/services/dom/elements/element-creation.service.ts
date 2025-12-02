@@ -278,11 +278,17 @@ export class ElementCreationService {
     ): void {
         console.log(`[ElementCreation] processChildren: processing ${children.length} children for ${parentElement?.id || 'unknown'}`);
 
+        // Check if parent is a list container
+        const isListContainer = parentElement?.type === 'ul' || parentElement?.type === 'ol';
+
         // Check if parent is a flex container
         const isFlex = parentElement && dom.actions.isFlexContainer(render, parentElement, styles);
-        console.log(`[ElementCreation] isFlexContainer(${parentElement?.id}): ${isFlex}`);
+        console.log(`[ElementCreation] isFlexContainer(${parentElement?.id}): ${isFlex}, isListContainer: ${isListContainer}`);
 
-        if (isFlex && parentElement) {
+        if (isListContainer && parentElement) {
+            console.log(`[ElementCreation] Processing list children for ${parentElement.type} container`);
+            dom.actions.processListChildren(dom, render, children, parent, styles, parentElement.type as 'ul' | 'ol');
+        } else if (isFlex && parentElement) {
             console.log(`[ElementCreation] Processing flex children for ${parentElement.id}`);
             dom.actions.processFlexChildren(dom, render, children, parent, styles, parentElement);
         } else {

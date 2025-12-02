@@ -32,8 +32,26 @@ export class ElementInteractionService {
             return; // Already set up or no scene
         }
 
-        // Mark as initialized - actual pointer observer is handled elsewhere in the system
-        this.pointerObserver = {} as Observer<PointerInfo>;
+        // Set up the global pointer observer to handle text selection
+        this.pointerObserver = render.scene.onPointerObservable.add((pointerInfo: PointerInfo) => {
+            switch (pointerInfo.type) {
+                case BABYLON.PointerEventTypes.POINTERDOWN:
+                    this.pointerInteractionService.handlePointerDown(pointerInfo, render);
+                    break;
+                case BABYLON.PointerEventTypes.POINTERMOVE:
+                    this.pointerInteractionService.handlePointerMove(pointerInfo, render);
+                    break;
+                case BABYLON.PointerEventTypes.POINTERUP:
+                    this.pointerInteractionService.handlePointerUp(pointerInfo, render);
+                    break;
+            }
+
+            // Handle pointer out events
+            const pointerEvent = pointerInfo.event as PointerEvent | MouseEvent | null | undefined;
+            if (pointerEvent && (pointerEvent.type === 'pointerout' || pointerEvent.type === 'pointerleave')) {
+                this.pointerInteractionService.handlePointerOut();
+            }
+        });
     }
 
     /**

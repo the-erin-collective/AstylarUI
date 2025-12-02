@@ -71,6 +71,9 @@ export class TextHighlightMeshFactory {
       return;
     }
 
+    // Debug logging for range values
+    console.log(`[TextHighlight] Applying selection range: start=${state.range.start}, end=${state.range.end}`);
+
     if (this.currentElementId && this.currentElementId !== entry.elementId) {
       this.disposeHighlights(this.currentElementId);
     }
@@ -99,6 +102,9 @@ export class TextHighlightMeshFactory {
       return [];
     }
 
+    // Debug logging for selection range
+    console.log(`[TextHighlight] computeSegments called with start=${start}, end=${end}`);
+
     const lineCharMap = new Map<number, typeof characters>();
     for (const character of characters) {
       if (character.isLineBreak) {
@@ -121,10 +127,37 @@ export class TextHighlightMeshFactory {
     const halfWidth = textWidth / 2;
     const halfHeight = textHeight / 2;
 
-    const minTop = cssMetrics.lines.reduce((acc, line) => Math.min(acc, line.top), Number.POSITIVE_INFINITY);
+    // Debug logging for text mesh position
+    console.log(`[TextHighlight] Text mesh position: x=${textMesh.position.x}, y=${textMesh.position.y}`);
+    console.log(`[TextHighlight] Text mesh absolute position: x=${textMesh.absolutePosition.x}, y=${textMesh.absolutePosition.y}`);
+
+    const minTop = cssMetrics.lines.reduce((acc: number, line: any) => Math.min(acc, line.top), Number.POSITIVE_INFINITY);
 
     const segments: HighlightSegment[] = [];
-    const scale = metrics.scale;
+
+    // Calculate scale based on the ratio of Mesh Width to CSS Content Width
+    // The text mesh represents the actual text content, not the container
+    // So we divide textWidth by the actual content width (calculated from characters), not the container width
+    let actualContentWidth = 0;
+    if (cssMetrics.characters && cssMetrics.characters.length > 0) {
+      for (const char of cssMetrics.characters) {
+        const charEnd = char.x + char.advance;
+        if (charEnd > actualContentWidth) {
+          actualContentWidth = charEnd;
+        }
+      }
+    } else {
+      actualContentWidth = cssMetrics.lines.reduce((max: number, line: any) => Math.max(max, line.width ?? 0), 0);
+    }
+
+    const scale = actualContentWidth > 0 ? textWidth / actualContentWidth : metrics.scale;
+
+    console.log(`[TextHighlight] Scale calculation: textWidth=${textWidth}, actualContentWidth=${actualContentWidth}, scale=${scale}`);
+
+
+
+
+
 
     for (const line of cssMetrics.lines) {
       const lineChars = lineCharMap.get(line.index) ?? [];
@@ -135,23 +168,43 @@ export class TextHighlightMeshFactory {
         continue;
       }
 
+      console.log(`[TextHighlight] Processing line ${line.index}: overlapStart=${overlapStart}, overlapEnd=${overlapEnd}, line.startIndex=${line.startIndex}, line.endIndex=${line.endIndex}`);
+
       const lineStartCaret = this.resolveCaretPosition(overlapStart, line, lineChars);
       const lineEndCaret = this.resolveCaretPosition(overlapEnd, line, lineChars, true);
-      const widthCss = Math.max(0, lineEndCaret - lineStartCaret);
+
+      console.log(`[TextHighlight] Line ${line.index} caret positions: lineStartCaret=${lineStartCaret}, lineEndCaret=${lineEndCaret}`);
+
+      // Calculate width using character positions directly
+      const widthCss = Math.abs(lineEndCaret - lineStartCaret);
 
       if (widthCss <= 0) {
         continue;
       }
 
+      // Convert CSS pixels to world units
       const widthWorld = Math.max(widthCss * scale, MIN_SEGMENT_WIDTH);
+
+      // Character x positions in CSS metrics are relative to line start (x=0)
+      // We don't need to add lineOffset here because the positions are already line-relative
       const startXWorld = lineStartCaret * scale;
-      const centerX = -halfWidth + startXWorld + (widthWorld / 2);
+      const endXWorld = lineEndCaret * scale;
+
+      // Calculate center position directly from start and end positions
+      // Map from text content coordinate system to text mesh coordinate system
+      // Note: The mesh X-axis appears to be inverted (Left is +X), so we negate the calculated center X
+      const centerX = -(((startXWorld + endXWorld) / 2) - (textWidth / 2));
 
       const topOffsetCss = line.top - minTop;
       const heightCss = Math.max(line.bottom - line.top, line.height ?? 0);
       const heightWorld = Math.max(heightCss * scale, MIN_SEGMENT_HEIGHT);
       const topOffsetWorld = topOffsetCss * scale;
+      // Convert from top-left origin (text metrics) to center origin (text mesh)
       const centerY = halfHeight - topOffsetWorld - (heightWorld / 2);
+
+      // Debug logging for calculated positions
+      console.log(`[TextHighlight] Line ${line.index}: widthCss=${widthCss}, startXWorld=${startXWorld}, endXWorld=${endXWorld}, centerX=${centerX}, centerY=${centerY}`);
+      console.log(`[TextHighlight] Line ${line.index}: widthWorld=${widthWorld}, heightWorld=${heightWorld}`);
 
       segments.push({
         centerX,
@@ -164,35 +217,61 @@ export class TextHighlightMeshFactory {
     return segments;
   }
 
+  private resolveLineOffset(entry: TextInteractionEntry, line: { width: number }, totalWidth: number): number {
+    const textAlign = entry.style?.textAlign?.toLowerCase() ?? 'left';
+    const lineWidth = line.width ?? totalWidth;
+
+    switch (textAlign) {
+      case 'center':
+      case 'middle':
+        return Math.max(0, (totalWidth - lineWidth) / 2);
+      case 'right':
+        return Math.max(0, totalWidth - lineWidth);
+      default:
+        return 0;
+    }
+  }
+
   private resolveCaretPosition(
     targetIndex: number,
     line: { startIndex: number; endIndex: number },
     lineCharacters: Array<{ index: number; x: number; advance: number }>,
     clampToEnd = false
   ): number {
+    // Debug logging for caret position resolution
+    console.log(`[TextHighlight] Resolving caret position: targetIndex=${targetIndex}, line.startIndex=${line.startIndex}, line.endIndex=${line.endIndex}, clampToEnd=${clampToEnd}`);
+
     if (!lineCharacters.length) {
+      console.log(`[TextHighlight] No line characters, returning 0`);
       return 0;
     }
 
     if (targetIndex <= line.startIndex) {
+      console.log(`[TextHighlight] Target index <= line start index, returning 0`);
       return 0;
     }
 
     if (targetIndex >= line.endIndex) {
       const last = lineCharacters[lineCharacters.length - 1];
-      return clampToEnd ? last.x + last.advance : last.x + last.advance;
+      const result = clampToEnd ? last.x + last.advance : last.x + last.advance;
+      console.log(`[TextHighlight] Target index >= line end index, returning ${result} (last.x=${last.x}, last.advance=${last.advance})`);
+      return result;
     }
 
     const exact = lineCharacters.find((char) => char.index === targetIndex);
     if (exact) {
+      console.log(`[TextHighlight] Found exact character match, returning ${exact.x}`);
       return exact.x;
     }
 
     const preceding = this.findPrecedingCharacter(targetIndex, lineCharacters);
     if (preceding) {
-      return preceding.x + preceding.advance;
+      const result = preceding.x + preceding.advance;
+      console.log(`[TextHighlight] Found preceding character, returning ${result} (preceding.x=${preceding.x}, preceding.advance=${preceding.advance})`);
+      return result;
     }
 
+    console.log(`[TextHighlight] No match found, returning 0`);
     return 0;
   }
 
@@ -236,9 +315,13 @@ export class TextHighlightMeshFactory {
 
       mesh.scaling.x = segment.width;
       mesh.scaling.y = segment.height;
-      mesh.position.x = -segment.centerX;  // Negate because X is flipped in selection controller
+      mesh.position.x = segment.centerX;
       mesh.position.y = segment.centerY;
       mesh.position.z = HIGHLIGHT_Z_OFFSET;
+      mesh.isVisible = true; // Ensure mesh visibility
+
+      // Debug logging for mesh positioning
+      console.log(`[TextHighlight] Mesh ${index}: position=(${mesh.position.x}, ${mesh.position.y}), scale=(${mesh.scaling.x}, ${mesh.scaling.y})`);
     });
 
     this.highlightRecords.set(entry.elementId, existing);

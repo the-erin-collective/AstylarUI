@@ -77,14 +77,19 @@ export class ElementDimensionService {
             // Calculate position - CSS uses top-left origin, BabylonJS uses center origin
             if (style.left !== undefined) {
                 if (typeof style.left === 'string' && style.left.endsWith('px')) {
-                    x = -((parentWidth / 2) - parseFloat(style.left) - (width / 2))
+                    x = -(parentWidth / 2) + parseFloat(style.left) + (width / 2);
+                    console.log(`[ElementDimension] Calculated X (px): ${x} (parentW=${parentWidth}, left=${style.left}, width=${width})`);
                 } else if (typeof style.left === 'string' && style.left.endsWith('%')) {
                     const leftPercent = parseFloat(style.left);
                     const leftPixels = (parentWidth * leftPercent) / 100;
-                    x = -((parentWidth / 2) - leftPixels - (width / 2));
+                    x = -(parentWidth / 2) + leftPixels + (width / 2);
+                    console.log(`[ElementDimension] Calculated X (%): ${x} (parentW=${parentWidth}, left=${style.left}, leftPx=${leftPixels}, width=${width})`);
                 } else {
-                    x = -((parentWidth / 2) - parseFloat(style.left) - (width / 2));
+                    x = -(parentWidth / 2) + parseFloat(style.left) + (width / 2);
+                    console.log(`[ElementDimension] Calculated X (val): ${x} (parentW=${parentWidth}, left=${style.left}, width=${width})`);
                 }
+            } else {
+                console.log(`[ElementDimension] No left style for ${style.selector}, x defaults to 0`);
             }
 
             if (style.top !== undefined) {

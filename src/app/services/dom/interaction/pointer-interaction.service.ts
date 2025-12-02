@@ -182,14 +182,39 @@ export class PointerInteractionService {
 
     const halfWidth = width / 2;
     const halfHeight = height / 2;
-    const normalizedX = clamp((localPoint.x + halfWidth) / width, 0, 1);
+
+    // Fixed coordinate transformation to match text rendering coordinate system
+    // The mesh local coordinates appear to be flipped relative to the text texture (Left click = +X)
+    // So we need to invert the normalized X coordinate
+    const normalizedX = 1 - clamp((localPoint.x + halfWidth) / width, 0, 1);
     const normalizedY = clamp((halfHeight - localPoint.y) / height, 0, 1);
 
-    const cssWidth = metrics.css?.totalWidth ?? 0;
-    const cssHeight = metrics.css?.totalHeight ?? 0;
+    const cssMetrics = entry.metrics?.css;
+    const cssWidth = cssMetrics?.totalWidth ?? 0;
+    const cssHeight = cssMetrics?.totalHeight ?? 0;
+
+    // The text mesh represents the actual rendered text content.
+    // We need to find the ACTUAL content width by looking at character positions,
+    // NOT line.width which represents the container width.
+    let actualContentWidth = 0;
+    if (cssMetrics?.characters && cssMetrics.characters.length > 0) {
+      // Find the rightmost character position
+      for (const char of cssMetrics.characters) {
+        const charEnd = char.x + char.advance;
+        if (charEnd > actualContentWidth) {
+          actualContentWidth = charEnd;
+        }
+      }
+    } else {
+      // Fallback to totalWidth if no characters
+      actualContentWidth = cssWidth;
+    }
+
+    // Map normalized coordinates (0-1 across mesh) to actual content width in CSS space
+    let x = normalizedX * actualContentWidth;
 
     return {
-      x: normalizedX * cssWidth,
+      x,
       y: normalizedY * cssHeight
     };
   }

@@ -18,6 +18,7 @@ import { TextRenderingService } from '../text/text-rendering.service';
 import { StoredTextLayoutMetrics } from '../../types/text-rendering';
 import { TextInteractionRegistryService } from './interaction/text-interaction-registry.service';
 import { TextHighlightMeshFactory } from './interaction/text-highlight-mesh.factory';
+import { BabylonMeshService } from '../babylon-mesh.service';
 
 @Injectable({
   providedIn: 'root'
@@ -50,7 +51,8 @@ export class BabylonDOMService {
     private positioningIntegration: PositioningIntegrationService,
     private textRenderingService: TextRenderingService,
     private textInteractionRegistry: TextInteractionRegistryService,
-    private textHighlightFactory: TextHighlightMeshFactory
+    private textHighlightFactory: TextHighlightMeshFactory,
+    private babylonMeshService: BabylonMeshService
   ) { }
 
   public render?: BabylonRender;
@@ -285,9 +287,11 @@ export class BabylonDOMService {
 
       console.log(`[TEXT DEBUG] ${element.id}: measured text dimensions ${measuredDimensions.width.toFixed(2)}x${measuredDimensions.height.toFixed(2)}px`);
 
+      // Convert text dimensions from CSS pixels to world units
+      const textScaleFactor = render.actions.camera.getPixelToWorldScale();
       const textureDimensions = {
-        width: measuredDimensions.width,
-        height: measuredDimensions.height
+        width: measuredDimensions.width * textScaleFactor,
+        height: measuredDimensions.height * textScaleFactor
       };
 
       // Determine layout dimensions for positioning within the parent box
@@ -521,32 +525,21 @@ export class BabylonDOMService {
    * @param render - BabylonRender interface
    * @returns Created text mesh
    */
-  private createTextMesh(elementId: string, texture: BABYLON.Texture, dimensions: any, render: BabylonRender): Mesh {
-    if (!render.scene) {
-      throw new Error('Scene not initialized for text mesh creation');
+  private createTextMesh(
+    elementId: string,
+    texture: BABYLON.Texture,
+    dimensions: { width: number; height: number },
+    render: BabylonRender
+  ): Mesh {
+    const scene = render.scene;
+    if (!scene) {
+      throw new Error('Scene not initialized');
     }
 
-    // Convert pixel dimensions to world units
-    const scaleFactor = render.actions.camera.getPixelToWorldScale();
-    const worldWidth = dimensions.width * scaleFactor;
-    const worldHeight = dimensions.height * scaleFactor;
+    // Create text mesh with proper material using BabylonMeshService
+    const textMesh = this.babylonMeshService.createTextMesh(`${elementId}_text`, texture, dimensions.width, dimensions.height);
 
-    // Create plane mesh for text
-    const textMesh = BABYLON.MeshBuilder.CreatePlane(`${elementId}-text`, {
-      width: worldWidth,
-      height: worldHeight,
-      sideOrientation: BABYLON.Mesh.DOUBLESIDE
-    }, render.scene);
-
-    // Create material with text texture
-    const material = new BABYLON.StandardMaterial(`${elementId}-text-material`, render.scene);
-    material.diffuseTexture = texture;
-    material.useAlphaFromDiffuseTexture = true;
-    material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
-    material.specularColor = new BABYLON.Color3(0, 0, 0); // No specular highlights
-    material.emissiveColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Slight emissive for visibility
-
-    textMesh.material = material;
+    // Make text mesh pickable for text selection
     textMesh.isPickable = true;
     textMesh.metadata = {
       ...(textMesh.metadata || {}),
@@ -555,7 +548,7 @@ export class BabylonDOMService {
       textDimensions: dimensions
     };
 
-    console.log(`🎨 Created text mesh: ${textMesh.name} (${worldWidth.toFixed(3)}x${worldHeight.toFixed(3)} world units)`);
+    console.log(`🎨 Created text mesh: ${textMesh.name} (${dimensions.width.toFixed(3)}x${dimensions.height.toFixed(3)} world units)`);
 
     return textMesh;
   }

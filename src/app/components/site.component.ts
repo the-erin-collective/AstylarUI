@@ -197,7 +197,7 @@ export class SiteComponent {
   constructor() {
     // Subscribe to route parameter changes
     this.route.paramMap.subscribe(params => {
-      const id = params.get('site-id');
+      const id = params.get('siteId');
       this.siteId.set(id || 'unknown');
     });
 

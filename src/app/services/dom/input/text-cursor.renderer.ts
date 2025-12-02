@@ -28,10 +28,12 @@ export class TextCursorRenderer {
         material.diffuseColor = this.CURSOR_COLOR;
         material.emissiveColor = this.CURSOR_COLOR;
         material.disableLighting = true;
+        material.freeze(); // Freeze material for better performance
         cursor.material = material;
 
         cursor.isVisible = true;
         cursor.isPickable = false; // Cursor should not interfere with picking
+        cursor.renderingGroupId = 2; // Ensure cursor renders in front of text
 
         return cursor;
     }
@@ -111,6 +113,10 @@ export class TextCursorRenderer {
             textInput.cursorMesh.position.x = parentMesh.position.x - (parentWidth / 2) + padding + cursorX;
             textInput.cursorMesh.position.y = parentMesh.position.y;
             textInput.cursorMesh.position.z = parentMesh.position.z + 0.02; // Slightly in front
+            
+            // Ensure cursor is visible and properly parented
+            textInput.cursorMesh.isVisible = textInput.focused && textInput.cursorState.visible;
+            textInput.cursorMesh.parent = parentMesh;
         }
 
         // Reset blink cycle when cursor moves
@@ -148,7 +154,7 @@ export class TextCursorRenderer {
      */
     updateCursorVisibility(textInput: TextInput, visible: boolean): void {
         if (textInput.cursorMesh) {
-            textInput.cursorMesh.isVisible = visible;
+            textInput.cursorMesh.isVisible = visible && textInput.focused;
             textInput.cursorState.visible = visible;
         }
     }
