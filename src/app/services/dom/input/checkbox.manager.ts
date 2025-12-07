@@ -295,11 +295,11 @@ export class CheckboxManager {
             );
 
             labelPlane.parent = input.mesh;
-            // Position to the right of the checkbox/radio
-            // Checkbox size is roughly 0.5, so center is 0. Right edge is 0.25.
-            // Add padding.
+            // Position to the right of the checkbox/radio (inverted coordinate system)
+            // Checkbox size is roughly 0.5, so center is 0. Right edge is 0.25 (which maps to negative x).
+            // So we want negative x offset.
             const padding = 0.1;
-            labelPlane.position.x = 0.25 + (textureWidth / 2) + padding;
+            labelPlane.position.x = -(0.25 + (textureWidth / 2) + padding);
             labelPlane.position.z = 0.0; // Same plane
             labelPlane.isPickable = true; // Allow clicking label
 

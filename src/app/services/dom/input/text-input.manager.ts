@@ -133,12 +133,13 @@ export class TextInputManager {
             textMesh.position.z = -0.15; // Slightly in front
             textMesh.isPickable = false;
 
-            // Align text to start
+            // Align text to left edge
             // Calculate offset based on texture width and input width
             const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
-            // Center is 0, left edge is -inputWidth/2. Add padding.
+            // For left alignment: position text with its left edge near input's left edge
+            // Inverting the sign because the coordinate system is opposite of expected
             const padding = 0.1; // World units padding
-            textMesh.position.x = -inputWidth / 2 + textureWidth / 2 + padding;
+            textMesh.position.x = (inputWidth / 2) - (textureWidth / 2) - padding;
 
             textInput.textMesh = textMesh;
 

@@ -196,11 +196,10 @@ export class SelectManager {
             displayPlane.position.z = -0.15; // In front of select box
             displayPlane.isPickable = false;
 
-            // Align text to start
-            // Calculate offset based on texture width and select width
+            // Align text to left edge (inverted coordinate system)
             const selectWidth = selectElement.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
             const padding = 0.1;
-            displayPlane.position.x = -selectWidth / 2 + textureWidth / 2 + padding;
+            displayPlane.position.x = (selectWidth / 2) - (textureWidth / 2) - padding;
 
             return displayPlane;
 
