@@ -198,7 +198,7 @@ export class SelectManager {
 
             // Align text to left edge (inverted coordinate system)
             const selectWidth = selectElement.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
-            const padding = 0.1;
+            const padding = 1.5; // Aggressive left padding
             displayPlane.position.x = (selectWidth / 2) - (textureWidth / 2) - padding;
 
             return displayPlane;

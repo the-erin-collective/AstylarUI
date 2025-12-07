@@ -138,7 +138,7 @@ export class TextInputManager {
             const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
             // For left alignment: position text with its left edge near input's left edge
             // Inverting the sign because the coordinate system is opposite of expected
-            const padding = 0.1; // World units padding
+            const padding = 1.5; // Aggressive left padding
             textMesh.position.x = (inputWidth / 2) - (textureWidth / 2) - padding;
 
             textInput.textMesh = textMesh;
