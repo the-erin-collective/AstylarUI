@@ -5234,7 +5234,7 @@ export class SiteDataService {
           selector: '#input-container',
           // Removed manual positioning/sizing to let root padding control the layout
           // top: '5%', left: '5%', width: '90%', height: '90%'
-          background: 'rgba(22, 33, 62, 0.8)',
+          background: '#eeeeee',
           borderRadius: '12px',
           padding: '20px',
           display: 'flex',
@@ -5590,3 +5590,4 @@ export class SiteDataService {
     return Object.keys(this.siteData);
   }
 }
+

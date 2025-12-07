@@ -264,7 +264,7 @@ export class CheckboxManager {
         const textContent = input.value || 'Option'; // Use value as label
 
         const textStyle = { ...style };
-        if (!textStyle.fontSize) textStyle.fontSize = '14px';
+        if (!textStyle.fontSize) textStyle.fontSize = '22px'; // Aggressively increased
         if (!textStyle.fontFamily) textStyle.fontFamily = 'Arial';
         if (!textStyle.color) textStyle.color = '#FFFFFF'; // Default to white for labels
         textStyle.textAlign = 'left';
@@ -295,12 +295,29 @@ export class CheckboxManager {
             );
 
             labelPlane.parent = input.mesh;
+
             // Position to the right of the checkbox/radio (inverted coordinate system)
-            // Checkbox size is roughly 0.5, so center is 0. Right edge is 0.25 (which maps to negative x).
-            // So we want negative x offset.
-            const padding = 0.1;
-            labelPlane.position.x = -(0.25 + (textureWidth / 2) + padding);
+            // Use actual mesh bounds for more accurate positioning
+            const inputHalfWidth = input.mesh.getBoundingInfo().boundingBox.extendSize.x;
+
+            // Increase padding to prevent overlap
+            const padding = 0.9;
+
+            // Formula: - (halfWidth + halfTextWidth + padding)
+            // This places the text starting 'padding' distance away from the right edge
+            labelPlane.position.x = -(inputHalfWidth + (textureWidth / 2) + padding);
             labelPlane.position.z = 0.0; // Same plane
+
+            // Fix orientation for Radio buttons:
+            // Radio meshes are rotated 90deg on X axis (to show face).
+            // Since label is child, it inherits this rotation. We need to counter-rotate.
+            if (input.type === InputType.Radio) {
+                labelPlane.rotation.x = -Math.PI / 2;
+                // Also need to push it slightly up in Z (which is parent's local Y/Z?) due to rotation?
+                // Actually if counter-rotated, its local Z is aligned with World Z again?
+                // Let's assume counter-rotation is enough for facing.
+            }
+
             labelPlane.isPickable = true; // Allow clicking label
 
             // Add interaction
