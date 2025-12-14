@@ -135,6 +135,9 @@ export class TextCanvasRendererService {
     const wordSpacing = style.wordSpacing ?? 0;
     const approxAscent = style.fontSize * 0.8;
     const approxDescent = style.fontSize * 0.2;
+    
+    // Get device pixel ratio to correctly convert measurements
+    const devicePixelRatio = window.devicePixelRatio || 1;
 
     const lineMetrics: TextLineMetrics[] = [];
     const characterMetrics: TextCharacterMetrics[] = [];
@@ -157,15 +160,24 @@ export class TextCanvasRendererService {
       let lineAscent = lineMeasure.actualBoundingBoxAscent ?? approxAscent;
       let lineDescent = lineMeasure.actualBoundingBoxDescent ?? approxDescent;
 
+      // Convert measurements from device pixels to CSS pixels
+      lineAscent = lineAscent / devicePixelRatio;
+      lineDescent = lineDescent / devicePixelRatio;
+
       const characters = Array.from(line.text);
 
       characters.forEach((char, charIndex) => {
         const glyphMetrics = ctx.measureText(char);
-        const width = glyphMetrics.width;
+        // Convert width from device pixels to CSS pixels
+        const width = glyphMetrics.width / devicePixelRatio;
         const advanceSpacing = (charIndex < characters.length - 1 ? letterSpacing : 0) + (char === ' ' ? wordSpacing : 0);
 
-        lineAscent = Math.max(lineAscent, glyphMetrics.actualBoundingBoxAscent ?? approxAscent);
-        lineDescent = Math.max(lineDescent, glyphMetrics.actualBoundingBoxDescent ?? approxDescent);
+        // Convert ascent/descent measurements from device pixels to CSS pixels
+        const charAscent = (glyphMetrics.actualBoundingBoxAscent ?? approxAscent) / devicePixelRatio;
+        const charDescent = (glyphMetrics.actualBoundingBoxDescent ?? approxDescent) / devicePixelRatio;
+
+        lineAscent = Math.max(lineAscent, charAscent);
+        lineDescent = Math.max(lineDescent, charDescent);
 
         characterMetrics.push({
           index: globalIndex,
@@ -214,8 +226,8 @@ export class TextCanvasRendererService {
         bottom,
         x: 0,
         y: baseline,
-        actualLeft: lineMeasure.actualBoundingBoxLeft ?? 0,
-        actualRight: lineMeasure.actualBoundingBoxRight ?? widthWithoutSpacing
+        actualLeft: (lineMeasure.actualBoundingBoxLeft ?? 0) / devicePixelRatio,
+        actualRight: (lineMeasure.actualBoundingBoxRight ?? widthWithoutSpacing) / devicePixelRatio
       });
 
       if (lineIndex < linesWithPositions.length - 1) {
