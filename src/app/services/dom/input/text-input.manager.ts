@@ -39,6 +39,9 @@ export class TextInputManager {
         // Create input field background
         const inputMesh = this.createInputBackground(element, render, style, worldDimensions);
 
+        // Setup interaction for click-to-position
+        this.setupInteraction(inputMesh, render);
+
         // Initialize cursor state
         const cursorState: CursorState = {
             position: 0,
@@ -77,6 +80,9 @@ export class TextInputManager {
             maxLength: element.maxLength,
             cursorState
         };
+
+        // Store reference to textInput in mesh metadata for interaction handler
+        inputMesh.metadata = { ...inputMesh.metadata, textInput };
 
         // Always create layout metrics, even for empty inputs (needed for cursor positioning)
         if (render.scene) {
@@ -320,6 +326,77 @@ export class TextInputManager {
         inputMesh.isPickable = true; // Enable clicking
 
         return inputMesh;
+    }
+
+    /**
+     * Sets up interaction handlers for the input mesh
+     */
+    private setupInteraction(mesh: BABYLON.Mesh, render: BabylonRender): void {
+        mesh.actionManager = new BABYLON.ActionManager(render.scene);
+        mesh.actionManager.registerAction(
+            new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, (evt) => {
+                const textInput = mesh.metadata?.textInput as TextInput;
+                if (!textInput || !textInput.textLayoutMetrics || !render.scene) return;
+
+                // Only process if focused or aiming to focus
+                // Assuming focusing logic happens elsewhere/concurrently, but we process position here.
+
+                const pickInfo = render.scene.pick(render.scene.pointerX, render.scene.pointerY, (m) => m === mesh);
+                if (pickInfo && pickInfo.hit && pickInfo.pickedPoint) {
+                    // Convert world point to local space
+                    const matrix = mesh.computeWorldMatrix(true);
+                    const localPoint = BABYLON.Vector3.TransformCoordinates(pickInfo.pickedPoint, matrix.clone().invert());
+
+                    const scale = render.actions.camera.getPixelToWorldScale();
+                    const inputWidth = mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
+                    const padding = 1.5 * scale;
+                    // Use stored texture width or fallback
+                    const textWidth = textInput.textureWidth !== undefined ? textInput.textureWidth : (textInput.textLayoutMetrics.totalWidth * scale / 1.0); // Assuming ratio 1 if unknown
+
+                    // Calculate visual components
+                    const textMeshPosition = (inputWidth / 2) - (textWidth / 2) - padding;
+                    const textLeftEdgeX = textMeshPosition + (textWidth / 2);
+
+                    // Calculate distance from start
+                    // Start is at textLeftEdgeX (Local +X)
+                    // Move Right means Decrease X
+                    // Distance = Start - Pick
+                    let distanceWorld = textLeftEdgeX - localPoint.x;
+
+                    // Cap distance to valid range (0 to Width)
+                    // Actually let's allow slight overshoot to snap to nearest
+
+                    // Calculate ratio
+                    const widthCorrectionRatio = (textInput.textLayoutMetrics.totalWidth > 0 && textInput.textureWidth !== undefined)
+                        ? (textInput.textureWidth / scale) / textInput.textLayoutMetrics.totalWidth
+                        : 1.0;
+
+                    // Convert World Distance -> Metric Visual Distance
+                    // DistanceWorld = MetricCSS * Scale * Ratio
+                    // MetricCSS = DistanceWorld / (Scale * Ratio)
+
+                    const metricVisualX = distanceWorld / (scale * widthCorrectionRatio);
+
+                    // Get index
+                    const newIndex = this.textSelectionService.getCharacterIndexAtPosition(metricVisualX, textInput.textLayoutMetrics);
+
+                    console.log('[TextInputManager] Clicked at localX:', localPoint.x, 'Dist:', distanceWorld, 'Index:', newIndex);
+
+                    // Update state
+                    textInput.cursorPosition = newIndex;
+                    textInput.cursorState.position = newIndex;
+
+                    // Clear selection unless shift is held (handled elsewhere? For now just set pos)
+                    textInput.cursorState.selectionActive = false;
+                    textInput.selectionStart = newIndex;
+                    textInput.selectionEnd = newIndex;
+
+                    // Update visuals
+                    this.updateCursorPosition(textInput, render, textInput.style);
+                    this.updateSelectionHighlight(textInput, render, textInput.style);
+                }
+            })
+        );
     }
 
     /**

@@ -379,4 +379,63 @@ export class TextSelectionService {
 
     return layoutMetrics.lines[char.lineIndex] || null;
   }
+
+  /**
+   * Calculates the character index closest to a given visual X position
+   * @param visualX - The visual X distance from the start of the text (in CSS pixels)
+   * @param layoutMetrics - Text layout metrics
+   * @returns The character index
+   */
+  getCharacterIndexAtPosition(visualX: number, layoutMetrics: TextLayoutMetrics): number {
+    // Basic validation
+    if (!layoutMetrics.characters || layoutMetrics.characters.length === 0) return 0;
+
+    // Initial check: if visualX is negative (before text), return 0
+    if (visualX < 0) return 0;
+
+    let closestIndex = 0;
+    let minDiff = Number.MAX_VALUE;
+
+    // Check distance to the start (0)
+    const diffStart = Math.abs(visualX - 0);
+    minDiff = diffStart;
+    closestIndex = 0;
+
+    // Iterate through all characters to find transition points
+    // A transition point is the gap between characters.
+    // Index i corresponds to the gap BEFORE character i.
+    // Index length corresponds to the gap AFTER the last character.
+
+    // Check all character centers to see if we should snap to the index before or after
+    for (let i = 0; i < layoutMetrics.characters.length; i++) {
+      const char = layoutMetrics.characters[i];
+      const charCenter = char.x + (char.width / 2);
+
+      // If we are past the center of this character, we are likely closer to index i+1
+      // If we are before the center, we are likely closer to index i
+
+      // Let's rely on finding the specific character whose center is closest, 
+      // then decide if we are left or right of it?
+      // Actually, simpler: check the boundaries (cursor positions)
+      // Cursor positions are at: char.x (Index i) and char.x + char.width (Index i+1)
+
+      // Check "cursor at i" (Left of char i)
+      const posAtI = char.x;
+      const diffAtI = Math.abs(visualX - posAtI);
+      if (diffAtI < minDiff) {
+        minDiff = diffAtI;
+        closestIndex = i;
+      }
+
+      // Check "cursor at i+1" (Right of char i / Left of char i+1)
+      const posAtNext = char.x + char.width;
+      const diffAtNext = Math.abs(visualX - posAtNext);
+      if (diffAtNext < minDiff) {
+        minDiff = diffAtNext;
+        closestIndex = i + 1;
+      }
+    }
+
+    return closestIndex;
+  }
 }
