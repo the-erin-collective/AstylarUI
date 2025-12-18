@@ -23,7 +23,8 @@ export interface BabylonDOMActions {
         tableChildren: DOMElement[],
         parent: Mesh,
         styles: StyleRule[],
-        parentElement: DOMElement
+        parentElement: DOMElement,
+        tableMeshOverride?: Mesh
     ) => void;
     generateElementId: (parentId: string, type: string, index: number, className?: string) => string;
     // Positioning delegates

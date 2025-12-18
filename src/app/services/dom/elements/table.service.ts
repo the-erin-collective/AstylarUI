@@ -8,33 +8,23 @@ import { StyleRule } from '../../../types/style-rule';
 @Injectable({ providedIn: 'root' })
 export class TableService {
 
-  public processTable(dom: BabylonDOM, render: BabylonRender, tableChildren: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement): void {
+  public processTable(dom: BabylonDOM, render: BabylonRender, tableChildren: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement, tableMeshOverride?: Mesh): void {
     if (!parentElement.id) {
       throw new Error("Parent table element has no id.");
     }
 
     console.log(`[TABLE DEBUG] ===== PROCESSING TABLE "${parentElement.id}" =====`);
+    if (tableMeshOverride) {
+      console.log(`[TABLE DEBUG] Using existing table mesh: ${tableMeshOverride.name}`);
+    }
+
+    // ... rest of logging ...
     console.log(`[TABLE DEBUG] Table has ${tableChildren.length} children`);
-    console.log(`[TABLE DEBUG] Table children types: ${JSON.stringify(tableChildren.map(c => c.type))}`);
-    console.log(`[TABLE DEBUG] Table children details:`, JSON.stringify(tableChildren.map(c => ({ type: c.type, id: c.id, class: c.class }))));
-    console.log(`[TABLE DEBUG] Parent mesh name: ${parent.name}`);
-    
-    // Debug: Check if styles are being passed correctly
-    console.log(`[TABLE DEBUG] Styles passed to processTable:`, styles.length);
-    console.log(`[TABLE DEBUG] Available elementStyles keys:`, Array.from(dom.context.elementStyles.keys()));
-    
-    // Check specific styles we're looking for
-    const simpleHeaderStyle = dom.context.elementStyles.get('.simple-header');
-    const simpleCellStyle = dom.context.elementStyles.get('.simple-cell');
-    const th1Style = dom.context.elementStyles.get('#simple-th-1');
-    console.log(`[TABLE DEBUG] .simple-header style:`, JSON.stringify(simpleHeaderStyle));
-    console.log(`[TABLE DEBUG] .simple-cell style:`, JSON.stringify(simpleCellStyle));
-    console.log(`[TABLE DEBUG] #simple-th-1 style:`, JSON.stringify(th1Style));
 
     try {
-      // First, create the table container mesh and store its dimensions
-      const tableMesh = this.createTableContainer(dom, render, parentElement, parent, styles);
-      console.log(`[TABLE DEBUG] ===== CREATED TABLE MESH: ${tableMesh.name} =====`);
+      // Use existing mesh or create a new one
+      const tableMesh = tableMeshOverride || this.createTableContainer(dom, render, parentElement, parent, styles);
+      console.log(`[TABLE DEBUG] ===== USING TABLE MESH: ${tableMesh.name} =====`);
 
       // Process column definitions first (col, colgroup) to establish column layout
       const columnDefinitions = this.extractColumnDefinitions(tableChildren);
@@ -92,7 +82,7 @@ export class TableService {
       console.log(`[TABLE DEBUG] Shared dimensions - rowHeight: ${sharedRowHeight}px, columnWidths: ${JSON.stringify(sharedColumnWidths)}`);
 
       // Filter out column definitions and captions from main table structure processing
-      const tableStructureChildren = tableChildren.filter(child => 
+      const tableStructureChildren = tableChildren.filter(child =>
         child.type !== 'col' && child.type !== 'colgroup' && child.type !== 'caption'
       );
 
@@ -130,7 +120,7 @@ export class TableService {
     // Check parent dimensions before creating table
     const parentDimensions = dom.context.elementDimensions.get(parent.name);
     console.log(`[TABLE CREATE] Parent (${parent.name}) dimensions: ${JSON.stringify(parentDimensions)}`);
-    
+
     // Fix: For tables, if parent is the table itself, look for the actual container parent
     let actualParentDimensions = parentDimensions;
     if (parent.name === tableElement.id) {
@@ -139,7 +129,7 @@ export class TableService {
       const containerName = tableElement.id?.replace('-table', '-container') || 'complex-container';
       actualParentDimensions = dom.context.elementDimensions.get(containerName);
       console.log(`[TABLE CREATE] Actual parent container (${containerName}) dimensions: ${JSON.stringify(actualParentDimensions)}`);
-      
+
       // Debug: Check what the container's parent dimensions are
       const rootDimensions = dom.context.elementDimensions.get('root-body');
       console.log(`[TABLE CREATE] Root body dimensions: ${JSON.stringify(rootDimensions)}`);
@@ -149,7 +139,7 @@ export class TableService {
         console.log(`[TABLE CREATE] Container actual height: ${actualParentDimensions?.height}px`);
       }
     }
-    
+
     // Check what the table's CSS height should resolve to
     if (actualParentDimensions && tableElement.id === 'complex-table') {
       const expectedHeight = actualParentDimensions.height * 0.7;
@@ -558,32 +548,32 @@ export class TableService {
 
     let currentX = 0;
     let columnIndex = 0;
-    
+
     tableCells.forEach((cell, cellIndex) => {
       console.log(`[TABLE DEBUG] Processing cell ${cellIndex + 1}/${tableCells.length}: ${cell.type}#${cell.id}`);
-      
+
       // Handle colspan
       const colspan = cell.colspan || cell.tableProperties?.colspan || 1;
       const rowspan = cell.rowspan || cell.tableProperties?.rowspan || 1;
-      
+
       console.log(`[TABLE-SPAN] ${cell.id || 'unknown'}: colspan=${colspan} rowspan=${rowspan} class="${cell.class || 'none'}"`);
       if (colspan > 1 || rowspan > 1) {
         console.log(`[TABLE-SPAN] *** SPANNING CELL DETECTED: ${cell.id} spans ${colspan}x${rowspan} ***`);
       }
-      
+
       // Calculate cell width based on colspan
       let cellWidth = 0;
       for (let i = 0; i < colspan && (columnIndex + i) < columnWidths.length; i++) {
         cellWidth += columnWidths[columnIndex + i];
       }
-      
+
       console.log(`[TABLE DEBUG] Cell currentX: ${currentX}, cellWidth: ${cellWidth} (spanning ${colspan} columns)`);
 
       try {
         if (cellWidth === null || cellWidth === undefined || isNaN(cellWidth)) {
           throw new Error(`[TABLE ERROR] Invalid cell width: ${cellWidth}. Column widths: ${JSON.stringify(columnWidths)}`);
         }
-        
+
         const cellMesh = this.createTableCellWithSpanning(dom, render, cell, rowMesh, styles, currentX, cellWidth, rowMesh.name, colspan, rowspan);
         console.log(`[TABLE DEBUG] Created cell mesh: ${cellMesh.name}`);
 
@@ -633,7 +623,7 @@ export class TableService {
     console.log(`[TABLE DEBUG] Creating cell ${cellElement.id}, rowMesh: ${rowMesh.name}, rowId: ${rowId}`);
     console.log(`[TABLE DEBUG] Cell xOffset: ${xOffset}, cellWidth: ${cellWidth}, colspan: ${colspan}, rowspan: ${rowspan}`);
     console.log(`[TABLE DEBUG] Cell element details: type=${cellElement.type}, id=${cellElement.id}, class=${cellElement.class}`);
-    
+
     // Debug: Check if the cell's styles are available
     if (cellElement.id) {
       const cellIdStyle = dom.context.elementStyles.get(cellElement.id);
@@ -690,10 +680,10 @@ export class TableService {
 
     // Debug: Check what styles are being used for createElement
     console.log(`[TABLE DEBUG] About to create cell mesh with autoPositionedStyle:`, JSON.stringify(autoPositionedStyle));
-    
+
     // Create the cell element using existing createElement method
     const cellMesh = dom.actions.createElement(dom, render, cellElement, rowMesh, styles);
-    
+
     console.log(`[TABLE DEBUG] Cell mesh created: ${cellMesh.name}, material:`, cellMesh.material?.name);
 
     // Store cell dimensions for potential child elements
@@ -883,7 +873,7 @@ export class TableService {
 
   private extractColumnDefinitions(tableChildren: DOMElement[]): ColumnDefinition[] {
     const columnDefinitions: ColumnDefinition[] = [];
-    
+
     for (const child of tableChildren) {
       if (child.type === 'colgroup') {
         // Process colgroup and its col children
@@ -914,14 +904,14 @@ export class TableService {
         }
       }
     }
-    
+
     console.log(`[TABLE DEBUG] Extracted column definitions: ${JSON.stringify(columnDefinitions)}`);
     return columnDefinitions;
   }
 
   private processCaption(dom: BabylonDOM, render: BabylonRender, captionElement: DOMElement, tableMesh: Mesh, styles: StyleRule[]): void {
     console.log(`[TABLE DEBUG] Processing caption: ${captionElement.id}`);
-    
+
     // Get table dimensions for caption positioning
     const tableDimensions = dom.context.elementDimensions.get(tableMesh.name);
     if (!tableDimensions) {

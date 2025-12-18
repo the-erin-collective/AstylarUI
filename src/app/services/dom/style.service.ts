@@ -10,7 +10,7 @@ import { StyleDefaultsService } from './style-defaults.service';
     providedIn: 'root'
 })
 export class StyleService {
-    constructor(private styleDefaults: StyleDefaultsService) {}
+    constructor(private styleDefaults: StyleDefaultsService) { }
 
     /**
      * Parses the align-content property for flex containers
@@ -33,7 +33,7 @@ export class StyleService {
         ];
 
         const normalizedValue = value.trim().toLowerCase();
-        
+
         // Check if the value is valid
         if (validValues.includes(normalizedValue)) {
             return normalizedValue;
@@ -42,7 +42,7 @@ export class StyleService {
         console.warn(`Invalid align-content value: "${value}". Using default "stretch" instead.`);
         return 'stretch'; // Default to stretch for invalid values
     }
-    
+
     /**
      * Parses the flex-grow property for flex items
      * @param value The flex-grow value to parse
@@ -54,7 +54,7 @@ export class StyleService {
         }
 
         const parsedValue = parseFloat(value.trim());
-        
+
         // Check if the value is a valid number
         if (!isNaN(parsedValue) && parsedValue >= 0) {
             return parsedValue;
@@ -75,7 +75,7 @@ export class StyleService {
         }
 
         const parsedValue = parseFloat(value.trim());
-        
+
         // Check if the value is a valid number
         if (!isNaN(parsedValue) && parsedValue >= 0) {
             return parsedValue;
@@ -96,18 +96,18 @@ export class StyleService {
         }
 
         const normalizedValue = value.trim().toLowerCase();
-        
+
         // Check if the value is 'auto' or 'content'
         if (normalizedValue === 'auto' || normalizedValue === 'content') {
             return normalizedValue;
         }
-        
+
         // Check if the value is a valid CSS dimension (e.g., 10px, 50%, 2em)
         const dimensionRegex = /^(0|[1-9]\d*)(px|%|em|rem|vh|vw)$/;
         if (dimensionRegex.test(normalizedValue)) {
             return normalizedValue;
         }
-        
+
         // Check if the value is just a number (interpreted as pixels)
         const numberRegex = /^(0|[1-9]\d*)$/;
         if (numberRegex.test(normalizedValue)) {
@@ -117,7 +117,7 @@ export class StyleService {
         console.warn(`Invalid flex-basis value: "${value}". Using default "auto" instead.`);
         return 'auto'; // Default to auto for invalid values
     }
-    
+
     /**
      * Parses the flex shorthand property for flex items
      * @param value The flex shorthand value to parse
@@ -129,23 +129,23 @@ export class StyleService {
         }
 
         const normalizedValue = value.trim().toLowerCase();
-        
+
         // Handle keyword values
         if (normalizedValue === 'initial') {
             return { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' };
         }
-        
+
         if (normalizedValue === 'auto') {
             return { flexGrow: 1, flexShrink: 1, flexBasis: 'auto' };
         }
-        
+
         if (normalizedValue === 'none') {
             return { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' };
         }
-        
+
         // Split the value by spaces to handle different syntaxes
         const parts = normalizedValue.split(/\s+/).filter(part => part.length > 0);
-        
+
         // Handle single-value syntax (flex: 1)
         if (parts.length === 1) {
             const flexGrow = parseFloat(parts[0]);
@@ -153,11 +153,11 @@ export class StyleService {
                 return { flexGrow, flexShrink: 1, flexBasis: '0%' };
             }
         }
-        
+
         // Handle two-value syntax (flex: 1 2)
         if (parts.length === 2) {
             const flexGrow = parseFloat(parts[0]);
-            
+
             // Check if the second part is a number (flex-shrink) or a dimension (flex-basis)
             if (!isNaN(parseFloat(parts[1]))) {
                 const flexShrink = parseFloat(parts[1]);
@@ -172,22 +172,22 @@ export class StyleService {
                 }
             }
         }
-        
+
         // Handle three-value syntax (flex: 1 2 10px)
         if (parts.length === 3) {
             const flexGrow = parseFloat(parts[0]);
             const flexShrink = parseFloat(parts[1]);
             const flexBasis = this.parseFlexBasis(parts[2]);
-            
+
             if (!isNaN(flexGrow) && !isNaN(flexShrink) && flexGrow >= 0 && flexShrink >= 0) {
                 return { flexGrow, flexShrink, flexBasis };
             }
         }
-        
+
         console.warn(`Invalid flex shorthand value: "${value}". Using default values instead.`);
         return { flexGrow: 0, flexShrink: 1, flexBasis: 'auto' }; // Default to initial values for invalid input
     }
-    
+
     /**
      * Parses the align-self property for flex items
      * @param value The align-self value to parse
@@ -208,7 +208,7 @@ export class StyleService {
         ];
 
         const normalizedValue = value.trim().toLowerCase();
-        
+
         // Check if the value is valid
         if (validValues.includes(normalizedValue)) {
             return normalizedValue;
@@ -217,7 +217,7 @@ export class StyleService {
         console.warn(`Invalid align-self value: "${value}". Using default "auto" instead.`);
         return 'auto'; // Default to auto for invalid values
     }
-    
+
     /**
      * Parses the order property for flex items
      * @param value The order value to parse
@@ -229,7 +229,7 @@ export class StyleService {
         }
 
         const parsedValue = parseInt(value.trim(), 10);
-        
+
         // Check if the value is a valid integer
         if (!isNaN(parsedValue)) {
             return parsedValue;
@@ -242,93 +242,103 @@ export class StyleService {
     public parseStyles(dom: BabylonDOM, render: BabylonRender, styles: StyleRule[]): void {
         console.log(`[STYLE-PARSE] Starting to parse ${styles.length} styles`);
         styles.forEach((style, index) => {
-            if (style.selector.includes(':hover')) {
-                // This is a hover style
-                const baseSelector = style.selector.replace(':hover', '');
-                const elementId = baseSelector.replace('#', '');
-                if (!dom.context.elementStyles.has(elementId)) {
-                    dom.context.elementStyles.set(elementId, { normal: {} as StyleRule });
-                }
-                dom.context.elementStyles.get(elementId)!.hover = style;
-                console.log(`[STYLE-PARSE] Hover style for ${elementId}: background=${style.background || 'none'}`);
-            } else if (style.selector.startsWith('#')) {
-                // This is a normal element style
-                const elementId = style.selector.replace('#', '');
-                if (!dom.context.elementStyles.has(elementId)) {
-                    dom.context.elementStyles.set(elementId, { normal: style });
-                } else {
-                    // MERGE with existing style instead of overwriting
-                    const existingStyle = dom.context.elementStyles.get(elementId)!.normal;
-                    const mergedStyle = { ...existingStyle, ...style };
-                    dom.context.elementStyles.get(elementId)!.normal = mergedStyle;
-                    
-
-                }
-                console.log(`[STYLE-PARSE] ID style for ${elementId}: background=${style.background || 'none'}`);
-                
-                // DEBUG: Log when we merge styles for containers
-                if (elementId.includes('container') && dom.context.elementStyles.has(elementId)) {
-                    console.log(`🔍 [CONTAINER MERGE DEBUG] Merged styles for ${elementId}`);
-                }
-            } else if (style.selector.startsWith('.')) {
-                // This is a class selector
-                const className = style.selector.replace('.', '');
-                // Store with dot prefix
-                if (!dom.context.elementStyles.has(style.selector)) {
-                    dom.context.elementStyles.set(style.selector, { normal: style });
-                } else {
-                    dom.context.elementStyles.get(style.selector)!.normal = style;
-                }
-                // Store without dot prefix
-                if (!dom.context.elementStyles.has(className)) {
-                    dom.context.elementStyles.set(className, { normal: style });
-                } else {
-                    dom.context.elementStyles.get(className)!.normal = style;
-                }
-                console.log(`[STYLE-PARSE] Class style for ${className}: background=${style.background || 'none'}`);
-            }
-        });
-        console.log(`[STYLE-PARSE] Completed parsing. Total stored styles: ${dom.context.elementStyles.size}`);
-    }
-
-    public findStyleForElement(element: DOMElement, styles: StyleRule[]): StyleRule | undefined {
-        if (!element.id) {
-            console.log('🎨 STYLE DEBUG: Element has no ID, returning undefined');
-            return undefined;
-        }
-        
-        const matchingStyles: StyleRule[] = [];
-        
-        for (const style of styles) {
-            // Handle comma-separated selectors
             const selectors = style.selector.split(',').map(s => s.trim());
-            
-            for (const selector of selectors) {
-                console.log(`🎨 STYLE DEBUG: Testing selector: "${selector}" against element: ${element.id}`);
-                
-                if (this.matchesSelector(element, selector)) {
-                    console.log(`✅ STYLE DEBUG: Selector "${selector}" matches element: ${element.id}`);
-                    matchingStyles.push({...style, selector}); // Use the specific matching selector
-                    break; // Don't test other selectors in this rule
+
+            selectors.forEach(selector => {
+                if (selector.includes(':hover')) {
+                    // This is a hover style
+                    const baseSelector = selector.replace(':hover', '');
+                    const elementId = baseSelector.replace('#', '');
+                    if (!dom.context.elementStyles.has(elementId)) {
+                        dom.context.elementStyles.set(elementId, { normal: {} as StyleRule });
+                    }
+                    dom.context.elementStyles.get(elementId)!.hover = style;
+                    console.log(`[STYLE-PARSE] Hover style for ${elementId}`);
+                } else if (selector.startsWith('#')) {
+                    // This is a normal element style
+                    const elementId = selector.replace('#', '');
+                    if (!dom.context.elementStyles.has(elementId)) {
+                        dom.context.elementStyles.set(elementId, { normal: style });
+                    } else {
+                        const existingStyle = dom.context.elementStyles.get(elementId)!.normal;
+                        dom.context.elementStyles.get(elementId)!.normal = { ...existingStyle, ...style };
+                    }
+                } else if (selector.startsWith('.')) {
+                    // This is a class selector
+                    const className = selector.replace('.', '');
+                    if (!dom.context.elementStyles.has(selector)) {
+                        dom.context.elementStyles.set(selector, { normal: style });
+                    } else {
+                        const existingStyle = dom.context.elementStyles.get(selector)!.normal;
+                        dom.context.elementStyles.get(selector)!.normal = { ...existingStyle, ...style };
+                    }
+                    // Also store without dot for convenience
+                    if (!dom.context.elementStyles.has(className)) {
+                        dom.context.elementStyles.set(className, { normal: style });
+                    }
                 } else {
-                    console.log(`❌ STYLE DEBUG: Selector "${selector}" does not match element: ${element.id}`);
+                    // This is likely a type selector (div, table, etc.)
+                    if (!dom.context.elementStyles.has(selector)) {
+                        dom.context.elementStyles.set(selector, { normal: style });
+                    } else {
+                        const existingStyle = dom.context.elementStyles.get(selector)!.normal;
+                        dom.context.elementStyles.get(selector)!.normal = { ...existingStyle, ...style };
+                    }
                 }
+            });
+        });
+        console.log(`[STYLE-PARSE] Completed parsing. Total stored style keys: ${dom.context.elementStyles.size}`);
+    }
+
+    public findStyleForElement(element: DOMElement, styles: StyleRule[], elementStylesOverride?: Map<string, { normal: StyleRule; hover?: StyleRule }>): StyleRule | undefined {
+        const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
+
+        let mergedStyle: StyleRule = {
+            selector: element.id ? `#${element.id}` : element.type,
+            ...typeDefaults
+        };
+
+        // If we don't have the map, fall back to the slow array search (though we should always have the map now)
+        const getStyle = (selector: string): StyleRule | undefined => {
+            if (elementStylesOverride) {
+                return elementStylesOverride.get(selector)?.normal;
+            }
+            // Fallback to searching the raw array if no map provided
+            return styles.find(s => {
+                const parts = s.selector.split(',').map(p => p.trim());
+                return parts.includes(selector);
+            });
+        };
+
+        // 1. Apply Type-based styles (e.g., "div")
+        const typeStyle = getStyle(element.type);
+        if (typeStyle) {
+            mergedStyle = { ...mergedStyle, ...typeStyle };
+        }
+
+        // 2. Apply Class-based styles (e.g., ".my-class")
+        if (element.class) {
+            const classNames = element.class.split(' ').filter(c => c.trim());
+            classNames.forEach(className => {
+                // Try both ".class" and "class" keys
+                const classStyle = getStyle(`.${className}`) || getStyle(className);
+                if (classStyle) {
+                    mergedStyle = { ...mergedStyle, ...classStyle };
+                }
+            });
+        }
+
+        // 3. Apply ID-based styles (e.g., "#my-id")
+        if (element.id) {
+            const idStyle = getStyle(`#${element.id}`) || getStyle(element.id);
+            if (idStyle) {
+                mergedStyle = { ...mergedStyle, ...idStyle };
             }
         }
-        
-        console.log(`🎨 STYLE DEBUG: Found ${matchingStyles.length} matching styles for ${element.id}`);
-        
-        if (matchingStyles.length === 0) {
-            return undefined;
-        }
-        
-        // For now, just return the first matching style
-        // In a more complete implementation, we would merge styles based on specificity
-        const selectedStyle = matchingStyles[0];
-        console.log(`🎨 STYLE DEBUG: Selected style for ${element.id}:`, selectedStyle);
-        return selectedStyle;
+
+        return mergedStyle;
     }
-    
+
     /**
      * Determines if an element matches a CSS selector
      * @param element The DOM element to test
@@ -345,7 +355,7 @@ export class StyleService {
             }
             return result;
         }
-        
+
         // Handle class selectors (.class)
         if (selector.startsWith('.')) {
             const selectorClass = selector.substring(1);
@@ -356,19 +366,19 @@ export class StyleService {
             }
             return result;
         }
-        
+
         // Handle element type selectors (div, span, etc.)
         if (!selector.includes('.') && !selector.includes('#')) {
             const result = element.type === selector;
             return result;
         }
-        
+
         // Handle child selectors (parent > child)
         if (selector.includes('>')) {
             // This would require parent context, which we don't have in this simple implementation
             return false;
         }
-        
+
         // Default: no match
         return false;
     }
@@ -416,7 +426,7 @@ export class StyleService {
             'black': new Color3(0, 0, 0),
             'gray': new Color3(0.5, 0.5, 0.5),
             'grey': new Color3(0.5, 0.5, 0.5),
-            
+
             // Extended colors
             'lightblue': new Color3(0.68, 0.85, 0.9),
             'lightgreen': new Color3(0.56, 0.93, 0.56),
@@ -547,14 +557,14 @@ export class StyleService {
             'darkorchid': new Color3(0.6, 0.2, 0.8),
             'mediumorchid': new Color3(0.73, 0.33, 0.83),
             'lavenderblush': new Color3(1, 0.94, 0.96),
-            
+
             // CSS4 colors
             'darkpurple': new Color3(0.3, 0, 0.3),
             'darkteal': new Color3(0, 0.3, 0.3),
             'darknavy': new Color3(0, 0, 0.3),
             'darkmaroon': new Color3(0.3, 0, 0),
             'darkolive': new Color3(0.3, 0.3, 0),
-            
+
             // Special colors for the flexbox test
             'f94144': new Color3(0.976, 0.255, 0.267),
             'f3722c': new Color3(0.953, 0.447, 0.173),
@@ -595,16 +605,16 @@ export class StyleService {
     private parseRgbColor(rgb: string): Color3 {
         // Extract the RGB values from the string
         const values = rgb.replace(/rgba?\(|\)/g, '').split(',').map(v => v.trim());
-        
+
         if (values.length < 3) {
             return new Color3(0.2, 0.2, 0.3); // Default for invalid format
         }
-        
+
         // Convert RGB values (0-255) to normalized values (0-1)
         const r = parseInt(values[0], 10) / 255;
         const g = parseInt(values[1], 10) / 255;
         const b = parseInt(values[2], 10) / 255;
-        
+
         return new Color3(r, g, b);
     }
 

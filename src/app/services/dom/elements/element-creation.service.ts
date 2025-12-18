@@ -50,19 +50,23 @@ export class ElementCreationService {
         // Ensure pointer observer is set up
         this.interactionService.ensurePointerObserver(render);
 
-        // Get element styles
+        // Resolve effective style using cascade (Type < Class < ID)
+        // This now correctly handles class-based styles and merges them with ID and type defaults
+        let style = render.actions.style.findStyleForElement(element, styles, dom.context.elementStyles) || {
+            selector: element.id ? `#${element.id}` : element.type,
+            ...this.styleDefaults.getElementTypeDefaults(element.type)
+        };
+
+        // Get element styles for manual overrides and hover state
         const elementStyles = element.id ? dom.context.elementStyles.get(element.id) : undefined;
 
-        // Check if element is in hover state
-        const isHovered = element.id ? (dom.context.hoverStates.get(element.id) || false) : false;
+        // Apply manual overrides from context if available (highest priority)
+        // This ensures TableService's auto-positioned styles are respected
+        if (elementStyles?.normal) {
+            style = { ...style, ...elementStyles.normal };
+        }
 
-        // Process styles - merge normal and hover styles if hovered
-        const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
-        let style: StyleRule = {
-            selector: element.id ? `#${element.id}` : element.type,
-            ...typeDefaults,
-            ...(elementStyles?.normal || {})
-        };
+        const isHovered = element.id ? (dom.context.hoverStates.get(element.id) || false) : false;
 
         // If element is hovered, merge in hover styles
         if (isHovered && elementStyles?.hover) {
@@ -285,7 +289,10 @@ export class ElementCreationService {
         const isFlex = parentElement && dom.actions.isFlexContainer(render, parentElement, styles);
         console.log(`[ElementCreation] isFlexContainer(${parentElement?.id}): ${isFlex}, isListContainer: ${isListContainer}`);
 
-        if (isListContainer && parentElement) {
+        if (parentElement?.type === 'table') {
+            console.log(`[ElementCreation] Processing table children for ${parentElement.id}`);
+            dom.actions.processTable(dom, render, children, parent, styles, parentElement, parent);
+        } else if (isListContainer && parentElement) {
             console.log(`[ElementCreation] Processing list children for ${parentElement.type} container`);
             dom.actions.processListChildren(dom, render, children, parent, styles, parentElement.type as 'ul' | 'ol');
         } else if (isFlex && parentElement) {
