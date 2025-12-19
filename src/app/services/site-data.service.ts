@@ -1531,18 +1531,21 @@ export class SiteDataService {
         // Page container
         {
           selector: '#page-container',
-          width: '100%',
-          height: '100%',
+          top: '10%',
+          left: '10%',
+          width: '80%',
+          height: '80%',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px',
-          padding: '20px',
+          gap: '40px',
+          padding: '40px',
           background: '#1a1a2e',
         },
-        // General container styles
+        // Individual container styles (split from comma selector)
         {
-          selector: '#grow-container, #shrink-container, #mixed-container',
+          selector: '#grow-container',
           height: '100px',
+          width: '600px',
           background: '#22223b',
           borderWidth: '2px',
           borderColor: '#4a5568',
@@ -1554,10 +1557,53 @@ export class SiteDataService {
           padding: '10px',
           gap: '10px',
         },
-        // General item styles
         {
-          selector:
-            '#grow-container > div, #shrink-container > div, #mixed-container > div',
+          selector: '#shrink-container',
+          height: '100px',
+          width: '300px',
+          background: '#22223b',
+          borderWidth: '2px',
+          borderColor: '#4a5568',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          padding: '10px',
+          gap: '10px',
+        },
+        {
+          selector: '#mixed-container',
+          height: '100px',
+          width: '600px',
+          background: '#22223b',
+          borderWidth: '2px',
+          borderColor: '#4a5568',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          padding: '10px',
+          gap: '10px',
+        },
+        // General item styles (split from comma selector)
+        {
+          selector: '#grow-container > div',
+          borderWidth: '1px',
+          borderColor: '#c1121f',
+          borderStyle: 'solid',
+          borderRadius: '4px',
+        },
+        {
+          selector: '#shrink-container > div',
+          borderWidth: '1px',
+          borderColor: '#c1121f',
+          borderStyle: 'solid',
+          borderRadius: '4px',
+        },
+        {
+          selector: '#mixed-container > div',
           borderWidth: '1px',
           borderColor: '#c1121f',
           borderStyle: 'solid',
@@ -1589,7 +1635,7 @@ export class SiteDataService {
         // --- Shrink Test ---
         {
           selector: '#shrink-container',
-          width: '400px',
+          width: '300px',
         },
         {
           selector: '#s-item-1',

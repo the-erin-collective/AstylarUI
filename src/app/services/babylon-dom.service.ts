@@ -256,7 +256,7 @@ export class BabylonDOMService {
         throw error;
       }
     } else if (isFlexContainer && parentElement) {
-      console.log(`� Parent is flex container, applying flexbox layout to ${children.length} items`);
+      console.log(`🔀 Parent is flex container, applying flexbox layout to ${children.length} items`);
       try {
         this.processFlexChildren(children, parent, styles, parentElement);
         console.log(`✅ Completed flex processing for ${parentElement?.id}`);
@@ -265,7 +265,7 @@ export class BabylonDOMService {
         throw error;
       }
     } else {
-      console.log(`�📄 Parent is NOT a list or flex container, using standard processing`);
+      console.log(`📄 Parent is NOT a list or flex container, using standard processing`);
       // Standard processing for non-list, non-flex elements
       children.forEach((child, index) => {
         console.log(`👶 Processing child ${index + 1}/${children.length}: ${child.type}#${child.id}`);
@@ -2126,6 +2126,7 @@ export class BabylonDOMService {
 
   private processFlexChildren(children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement): void {
     console.log(`🔀 Processing ${children.length} flex children for parent:`, parent.name);
+    console.log('🔍 Children IDs:', children.map(c => c.id));
     
     const parentStyle = this.findStyleForElement(parentElement, styles);
     const flexDirection = this.getFlexDirection(parentStyle);
@@ -2142,13 +2143,18 @@ export class BabylonDOMService {
       alignItems,
       flexWrap
     });
+    console.log('🧩 Flex layout result:', flexLayout.map((l, i) => ({
+      index: i,
+      position: l.position,
+      size: l.size,
+      childId: children[i]?.id
+    })));
     
     // Create and position child elements according to flex layout
     flexLayout.forEach((childLayout, index) => {
       const child = children[index];
       console.log(`🔀 Creating flex child ${index + 1}/${children.length}: ${child.type}#${child.id}`);
-      console.log(`🔀 Child ${child.id} layout position: (${childLayout.position.x.toFixed(2)}, ${childLayout.position.y.toFixed(2)}, ${childLayout.position.z.toFixed(6)})`);
-      console.log(`🎯 DEBUG: ${child.id} receiving Z position: ${childLayout.position.z} (should include index offset)`);
+      console.log(`🔀 Child ${child.id} layout position: (${childLayout.position.x.toFixed(2)}, ${childLayout.position.y.toFixed(2)}, ${childLayout.position.z.toFixed(6)}) size: (${childLayout.size.width.toFixed(2)}x${childLayout.size.height.toFixed(2)})`);
       
       try {
         const childMesh = this.createElement(child, parent, styles, childLayout.position, childLayout.size);
@@ -2183,6 +2189,43 @@ export class BabylonDOMService {
 
   private getFlexWrap(style?: StyleRule): string {
     return style?.flexWrap || style?.['flex-wrap'] || 'nowrap';
+  }
+
+  // Move parseFlexBasis and parseGapProperties above calculateFlexLayout or declare them as function expressions
+  private parseFlexBasis(flexBasis: string, containerSize: number): number {
+    if (flexBasis.endsWith('%')) {
+      return (parseFloat(flexBasis) / 100) * containerSize;
+    } else if (flexBasis.endsWith('px')) {
+      // Convert pixels to world units
+      return parseFloat(flexBasis) * 0.01; // Approximate pixel to world conversion
+    } else {
+      return parseFloat(flexBasis) || containerSize / 3; // Fallback
+    }
+  }
+  private parseGapProperties(style: StyleRule): { rowGap: number; columnGap: number } {
+    let rowGap = 0;
+    let columnGap = 0;
+    const rowGapValue = style?.rowGap || style?.['row-gap'];
+    if (rowGapValue) {
+      rowGap = this.parseGapValue(rowGapValue);
+    }
+    const columnGapValue = style?.columnGap || style?.['column-gap'];
+    if (columnGapValue) {
+      columnGap = this.parseGapValue(columnGapValue);
+    }
+    const gapValue = style?.gap;
+    if (gapValue) {
+      const gaps = gapValue.trim().split(/\s+/);
+      if (gaps.length === 1) {
+        const parsedGap = this.parseGapValue(gaps[0]);
+        rowGap = parsedGap;
+        columnGap = parsedGap;
+      } else if (gaps.length === 2) {
+        rowGap = this.parseGapValue(gaps[0]);
+        columnGap = this.parseGapValue(gaps[1]);
+      }
+    }
+    return { rowGap, columnGap };
   }
 
   private calculateFlexLayout(children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement, parentStyle?: StyleRule, flexProps?: {
@@ -2258,6 +2301,17 @@ export class BabylonDOMService {
       };
     });
 
+    // Now log childData, after it exists:
+    console.log('🧮 FLEX DEBUG: childData', childData.map((c, i) => ({
+      index: i,
+      id: c.element.id,
+      flexGrow: c.flexGrow,
+      flexShrink: c.flexShrink,
+      flexBasis: c.flexBasis,
+      baseWidth: c.baseWidth,
+      baseHeight: c.baseHeight
+    })));
+
     // Handle flex-wrap: organize children into lines
     const lines: Array<typeof childData> = [];
     
@@ -2314,7 +2368,7 @@ export class BabylonDOMService {
     }
 
     // Calculate positions for each line
-    const layout: Array<{ position: { x: number; y: number; z: number }; size: { width: number; height: number } }> = new Array(children.length);
+    const layout: Array<{ position: { x: number; y: number; z: number }; size: { width: number; height: number } }> = [];
     
     // Calculate line spacing for cross-axis
     const crossAxisSize = isRow ? parentDimensions.height : parentDimensions.width;
@@ -2325,203 +2379,136 @@ export class BabylonDOMService {
     console.log(`🧮 Cross-axis layout: totalSize=${crossAxisSize.toFixed(3)}, gaps=${totalCrossAxisGaps.toFixed(3)}, available=${availableCrossAxisSpace.toFixed(3)}, lineHeight=${lineHeight.toFixed(3)}`);
     
     lines.forEach((line, lineIndex) => {
-      console.log(`🧮 Processing line ${lineIndex + 1}/${lines.length} with ${line.length} items`);
-      
-      // Calculate positions within this line
-      let currentOffset = 0;
+      // --- FLEX GROW/SHRINK LOGIC START ---
+      // Calculate total base size and total flex factors
       const containerSize = isRow ? parentDimensions.width : parentDimensions.height;
       const totalBaseSize = line.reduce((sum, child) => sum + (isRow ? child.baseWidth : child.baseHeight), 0);
       const totalMainAxisGaps = line.length > 1 ? (line.length - 1) * mainAxisGap : 0;
-      
+      const totalContentSize = totalBaseSize + totalMainAxisGaps;
+      const availableSpace = containerSize - totalContentSize;
+      // Calculate total grow/shrink factors
+      const totalGrow = line.reduce((sum, child) => sum + (child.flexGrow || 0), 0);
+      const totalShrink = line.reduce((sum, child) => sum + (child.flexShrink || 0), 0);
+      // Determine if we need to grow or shrink
+      let itemSizes: number[] = [];
+      if (availableSpace > 0 && totalGrow > 0) {
+        // Distribute extra space by flexGrow
+        itemSizes = line.map(child => {
+          const base = isRow ? child.baseWidth : child.baseHeight;
+          return base + (availableSpace * (child.flexGrow || 0) / totalGrow);
+        });
+      } else if (availableSpace < 0 && totalShrink > 0) {
+        // Remove overflow space by flexShrink (CSS spec: shrink is proportional to flexShrink * baseSize)
+        const shrinkableTotal = line.reduce((sum, child) => sum + ((child.flexShrink > 0 ? child.flexShrink * (isRow ? child.baseWidth : child.baseHeight) : 0)), 0);
+        itemSizes = line.map(child => {
+          const base = isRow ? child.baseWidth : child.baseHeight;
+          if (child.flexShrink > 0 && shrinkableTotal > 0) {
+            const shrinkFactor = child.flexShrink * base;
+            return base + (availableSpace * (shrinkFactor / shrinkableTotal));
+          } else {
+            // No shrink
+            return base;
+          }
+        });
+      } else {
+        // No grow/shrink, use base sizes
+        itemSizes = line.map(child => isRow ? child.baseWidth : child.baseHeight);
+      }
+
+      console.log('🧮 FLEX DEBUG: line', line.map((c, i) => ({
+        index: i,
+        id: c.element.id,
+        base: isRow ? c.baseWidth : c.baseHeight,
+        flexGrow: c.flexGrow,
+        flexShrink: c.flexShrink
+      })));
+      console.log('🧮 FLEX DEBUG: containerSize', containerSize, 'totalBaseSize', totalBaseSize, 'totalMainAxisGaps', totalMainAxisGaps, 'totalContentSize', totalContentSize, 'availableSpace', availableSpace, 'totalGrow', totalGrow, 'totalShrink', totalShrink);
+      console.log('🧮 FLEX DEBUG: itemSizes', itemSizes);
+
+      // --- FLEX GROW/SHRINK LOGIC END ---
       // Calculate spacing for justify-content (main axis)
       let spacing = 0;
       let startOffset = 0;
-      
-      // Account for gaps in justify-content calculations
-      const totalContentSize = totalBaseSize + totalMainAxisGaps;
-      const availableSpace = containerSize - totalContentSize;
-      
+      const totalItemSize = itemSizes.reduce((sum, s) => sum + s, 0);
+      const totalContentWithGaps = totalItemSize + totalMainAxisGaps;
+      const mainAxisAvailable = containerSize - totalContentWithGaps;
       if (flexProps.justifyContent === 'center') {
-        startOffset = availableSpace / 2;
+        startOffset = mainAxisAvailable / 2;
       } else if (flexProps.justifyContent === 'flex-end') {
-        startOffset = availableSpace;
+        startOffset = mainAxisAvailable;
       } else if (flexProps.justifyContent === 'space-between' && line.length > 1) {
-        // space-between: distribute remaining space evenly between items (gaps are handled separately)
-        spacing = availableSpace / (line.length - 1);
+        spacing = mainAxisAvailable / (line.length - 1);
         startOffset = 0;
       } else if (flexProps.justifyContent === 'space-around') {
-        // space-around: distribute space around items (gaps are handled separately)
-        spacing = availableSpace / line.length;
+        spacing = mainAxisAvailable / line.length;
         startOffset = spacing / 2;
       } else if (flexProps.justifyContent === 'space-evenly') {
-        // space-evenly: distribute space evenly including edges (gaps are handled separately)
-        spacing = availableSpace / (line.length + 1);
+        spacing = mainAxisAvailable / (line.length + 1);
         startOffset = spacing;
       }
-      
-      console.log(`🧮 Main-axis layout: contentSize=${totalContentSize.toFixed(3)}, available=${availableSpace.toFixed(3)}, spacing=${spacing.toFixed(3)}, startOffset=${startOffset.toFixed(3)}`);
-      
-      currentOffset = startOffset;
-      
+      let currentOffset = startOffset;
       // Calculate cross-axis position for this line
-      // Account for cross-axis gaps between lines
       const totalGapsBeforeLine = lineIndex * crossAxisGap;
       const linePosition = isRow 
         ? (parentDimensions.height / 2) - (lineIndex + 0.5) * lineHeight - totalGapsBeforeLine
         : -(parentDimensions.width / 2) + (lineIndex + 0.5) * lineHeight + totalGapsBeforeLine;
-      
       line.forEach((child, indexInLine) => {
-        // Find the original index of this child in the children array
-        const originalIndex = children.findIndex(c => c.id === child.element.id);
-        const actualIndex = isReverse ? children.length - 1 - originalIndex : originalIndex;
-        
-        console.log(`🧮 Line ${lineIndex + 1}, item ${indexInLine + 1}: ${child.element.id}, originalIndex: ${originalIndex}, actualIndex: ${actualIndex}`);
-        
         let x, y;
-        
+        // Use itemSizes for main axis size
+        const mainSize = itemSizes[indexInLine];
         if (isRow) {
-          // For space-between, calculate position differently
-          if (flexProps.justifyContent === 'space-between' && line.length > 1) {
-            console.log(`🧮 SPACE-BETWEEN BLOCK EXECUTING for line ${lineIndex + 1}, item ${indexInLine}/${line.length}`);
-            
-            // For space-between, gaps are handled normally, but extra space is distributed
-            if (indexInLine === 0) {
-              const itemCenterPosition = child.baseWidth / 2;
-              x = -(itemCenterPosition - parentDimensions.width / 2);
-            } else if (indexInLine === line.length - 1) {
-              const itemCenterPosition = containerSize - (child.baseWidth / 2);
-              x = -(itemCenterPosition - parentDimensions.width / 2);
-            } else {
-              let cumulativeWidth = 0;
-              for (let i = 0; i < indexInLine; i++) {
-                cumulativeWidth += line[i].baseWidth;
-              }
-              const gapsBeforeItem = indexInLine * mainAxisGap;
-              const spacingBeforeItem = indexInLine * spacing;
-              const itemCenterPosition = cumulativeWidth + gapsBeforeItem + spacingBeforeItem + (child.baseWidth / 2);
-              x = -(itemCenterPosition - parentDimensions.width / 2);
-            }
-          } else {
-            // Standard positioning with gaps
-            x = -(currentOffset - parentDimensions.width / 2 + child.baseWidth / 2);
-          }
-          
+          x = -(currentOffset - parentDimensions.width / 2 + mainSize / 2);
           // Cross-axis positioning for wrapped lines
           if (canWrap && lines.length > 1) {
             y = linePosition;
           } else {
-            // Handle align-items for single line
             if (flexProps.alignItems === 'center') {
               y = 0;
             } else if (flexProps.alignItems === 'flex-end') {
               y = -(parentDimensions.height / 2 - child.baseHeight / 2);
-            } else { // flex-start or stretch
+            } else {
               y = parentDimensions.height / 2 - child.baseHeight / 2;
             }
           }
-          
-          if (!(flexProps.justifyContent === 'space-between' && line.length > 1)) {
-            // Add item width + spacing + gap (but only gap if this isn't the last item)
-            const gapToAdd = indexInLine < line.length - 1 ? mainAxisGap : 0;
-            currentOffset += child.baseWidth + spacing + gapToAdd;
-          }
+          const gapToAdd = indexInLine < line.length - 1 ? mainAxisGap : 0;
+          currentOffset += mainSize + spacing + gapToAdd;
         } else {
-          // Column direction
-          y = parentDimensions.height / 2 - currentOffset - child.baseHeight / 2;
-          
-          // Cross-axis positioning for wrapped lines
+          y = parentDimensions.height / 2 - currentOffset - mainSize / 2;
           if (canWrap && lines.length > 1) {
             x = linePosition;
           } else {
-            // Handle align-items for single line
             if (flexProps.alignItems === 'center') {
               x = 0;
             } else if (flexProps.alignItems === 'flex-end') {
               x = parentDimensions.width / 2 - child.baseWidth / 2;
-            } else { // flex-start or stretch
+            } else {
               x = -parentDimensions.width / 2 + child.baseWidth / 2;
             }
           }
-          
-          // Add item height + spacing + gap (but only gap if this isn't the last item)
           const gapToAdd = indexInLine < line.length - 1 ? mainAxisGap : 0;
-          currentOffset += child.baseHeight + spacing + gapToAdd;
+          currentOffset += mainSize + spacing + gapToAdd;
         }
-        
-        const zPosition = 0.01 + (originalIndex * 0.01); // Much larger Z offset for clear visual separation
-        layout[originalIndex] = {
-          position: { x, y, z: zPosition }, // Small Z offset based on order
-          size: { width: child.baseWidth, height: child.baseHeight }
-        };
-        
-        console.log(`🧮 Child ${originalIndex}: ${child.element.id} positioned at (${x.toFixed(2)}, ${y.toFixed(2)}) size ${child.baseWidth.toFixed(2)}x${child.baseHeight.toFixed(2)}`);
-        console.log(`🎯 Z-index layering: ${child.element.id} originalIndex=${originalIndex} -> zPosition=${zPosition.toFixed(6)}`);
+        const zPosition = 0.01 + (layout.length * 0.01);
+        layout.push({
+          position: { x, y, z: zPosition },
+          size: isRow ? { width: mainSize, height: child.baseHeight } : { width: child.baseWidth, height: mainSize }
+        });
       });
     });
-    
-    console.log(`🧮 Final layout array:`, layout.map((item, idx) => `[${idx}]: ${item.position.x.toFixed(2)}`).join(', '));
+
+    console.log('🧮 FLEX DEBUG: final layout', layout.map((l, i) => ({
+      index: i,
+      position: l.position,
+      size: l.size
+    })));
     
     return layout;
   }
 
-  private parseFlexBasis(flexBasis: string, containerSize: number): number {
-    if (flexBasis.endsWith('%')) {
-      return (parseFloat(flexBasis) / 100) * containerSize;
-    } else if (flexBasis.endsWith('px')) {
-      // Convert pixels to world units
-      return parseFloat(flexBasis) * 0.01; // Approximate pixel to world conversion
-    } else {
-      return parseFloat(flexBasis) || containerSize / 3; // Fallback
-    }
-  }
-
-  /**
-   * Parse gap properties and return gap values in world units
-   */
-  private parseGapProperties(style: StyleRule): { rowGap: number; columnGap: number } {
-    // Parse individual gap properties first
-    let rowGap = 0;
-    let columnGap = 0;
-
-    // Parse row-gap
-    const rowGapValue = style?.rowGap || style?.['row-gap'];
-    if (rowGapValue) {
-      rowGap = this.parseGapValue(rowGapValue);
-    }
-
-    // Parse column-gap
-    const columnGapValue = style?.columnGap || style?.['column-gap'];
-    if (columnGapValue) {
-      columnGap = this.parseGapValue(columnGapValue);
-    }
-
-    // Parse shorthand gap property (overrides individual properties)
-    const gapValue = style?.gap;
-    if (gapValue) {
-      const gaps = gapValue.trim().split(/\s+/);
-      if (gaps.length === 1) {
-        // Single value: applies to both row and column gaps
-        const parsedGap = this.parseGapValue(gaps[0]);
-        rowGap = parsedGap;
-        columnGap = parsedGap;
-      } else if (gaps.length === 2) {
-        // Two values: first is row-gap, second is column-gap
-        rowGap = this.parseGapValue(gaps[0]);
-        columnGap = this.parseGapValue(gaps[1]);
-      }
-    }
-
-    return { rowGap, columnGap };
-  }
-
-  /**
-   * Parse a single gap value and convert to world units
-   */
   private parseGapValue(gapValue: string): number {
     if (!gapValue || gapValue === '0' || gapValue === 'normal') {
       return 0;
     }
-
     if (gapValue.endsWith('px')) {
       // Convert pixels to world units using the same scale as other measurements
       return parseFloat(gapValue) * 0.01;
