@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "python",
+      "args": [
+        "-m",
+        "uv",
+        "tool",
+        "run",
+        "mcp-server-fetch"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "fetch"
+      ]
+    }
+  }
+}

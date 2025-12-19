@@ -1,11 +1,14 @@
 import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Engine, Scene, FreeCamera, HemisphericLight, DirectionalLight, Vector3, Color4, MeshBuilder, StandardMaterial, Color3, Texture, PassPostProcess, RenderTargetTexture, PostProcess, Effect } from '@babylonjs/core';
-import { BabylonDOMService } from '../services/babylon-dom.service';
+import { Engine, Scene, FreeCamera, HemisphericLight, DirectionalLight, Vector3, Color4, MeshBuilder, StandardMaterial, Color3, Texture, PassPostProcess, RenderTargetTexture, PostProcess, Effect, Mesh } from '@babylonjs/core';
+import { BabylonDOMService } from '../services/dom/babylon-dom.service';
 import { BabylonCameraService } from '../services/babylon-camera.service';
 import { BabylonMeshService } from '../services/babylon-mesh.service';
 import { SiteDataService } from '../services/site-data.service';
+import { BabylonRender } from '../services/dom/interfaces/render.types';
+import { TextureService } from '../services/texture.service';
+import { StyleService } from '../services/dom/style.service';
 
 @Component({
   selector: 'app-site',
@@ -176,6 +179,8 @@ export class SiteComponent {
   private babylonDOMService: BabylonDOMService = inject(BabylonDOMService);
   private babylonCameraService = inject(BabylonCameraService);
   private babylonMeshService = inject(BabylonMeshService);
+  private textureService = inject(TextureService);
+  private styleService = inject(StyleService);
   private siteDataService = inject(SiteDataService);
 
   // ViewChild for canvas element
@@ -234,7 +239,41 @@ export class SiteComponent {
     // Initialize the DOM service with services and proper viewport dimensions
     const viewportWidth = canvas.clientWidth || 1920;
     const viewportHeight = canvas.clientHeight || 1080;
-    this.babylonDOMService.initialize(this.babylonScene!, this.babylonCameraService!, this.babylonMeshService!, canvas.clientWidth || 1920, canvas.clientHeight || 1080);
+
+    const render: BabylonRender = {
+        actions: {
+          mesh: {
+            createPolygon: this.babylonMeshService?.createPolygon.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
+            createPlane: this.babylonMeshService?.createPlane.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
+            createMaterial: this.babylonMeshService?.createMaterial.bind(this.babylonMeshService) || (() => new StandardMaterial('default', this.babylonScene)),
+            createGradientMaterial: this.babylonMeshService?.createGradientMaterial.bind(this.babylonMeshService) || (() => new StandardMaterial('default', this.babylonScene)),
+            createShadow: this.babylonMeshService?.createShadow.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
+            createPolygonBorder: this.babylonMeshService?.createPolygonBorder.bind(this.babylonMeshService) || (() => []),
+            positionMesh: this.babylonMeshService?.positionMesh.bind(this.babylonMeshService) || (() => { }),
+            parentMesh: this.babylonMeshService?.parentMesh.bind(this.babylonMeshService) || (() => { }),
+            positionBorderFrames: this.babylonMeshService?.positionBorderFrames.bind(this.babylonMeshService) || (() => { }),
+            updatePolygon: this.babylonMeshService?.updatePolygon.bind(this.babylonMeshService) || (() => { }),
+            generatePolygonVertexData: this.babylonMeshService?.createPolygonVertexData.bind(this.babylonMeshService) || (() => { }),
+          },
+          style: {
+            findStyleBySelector: this.styleService.findStyleBySelector.bind(this.styleService),
+            findStyleForElement: this.styleService.findStyleForElement.bind(this.styleService),
+            parseBackgroundColor: this.styleService.parseBackgroundColor.bind(this.styleService),
+            parseOpacity: this.styleService.parseOpacity.bind(this.styleService),
+            getElementTypeDefaults: this.styleService.getElementTypeDefaults.bind(this.styleService),
+          },
+          camera: {
+            calculateViewportDimensions: this.babylonCameraService?.calculateViewportDimensions.bind(this.babylonCameraService) || (() => ({ width: 0, height: 0 })),
+            getPixelToWorldScale: this.babylonCameraService?.getPixelToWorldScale.bind(this.babylonCameraService) || (() => 0.03),
+          },
+          texture: {
+            getTexture: this.textureService.getTexture.bind(this.textureService),
+          },
+        },
+        scene: this.babylonScene!
+      };
+
+    this.babylonDOMService.initialize(render, canvas.clientWidth || 1920, canvas.clientHeight || 1080);
     
     // Start render loop
     this.engine.runRenderLoop(() => {

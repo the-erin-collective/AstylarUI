@@ -186,7 +186,7 @@ export class BabylonMeshService {
     return vertexData;
   }
 
-  private createPolygonVertexData(polygonType: string, width: number, height: number, borderRadius: number): VertexData {
+  public createPolygonVertexData(polygonType: string, width: number, height: number, borderRadius: number): VertexData {
     console.log(`🔍 createPolygonVertexData: ${polygonType}, ${width.toFixed(1)}×${height.toFixed(1)}, radius=${borderRadius.toFixed(3)}`);
     
     const positions: number[] = [];
@@ -1146,6 +1146,11 @@ export class BabylonMeshService {
 
   parentMesh(child: Mesh, parent: Mesh): void {
     child.parent = parent;
+  }
+
+  updatePolygon(mesh: Mesh, polygonType: string, width: number, height: number, borderRadius: number): void {
+    const vertexData = this.createPolygonVertexData(polygonType, width, height, borderRadius);
+    vertexData.applyToMesh(mesh);
   }
 
   cleanup(): void {

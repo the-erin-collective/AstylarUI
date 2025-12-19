@@ -441,6 +441,7 @@ export class SiteDataService {
           width: '25%',
           height: '12%',
           href: 'https://www.example.com',
+          borderWidth: '15px',
           target: '_blank'
         },
 
@@ -448,7 +449,8 @@ export class SiteDataService {
           selector: '#absolute-link:hover',
           background: '#27ae60', // Green on hover
           borderColor: '#2ecc71',
-          transform: 'scale(1.05)'
+          borderWidth: '15px',
+          transform: 'scale(1.25)'
         },
 
         // OnClick handler (no navigation) - top-right
@@ -460,6 +462,7 @@ export class SiteDataService {
           height: '12%',
           onclick: 'console.log("Custom button clicked!")',
           background: '#e67e22', // Orange background
+          borderWidth: '15px',
           borderColor: '#d35400'
         },
 
@@ -467,7 +470,7 @@ export class SiteDataService {
           selector: '#onclick-link:hover',
           background: '#f39c12', // Lighter orange on hover
           borderColor: '#e67e22',
-          transform: 'scale(1.05)'
+          transform: 'scale(1.25)'
         },
 
         // Combined href + onclick - middle-left
@@ -481,14 +484,16 @@ export class SiteDataService {
           target: '_self',
           onclick: 'console.log("Combined link clicked before navigation")',
           background: '#9b59b6', // Purple background
-          borderColor: '#8e44ad'
+          borderColor: '#8e44ad',
+          borderWidth: '10px',
+          borderRadius: '40px'
         },
 
         {
           selector: '#combined-link:hover',
           background: '#be7bd9', // Lighter purple on hover
           borderColor: '#9b59b6',
-          transform: 'scale(1.05)'
+          transform: 'scale(1.25)'
         },
 
         // External site (new window) - middle-center
@@ -501,6 +506,7 @@ export class SiteDataService {
           href: 'https://babylonjs.com',
           target: '_blank',
           background: '#e74c3c', // Red background
+          borderWidth: '15px',
           borderColor: '#c0392b'
         },
 
@@ -508,7 +514,8 @@ export class SiteDataService {
           selector: '#external-link:hover',
           background: '#ec7063', // Lighter red on hover
           borderColor: '#e74c3c',
-          transform: 'scale(1.05)'
+          borderWidth: '15px',
+          borderRadius: '60px'
         },
 
         // Same window absolute - middle-right
@@ -528,7 +535,7 @@ export class SiteDataService {
           selector: '#same-window-absolute:hover',
           background: '#5d6d7e', // Lighter gray on hover
           borderColor: '#34495e',
-          transform: 'scale(1.05)'
+          transform: 'scale(1.25)'
         }
       ],
       root: {
