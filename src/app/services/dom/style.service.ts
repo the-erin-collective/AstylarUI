@@ -240,30 +240,45 @@ export class StyleService {
     }
 
     public parseStyles(dom: BabylonDOM, render: BabylonRender, styles: StyleRule[]): void {
-        styles.forEach(style => {
+        console.log(`[STYLE-PARSE] Starting to parse ${styles.length} styles`);
+        styles.forEach((style, index) => {
             if (style.selector.includes(':hover')) {
                 // This is a hover style
                 const baseSelector = style.selector.replace(':hover', '');
                 const elementId = baseSelector.replace('#', '');
-
                 if (!dom.context.elementStyles.has(elementId)) {
                     dom.context.elementStyles.set(elementId, { normal: {} as StyleRule });
                 }
-
                 dom.context.elementStyles.get(elementId)!.hover = style;
-                console.log(`Parsed hover style for ${elementId}:`, style);
+                console.log(`[STYLE-PARSE] Hover style for ${elementId}: background=${style.background || 'none'}`);
             } else if (style.selector.startsWith('#')) {
                 // This is a normal element style
                 const elementId = style.selector.replace('#', '');
-
                 if (!dom.context.elementStyles.has(elementId)) {
                     dom.context.elementStyles.set(elementId, { normal: style });
                 } else {
                     dom.context.elementStyles.get(elementId)!.normal = style;
                 }
-                console.log(`Parsed normal style for ${elementId}:`, style);
+                console.log(`[STYLE-PARSE] ID style for ${elementId}: background=${style.background || 'none'}`);
+            } else if (style.selector.startsWith('.')) {
+                // This is a class selector
+                const className = style.selector.replace('.', '');
+                // Store with dot prefix
+                if (!dom.context.elementStyles.has(style.selector)) {
+                    dom.context.elementStyles.set(style.selector, { normal: style });
+                } else {
+                    dom.context.elementStyles.get(style.selector)!.normal = style;
+                }
+                // Store without dot prefix
+                if (!dom.context.elementStyles.has(className)) {
+                    dom.context.elementStyles.set(className, { normal: style });
+                } else {
+                    dom.context.elementStyles.get(className)!.normal = style;
+                }
+                console.log(`[STYLE-PARSE] Class style for ${className}: background=${style.background || 'none'}`);
             }
         });
+        console.log(`[STYLE-PARSE] Completed parsing. Total stored styles: ${dom.context.elementStyles.size}`);
     }
 
     public findStyleForElement(element: DOMElement, styles: StyleRule[]): StyleRule | undefined {
@@ -315,7 +330,9 @@ export class StyleService {
         if (selector.startsWith('#')) {
             const selectorId = selector.substring(1);
             const result = element.id === selectorId;
-            console.log(`🎨 SELECTOR DEBUG: ID selector "${selector}" vs element ID "${element.id}": ${result}`);
+            if (element.id && (element.id.includes('complete') || element.id.includes('th-') || element.id.includes('td-'))) {
+                console.log(`[SELECTOR-MATCH] ID "${selector}" vs element "${element.id}": ${result}`);
+            }
             return result;
         }
         
@@ -324,21 +341,21 @@ export class StyleService {
             const selectorClass = selector.substring(1);
             const elementClasses = element.class ? element.class.split(' ') : [];
             const result = elementClasses.includes(selectorClass);
-            console.log(`🎨 SELECTOR DEBUG: Class selector "${selector}" vs element classes "${element.class}": ${result}`);
+            if (element.class && (element.class.includes('complete') || element.class.includes('spanning'))) {
+                console.log(`[SELECTOR-MATCH] Class "${selector}" vs element classes "${element.class}": ${result} (classes: [${elementClasses.join(', ')}])`);
+            }
             return result;
         }
         
         // Handle element type selectors (div, span, etc.)
         if (!selector.includes('.') && !selector.includes('#')) {
             const result = element.type === selector;
-            console.log(`🎨 SELECTOR DEBUG: Type selector "${selector}" vs element type "${element.type}": ${result}`);
             return result;
         }
         
         // Handle child selectors (parent > child)
         if (selector.includes('>')) {
             // This would require parent context, which we don't have in this simple implementation
-            console.log(`🎨 SELECTOR DEBUG: Child selector "${selector}" not supported yet`);
             return false;
         }
         
@@ -358,6 +375,12 @@ export class StyleService {
 
         console.log(`🎨 COLOR DEBUG: Parsing background color: "${background}"`);
         const colorLower = background.toLowerCase();
+
+        // Handle transparent backgrounds
+        if (colorLower === 'transparent') {
+            console.log('🎨 COLOR DEBUG: Transparent background detected, returning null');
+            return null as any; // Special case - will be handled in material creation
+        }
 
         // Handle hex colors (#ff0000, #f00)
         if (colorLower.startsWith('#')) {

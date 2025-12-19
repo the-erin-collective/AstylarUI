@@ -13,7 +13,6 @@ const globalDefaultStyle: Partial<StyleRule> = {
     background: 'transparent',
     boxShadow: undefined,
     opacity: '1.0',
-    // Flexbox defaults (match browser spec)
     flexDirection: 'row',
     flexWrap: 'nowrap',
     justifyContent: 'normal',
@@ -24,8 +23,6 @@ const globalDefaultStyle: Partial<StyleRule> = {
     flexShrink: '1',
     flexBasis: 'auto',
     alignSelf: 'auto',
-    // No default for width/height (auto)
-    // No default for flex properties (handled by flex container)
 };
 
 const defaults: { [key: string]: Partial<StyleRule> } = {
@@ -73,11 +70,64 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         // width/height: auto by default
         objectFit: 'fill', // CSS default
     },
+    table: {
+        display: 'table',
+        width: 'auto',
+    },
+    thead: {
+        display: 'table-header-group',
+    },
+    tbody: {
+        display: 'table-row-group',
+    },
+    tfoot: {
+        display: 'table-footer-group',
+    },
+    tr: {
+        display: 'table-row',
+    },
+    th: {
+        display: 'table-cell',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: '#888',
+    },
+    td: {
+        display: 'table-cell',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: '#bbb',
+    },
+    caption: {
+        display: 'table-caption',
+        background: '#f9e6ff', // Purple for caption
+    },
+    col: {
+        display: 'table-column',
+    },
+    colgroup: {
+        display: 'table-column-group',
+    },
     a: {
-        // color: '#0000ee', // Default link color (blue) - not in StyleRule
-        // textDecoration: 'underline', // Not in StyleRule, but would be default
-        // display: inline by default, but not in StyleRule
-    }
+        display: 'inline-block',
+        background: '#1976d2', // Blue for normal anchor
+        borderRadius: '4px',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: '#1976d2',
+        // color: '#fff', // Not used, but would be default
+    },
+    'a:visited': {
+        background: '#6a1b9a', // Purple for visited
+    },
+    'a:hover': {
+        background: '#1565c0', // Darker blue for hover
+    },
+    area: {
+        display: 'inline-block',
+        background: '#ffb300', // Orange for area
+        borderRadius: '4px',
+    },
 };
 
 @Injectable({

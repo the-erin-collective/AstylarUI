@@ -15,6 +15,15 @@ export interface BabylonDOMActions {
         elementId: string,
         styleType: 'normal' | 'hover'
     ) => void;
+    processTable: (
+        dom: BabylonDOM,
+        render: BabylonRender,
+        tableChildren: DOMElement[],
+        parent: Mesh,
+        styles: StyleRule[],
+        parentElement: DOMElement
+    ) => void;
+    generateElementId: (parentId: string, type: string, index: number, className?: string) => string;
 }
 
 export interface BabylonDOMContext {

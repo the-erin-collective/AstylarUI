@@ -79,6 +79,12 @@ interface PositionData {
 }
 ```
 
+### Integration with Existing StyleRule
+The StyleRule interface already includes positioning properties:
+- `top`, `left`, `right`, `bottom` - positioning offset values
+- `zIndex` - stacking order value
+- `position` - positioning mode (added for this feature)
+
 ### ContainingBlock
 Represents the coordinate system reference for positioned elements:
 

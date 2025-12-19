@@ -9,6 +9,9 @@ import { ListService } from './elements/list.service';
 import { ElementService } from './elements/element.service';
 import { StyleService } from './style.service';
 import { BabylonRender } from './interfaces/render.types';
+import { TableService } from './elements/table.service';
+import { DOMElement } from '../../types/dom-element';
+import { generateElementId } from './utils/element-id.util';
 
 @Injectable({
   providedIn: 'root'
@@ -23,7 +26,7 @@ export class BabylonDOMService {
   private elementTypes: Map<string, string> = new Map(); // Store element types for hover handling
   private elementDimensions: Map<string, { width: number, height: number, padding: { top: number; right: number; bottom: number; left: number } }> = new Map();
 
-  constructor( private flexService: FlexService, private rootService: RootService, private listService: ListService, private elementService: ElementService, private styleService: StyleService) { }
+  constructor( private flexService: FlexService, private rootService: RootService, private listService: ListService, private elementService: ElementService, private styleService: StyleService, private tableService: TableService) { }
 
   public render?: BabylonRender;
 
@@ -36,6 +39,8 @@ export class BabylonDOMService {
         processListChildren: this.listService.processListChildren.bind(this.listService),
         processFlexChildren: this.flexService.processFlexChildren.bind(this.flexService),
         requestElementRecreation: this.elementService.requestElementRecreation.bind(this.elementService),
+        processTable: this.tableService.processTable.bind(this.tableService),
+        generateElementId
       },
       context: {
         elements: this.elements,

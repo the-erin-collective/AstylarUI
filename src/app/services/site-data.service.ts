@@ -3674,6 +3674,1130 @@ export class SiteDataService {
         ]
       }
     },
+    tabletest: {
+      styles: [
+        // Container styles
+        {
+          selector: '#table1-container',
+          top: '10%',
+          left: '10%',
+          width: '40%',
+          height: '60%',
+          background: '#ff1744',
+          borderWidth: '2px',
+          borderColor: '#aaa',
+          borderStyle: 'solid'
+        },
+        {
+          selector: '#table2-container',
+          top: '10%',
+          left: '55%',
+          width: '30%',
+          height: '40%',
+          background: '#ffea00',
+          borderWidth: '2px',
+          borderColor: '#aaa',
+          borderStyle: 'solid'
+        },
+        // Table 1: No explicit size
+        {
+          selector: '#table1',
+          background: '#fff',
+          borderWidth: '1px',
+          borderColor: '#333',
+          borderStyle: 'solid'
+        },
+        {
+          selector: '#table1-tbody',
+        },
+        // Table 2: Explicit size
+        {
+          selector: '#table2',
+          width: '100%',
+          height: '100%',
+          background: '#fff',
+          borderWidth: '1px',
+          borderColor: '#333',
+          borderStyle: 'solid'
+        },
+        {
+          selector: '#table2-tbody',
+          width: '100%',
+          height: '100%',
+        },
+        // Fixed size divs for table 1 cells
+        {
+          selector: '.table1-cell-content',
+          width: '120px',
+          height: '40px',
+          background: '#2979ff',
+          borderWidth: '5px',
+          borderStyle: 'solid',
+          borderColor: '#212121'
+        },
+        // Table 2 cell content stretches
+        {
+          selector: '.table2-cell-content',
+          background: '#ffe676',
+          borderWidth: '5px',
+          borderStyle: 'solid',
+          borderColor: '#545454'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'table1-container',
+            children: [
+              {
+                type: 'table',
+                id: 'table1',
+                children: [
+                  {
+                    type: 'tbody',
+                    id: 'table1-tbody',
+                    children: [
+                      // Table 1 rows
+                      {
+                        type: 'tr',
+                        children: [
+                          {
+                            type: 'th',
+                            id: 'table1-th1',
+                            children: [
+                              { type: 'div', class: 'table1-cell-content', id: 'table1-th1-content' }
+                            ]
+                          },
+                          {
+                            type: 'th',
+                            id: 'table1-th2',
+                            children: [
+                              { type: 'div', class: 'table1-cell-content', id: 'table1-th2-content' }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        type: 'tr',
+                        children: [
+                          {
+                            type: 'td',
+                            id: 'table1-td1',
+                            children: [
+                              { type: 'div', class: 'table1-cell-content', id: 'table1-td1-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'table1-td2',
+                            children: [
+                              { type: 'div', class: 'table1-cell-content', id: 'table1-td2-content' }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            type: 'div',
+            id: 'table2-container',
+            children: [
+              {
+                type: 'table',
+                id: 'table2',
+                children: [
+                  {
+                    type: 'tbody',
+                    id: 'table2-tbody',
+                    children: [
+                      // Table 2 rows
+                      {
+                        type: 'tr',
+                        children: [
+                          {
+                            type: 'th',
+                            id: 'table2-th1',
+                            children: [
+                              { type: 'div', class: 'table2-cell-content', id: 'table2-th1-content' }
+                            ]
+                          },
+                          {
+                            type: 'th',
+                            id: 'table2-th2',
+                            children: [
+                              { type: 'div', class: 'table2-cell-content', id: 'table2-th2-content' }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        type: 'tr',
+                        children: [
+                          {
+                            type: 'td',
+                            id: 'table2-td1',
+                            children: [
+                              { type: 'div', class: 'table2-cell-content', id: 'table2-td1-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'table2-td2',
+                            children: [
+                              { type: 'div', class: 'table2-cell-content', id: 'table2-td2-content' }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    // Complex table test site with various features
+    'tablecomplex': {
+      styles: [
+        // Container styles
+        {
+          selector: '#complex-container',
+          top: '20%',
+          left: '5%',
+          width: '90%',
+          height: '70%',
+          background: '#f8f9fa',
+          borderWidth: '2px',
+          borderColor: '#dee2e6',
+          borderStyle: 'solid',
+          borderRadius: '8px'
+        },
+
+        // Main table with explicit dimensions
+        {
+          selector: '#complex-table',
+          top: '15%',
+          width: '100%',
+          height: '70%',
+          background: '#ffffff',
+          borderWidth: '1px',
+          borderColor: '#495057',
+          borderStyle: 'solid',
+          borderRadius: '4px'
+        },
+
+        // Table sections
+        {
+          selector: '#complex-thead',
+          background: '#e9ecef'
+        },
+        {
+          selector: '#complex-tbody',
+          background: '#ffffff'
+        },
+        {
+          selector: '#complex-tfoot',
+          background: '#f8f9fa'
+        },
+
+        // Header cells
+        {
+          selector: '.complex-th',
+          background: '#6c757d',
+          borderWidth: '8px',
+          borderStyle: 'solid',
+          borderColor: '#495057',
+          borderRadius: '12px'
+        },
+
+        // Data cells - alternating colors
+        {
+          selector: '.complex-td-even',
+          background: '#f8f9fa',
+          borderWidth: '4px',
+          borderStyle: 'solid',
+          borderColor: '#dee2e6'
+        },
+        {
+          selector: '.complex-td-odd',
+          background: '#ffffff',
+          borderWidth: '4px',
+          borderStyle: 'solid',
+          borderColor: '#dee2e6'
+        },
+
+        // Footer cells
+        {
+          selector: '.complex-tf',
+          background: '#e9ecef',
+          borderWidth: '8px',
+          borderStyle: 'solid',
+          borderColor: '#adb5bd'
+        },
+
+        // Cell content styles
+        {
+          selector: '.header-content',
+          width: '90%',
+          height: '80%',
+          background: '#343a40',
+          borderWidth: '6px',
+          borderStyle: 'solid',
+          borderColor: '#ffffff',
+          borderRadius: '8px'
+        },
+        {
+          selector: '.data-content',
+          width: '80%',
+          height: '60%',
+          background: '#007bff',
+          borderWidth: '4px',
+          borderStyle: 'solid',
+          borderColor: '#0056b3',
+          borderRadius: '10px'
+        },
+        {
+          selector: '.footer-content',
+          width: '90%',
+          height: '80%',
+          background: '#6c757d',
+          borderWidth: '6px',
+          borderStyle: 'solid',
+          borderColor: '#495057'
+        },
+
+        // Small content-based table
+        {
+          selector: '#small-table',
+          background: '#fff3cd',
+          borderWidth: '6px',
+          borderColor: '#856404',
+          borderStyle: 'solid'
+        },
+        {
+          selector: '.small-cell-content',
+          width: '80px',
+          height: '30px',
+          background: '#ffc107',
+          borderWidth: '4px',
+          borderStyle: 'solid',
+          borderColor: '#e0a800'
+        }
+      ],
+
+      root: {
+        children: [{
+          type: 'div',
+          id: 'complex-container',
+          children: [
+            // Main complex table
+            {
+              type: 'table',
+              id: 'complex-table',
+              children: [
+                // Table header
+                {
+                  type: 'thead',
+                  id: 'complex-thead',
+                  children: [
+                    {
+                      type: 'tr',
+                      id: 'header-row',
+                      children: [
+                        {
+                          type: 'th',
+                          id: 'th-1',
+                          class: 'complex-th',
+                          children: [
+                            { type: 'div', class: 'header-content', id: 'th-1-content' }
+                          ]
+                        },
+                        {
+                          type: 'th',
+                          id: 'th-2',
+                          class: 'complex-th',
+                          children: [
+                            { type: 'div', class: 'header-content', id: 'th-2-content' }
+                          ]
+                        },
+                        {
+                          type: 'th',
+                          id: 'th-3',
+                          class: 'complex-th',
+                          children: [
+                            { type: 'div', class: 'header-content', id: 'th-3-content' }
+                          ]
+                        },
+                        {
+                          type: 'th',
+                          id: 'th-4',
+                          class: 'complex-th',
+                          children: [
+                            { type: 'div', class: 'header-content', id: 'th-4-content' }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+
+                // Table body with multiple rows
+                {
+                  type: 'tbody',
+                  id: 'complex-tbody',
+                  children: [
+                    // Row 1
+                    {
+                      type: 'tr',
+                      id: 'data-row-1',
+                      children: [
+                        {
+                          type: 'td',
+                          id: 'td-1-1',
+                          class: 'complex-td-odd',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-1-1-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-1-2',
+                          class: 'complex-td-odd',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-1-2-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-1-3',
+                          class: 'complex-td-odd',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-1-3-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-1-4',
+                          class: 'complex-td-odd',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-1-4-content' }
+                          ]
+                        }
+                      ]
+                    },
+
+                    // Row 2
+                    {
+                      type: 'tr',
+                      id: 'data-row-2',
+                      children: [
+                        {
+                          type: 'td',
+                          id: 'td-2-1',
+                          class: 'complex-td-even',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-2-1-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-2-2',
+                          class: 'complex-td-even',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-2-2-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-2-3',
+                          class: 'complex-td-even',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-2-3-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-2-4',
+                          class: 'complex-td-even',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-2-4-content' }
+                          ]
+                        }
+                      ]
+                    },
+
+                    // Row 3
+                    {
+                      type: 'tr',
+                      id: 'data-row-3',
+                      children: [
+                        {
+                          type: 'td',
+                          id: 'td-3-1',
+                          class: 'complex-td-odd',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-3-1-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-3-2',
+                          class: 'complex-td-odd',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-3-2-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-3-3',
+                          class: 'complex-td-odd',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-3-3-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'td-3-4',
+                          class: 'complex-td-odd',
+                          children: [
+                            { type: 'div', class: 'data-content', id: 'td-3-4-content' }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+
+                // Table footer
+                {
+                  type: 'tfoot',
+                  id: 'complex-tfoot',
+                  children: [
+                    {
+                      type: 'tr',
+                      id: 'footer-row',
+                      children: [
+                        {
+                          type: 'td',
+                          id: 'tf-1',
+                          class: 'complex-tf',
+                          children: [
+                            { type: 'div', class: 'footer-content', id: 'tf-1-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'tf-2',
+                          class: 'complex-tf',
+                          children: [
+                            { type: 'div', class: 'footer-content', id: 'tf-2-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'tf-3',
+                          class: 'complex-tf',
+                          children: [
+                            { type: 'div', class: 'footer-content', id: 'tf-3-content' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'tf-4',
+                          class: 'complex-tf',
+                          children: [
+                            { type: 'div', class: 'footer-content', id: 'tf-4-content' }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+
+            // Small content-based table (no explicit dimensions)
+            {
+              type: 'table',
+              id: 'small-table',
+              children: [
+                {
+                  type: 'tbody',
+                  id: 'small-tbody',
+                  children: [
+                    {
+                      type: 'tr',
+                      id: 'small-row-1',
+                      children: [
+                        {
+                          type: 'td',
+                          id: 'small-td-1',
+                          children: [
+                            { type: 'div', class: 'small-cell-content', id: 'small-content-1' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'small-td-2',
+                          children: [
+                            { type: 'div', class: 'small-cell-content', id: 'small-content-2' }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      type: 'tr',
+                      id: 'small-row-2',
+                      children: [
+                        {
+                          type: 'td',
+                          id: 'small-td-3',
+                          children: [
+                            { type: 'div', class: 'small-cell-content', id: 'small-content-3' }
+                          ]
+                        },
+                        {
+                          type: 'td',
+                          id: 'small-td-4',
+                          children: [
+                            { type: 'div', class: 'small-cell-content', id: 'small-content-4' }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        ]
+      }
+    },
+
+    // Complete table features test site
+    'table-complete': {
+      styles: [
+        // Container
+        {
+          selector: '#complete-container',
+          top: '5%',
+          left: '5%',
+          width: '90%',
+          height: '90%',
+          background: 'rgba(240, 240, 240, 0.9)',
+          borderRadius: '8px',
+          padding: '20px'
+        },
+
+        // Table with column definitions
+        {
+          selector: '#complete-table',
+          top: '10%',
+          left: '0%',
+          width: '100%',
+          height: '80%',
+          background: 'rgba(255, 255, 255, 0.95)',
+          borderWidth: '2px',
+          borderColor: '#333333',
+          borderStyle: 'solid',
+          borderRadius: '4px'
+        },
+
+        // Caption styling
+        {
+          selector: '#table-caption',
+          background: 'rgba(0, 123, 255, 0.1)',
+          borderWidth: '1px',
+          borderColor: '#007bff',
+          borderStyle: 'solid',
+          borderRadius: '4px 4px 0 0',
+          padding: '10px'
+        },
+
+        // Header cells
+        {
+          selector: '.complete-th',
+          background: 'rgba(0, 123, 255, 0.2)',
+          borderWidth: '1px',
+          borderColor: '#007bff',
+          borderStyle: 'solid',
+          padding: '8px'
+        },
+
+        // Data cells
+        {
+          selector: '.complete-td',
+          background: 'rgba(255, 255, 255, 0.8)',
+          borderWidth: '1px',
+          borderColor: '#dee2e6',
+          borderStyle: 'solid',
+          padding: '8px'
+        },
+
+        // Spanning cell highlight
+        {
+          selector: '.spanning-cell',
+          background: 'rgba(255, 193, 7, 0.3)',
+          borderWidth: '2px',
+          borderColor: '#ffc107',
+          borderStyle: 'solid'
+        },
+
+        // Cell content
+        {
+          selector: '.cell-content',
+          width: '100%',
+          height: '100%',
+          padding: '4px',
+          background: 'transparent'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'complete-container',
+            children: [
+              {
+                type: 'table',
+                id: 'complete-table',
+                children: [
+                  // Caption
+                  {
+                    type: 'caption',
+                    id: 'table-caption',
+                    children: [
+                      { type: 'div', class: 'cell-content' }
+                    ]
+                  },
+
+                  // Column definitions
+                  {
+                    type: 'colgroup',
+                    id: 'col-group',
+                    children: [
+                      { type: 'col', tableProperties: { width: '25%' } },
+                      { type: 'col', tableProperties: { width: '25%' } },
+                      { type: 'col', tableProperties: { width: '25%' } },
+                      { type: 'col', tableProperties: { width: '25%' } }
+                    ]
+                  },
+
+                  // Table header
+                  {
+                    type: 'thead',
+                    id: 'complete-thead',
+                    children: [
+                      {
+                        type: 'tr',
+                        id: 'header-row',
+                        children: [
+                          {
+                            type: 'th',
+                            id: 'th-1',
+                            class: 'complete-th',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'th',
+                            id: 'th-2',
+                            class: 'complete-th',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'th',
+                            id: 'th-3',
+                            class: 'complete-th',
+                            colspan: 2,
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+
+                  // Table body
+                  {
+                    type: 'tbody',
+                    id: 'complete-tbody',
+                    children: [
+                      {
+                        type: 'tr',
+                        id: 'data-row-1',
+                        children: [
+                          {
+                            type: 'td',
+                            id: 'td-1-1',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'td-1-2',
+                            class: 'complete-td spanning-cell',
+                            rowspan: 2,
+                            children: [
+                              { type: 'div', id: 'td-1-2-content', class: 'cell-content', textContent: 'Rowspan Cell' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'td-1-3',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'td-1-4',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        type: 'tr',
+                        id: 'data-row-2',
+                        children: [
+                          {
+                            type: 'td',
+                            id: 'td-2-1',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          // td-2-2 is spanned by td-1-2
+                          {
+                            type: 'td',
+                            id: 'td-2-3',
+                            class: 'complete-td spanning-cell',
+                            colspan: 2,
+                            children: [
+                              { type: 'div', id: 'td-2-3-content', class: 'cell-content', textContent: 'Colspan Cell' }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        type: 'tr',
+                        id: 'data-row-3',
+                        children: [
+                          {
+                            type: 'td',
+                            id: 'td-3-1',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'td-3-2',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'td-3-3',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'td-3-4',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+
+                  // Table footer
+                  {
+                    type: 'tfoot',
+                    id: 'complete-tfoot',
+                    children: [
+                      {
+                        type: 'tr',
+                        id: 'footer-row',
+                        children: [
+                          {
+                            type: 'td',
+                            id: 'tf-1',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'tf-2',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'tf-3',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'tf-4',
+                            class: 'complete-td',
+                            children: [
+                              { type: 'div', class: 'cell-content' }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    // Simple table test for basic functionality
+    'table-simple': {
+      styles: [
+        {
+          selector: '#simple-container',
+          top: '10%',
+          left: '10%',
+          width: '80%',
+          height: '80%',
+          background: 'rgba(248, 249, 250, 0.95)',
+          borderRadius: '8px',
+          padding: '20px'
+        },
+        {
+          selector: '#simple-table',
+          top: '0%',
+          left: '0%',
+          width: '100%',
+          height: '100%',
+          background: 'white',
+          borderWidth: '1px',
+          borderColor: '#dee2e6',
+          borderStyle: 'solid'
+        },
+        {
+          selector: '.simple-cell',
+          borderWidth: '1px',
+          borderColor: '#dee2e6',
+          borderStyle: 'solid',
+          padding: '12px',
+          background: '#00ff00' // Bright green for regular cells
+        },
+        {
+          selector: '.simple-header',
+          background: '#ff0000', // Bright red for header cells
+          borderWidth: '2px',
+          borderColor: '#ff0000',
+          borderStyle: 'solid'
+        },
+        // Specific ID-based styling to ensure it works
+        {
+          selector: '#simple-th-1',
+          background: '#ff0000' // Very bright red
+        },
+        {
+          selector: '#simple-th-2',
+          background: '#ff0000' // Very bright red
+        },
+        {
+          selector: '#simple-th-3',
+          background: '#ff0000' // Very bright red
+        },
+        {
+          selector: '#simple-td-1',
+          background: '#00ff00' // Very bright green
+        },
+        {
+          selector: '#simple-td-2',
+          background: '#00ff00' // Very bright green
+        },
+        {
+          selector: '#simple-td-3',
+          background: '#00ff00' // Very bright green
+        },
+        {
+          selector: '#simple-td-4',
+          background: '#00ff00' // Very bright green
+        },
+        {
+          selector: '#simple-td-5',
+          background: '#00ff00' // Very bright green
+        },
+        {
+          selector: '#simple-td-6',
+          background: '#00ff00' // Very bright green
+        },
+        // Style the content divs
+        {
+          selector: '.header-content',
+          background: '#ff0000', // Red background for header content
+          width: '100%',
+          height: '100%',
+          padding: '4px'
+        },
+        {
+          selector: '.cell-content',
+          background: '#00ff00', // Green background for cell content
+          width: '100%',
+          height: '100%',
+          padding: '4px'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'simple-container',
+            children: [
+              {
+                type: 'table',
+                id: 'simple-table',
+                children: [
+                  {
+                    type: 'tbody',
+                    id: 'simple-tbody',
+                    children: [
+                      {
+                        type: 'tr',
+                        id: 'simple-row-1',
+                        children: [
+                          {
+                            type: 'th',
+                            id: 'simple-th-1',
+                            class: 'simple-cell simple-header',
+                            children: [
+                              { type: 'div', id: 'header-content-1', class: 'header-content' }
+                            ]
+                          },
+                          {
+                            type: 'th',
+                            id: 'simple-th-2',
+                            class: 'simple-cell simple-header',
+                            children: [
+                              { type: 'div', id: 'header-content-2', class: 'header-content' }
+                            ]
+                          },
+                          {
+                            type: 'th',
+                            id: 'simple-th-3',
+                            class: 'simple-cell simple-header',
+                            children: [
+                              { type: 'div', id: 'header-content-3', class: 'header-content' }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        type: 'tr',
+                        id: 'simple-row-2',
+                        children: [
+                          {
+                            type: 'td',
+                            id: 'simple-td-1',
+                            class: 'simple-cell',
+                            children: [
+                              { type: 'div', id: 'cell-content-1', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'simple-td-2',
+                            class: 'simple-cell',
+                            children: [
+                              { type: 'div', id: 'cell-content-2', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'simple-td-3',
+                            class: 'simple-cell',
+                            children: [
+                              { type: 'div', id: 'cell-content-3', class: 'cell-content' }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        type: 'tr',
+                        id: 'simple-row-3',
+                        children: [
+                          {
+                            type: 'td',
+                            id: 'simple-td-4',
+                            class: 'simple-cell',
+                            children: [
+                              { type: 'div', id: 'cell-content-4', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'simple-td-5',
+                            class: 'simple-cell',
+                            children: [
+                              { type: 'div', id: 'cell-content-5', class: 'cell-content' }
+                            ]
+                          },
+                          {
+                            type: 'td',
+                            id: 'simple-td-6',
+                            class: 'simple-cell',
+                            children: [
+                              { type: 'div', id: 'cell-content-6', class: 'cell-content' }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
   };
 
   getSiteData(siteName: string): SiteData | undefined {
