@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import * as BABYLON from '@babylonjs/core';
-import { 
-  TextStyleProperties, 
-  TextDimensions, 
+import {
+  TextStyleProperties,
+  TextDimensions,
   TextElement,
   TextCache,
   TextCacheManager,
@@ -43,7 +43,7 @@ export class TextRenderingService implements TextCacheManager {
     private textCanvasRenderer: TextCanvasRendererService,
     private textStyleParser: TextStyleParserService,
     private multiLineTextRenderer: MultiLineTextRendererService
-  ) {}
+  ) { }
 
   /**
    * Initialize the text rendering service with BabylonJS scene
@@ -102,7 +102,7 @@ export class TextRenderingService implements TextCacheManager {
       }))
     };
   }
-  
+
 
   /**
    * Renders text content to a BabylonJS texture using off-screen canvas rendering
@@ -123,10 +123,10 @@ export class TextRenderingService implements TextCacheManager {
 
     // Parse text style properties from element and style rule
     const textStyle = this.parseElementTextStyle(element, styleRule);
-    
+
     // Generate cache key for texture reuse
     const cacheKey = this.generateCacheKey(textContent, textStyle);
-    
+
     // Check cache first if caching is enabled
     if (this.options.enableCaching) {
       const cachedTexture = this.getTexture(cacheKey);
@@ -139,16 +139,16 @@ export class TextRenderingService implements TextCacheManager {
     try {
       // Create styled canvas for text rendering
       const canvas = this.textCanvasRenderer.createStyledCanvas(textContent, textStyle, maxWidth);
-      
+
       // Render text to canvas
       this.textCanvasRenderer.renderTextToCanvas(canvas, textContent, textStyle, maxWidth);
-      
+
       // Apply text effects if specified
       if (textStyle.textShadow && textStyle.textShadow.length > 0) {
         const effects = { shadows: textStyle.textShadow };
         this.textCanvasRenderer.applyTextEffects(canvas, effects, textContent, textStyle);
       }
-      
+
       // Create a new texture with the same dimensions as the canvas
       const texture = new BABYLON.DynamicTexture(
         `text-texture-${Date.now()}`,
@@ -159,31 +159,31 @@ export class TextRenderingService implements TextCacheManager {
         BABYLON.Engine.TEXTUREFORMAT_RGBA,
         false // Don't invert Y in the texture
       );
-      
+
       // Get the texture context
       const textureContext = texture.getContext();
-      
+
       // Clear the texture with transparent background
       textureContext.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       // Draw the canvas content directly without any flipping to prevent horizontal mirroring
       textureContext.drawImage(canvas, 0, 0);
-      
+
       // Update the texture
       texture.hasAlpha = true;
       texture.update(false);
-      
+
       // Ensure proper texture wrapping
       texture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
       texture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
-      
+
       // Cache the texture if caching is enabled
       if (this.options.enableCaching) {
         this.setTexture(cacheKey, texture);
       }
-      
+
       console.log(`🎨 Created text texture: "${textContent.substring(0, 30)}..." (${canvas.width}x${canvas.height})`);
-      
+
       return texture;
     } catch (error) {
       console.error('❌ Error creating text texture:', error);
@@ -206,13 +206,13 @@ export class TextRenderingService implements TextCacheManager {
     try {
       // Dispose of the old texture
       this.disposeTextTexture(textElement);
-      
+
       // Create new texture with updated content
       const newTexture = this.renderTextToTexture(textElement, newContent, styleRule, maxWidth);
-      
+
       // Update element reference
       textElement.textTexture = newTexture;
-      
+
       console.log(`🔄 Updated text texture for element with new content: "${newContent.substring(0, 30)}..."`);
     } catch (error) {
       console.error('❌ Error updating text texture:', error);
@@ -231,7 +231,7 @@ export class TextRenderingService implements TextCacheManager {
     try {
       // Use canvas renderer for accurate text measurement
       const bounds = this.textCanvasRenderer.measureTextBounds(text, style, maxWidth);
-      
+
       // Handle multi-line text layout if needed
       let lines = [];
       if (maxWidth) {
@@ -245,7 +245,7 @@ export class TextRenderingService implements TextCacheManager {
           y: style.fontSize
         }];
       }
-      
+
       const dimensions: TextDimensions = {
         width: bounds.width,
         height: bounds.height,
@@ -259,9 +259,9 @@ export class TextRenderingService implements TextCacheManager {
           bottom: bounds.actualBoundingBoxDescent
         }
       };
-      
+
       console.log(`📏 Calculated text dimensions: ${dimensions.width.toFixed(2)}x${dimensions.height.toFixed(2)} for "${text.substring(0, 30)}..."`);
-      
+
       return dimensions;
     } catch (error) {
       console.error('❌ Error calculating text dimensions:', error);
@@ -282,11 +282,11 @@ export class TextRenderingService implements TextCacheManager {
       // Find and remove from cache if present
       const textStyle = this.parseElementTextStyle(textElement);
       const cacheKey = this.generateCacheKey(textElement.textContent || '', textStyle);
-      
+
       if (this.textureCache.has(cacheKey)) {
         const cacheEntry = this.textureCache.get(cacheKey)!;
         cacheEntry.referenceCount--;
-        
+
         // Only dispose if no other references
         if (cacheEntry.referenceCount <= 0) {
           textElement.textTexture.dispose();
@@ -300,7 +300,7 @@ export class TextRenderingService implements TextCacheManager {
         textElement.textTexture.dispose();
         console.log(`🗑️ Disposed text texture (not cached)`);
       }
-      
+
       // Clear element reference
       textElement.textTexture = undefined;
     } catch (error) {

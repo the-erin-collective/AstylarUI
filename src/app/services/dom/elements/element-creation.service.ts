@@ -79,8 +79,8 @@ export class ElementCreationService {
 
         // Calculate dimensions
         const dimensions = flexSize
-            ? { ...this.dimensionService.calculateDimensions(dom, render, style, parent), width: flexSize.width, height: flexSize.height }
-            : this.dimensionService.calculateDimensions(dom, render, style, parent);
+            ? { ...this.dimensionService.calculateDimensions(dom, render, element, style, parent, styles), width: flexSize.width, height: flexSize.height }
+            : this.dimensionService.calculateDimensions(dom, render, element, style, parent, styles);
 
         // Parse border radius and scale
         const borderRadiusPixels = this.borderService.parseBorderRadius(style?.borderRadius);

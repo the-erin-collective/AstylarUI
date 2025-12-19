@@ -2,7 +2,10 @@ import { Injectable } from '@angular/core';
 import { BabylonDOM } from '../interfaces/dom.types';
 import { BabylonRender } from '../interfaces/render.types';
 import { StyleRule } from '../../../types/style-rule';
+import { DOMElement } from '../../../types/dom-element';
 import { Mesh } from '@babylonjs/core';
+import { TextRenderingService } from '../../text/text-rendering.service';
+import { TextStyleParserService } from '../../text/text-style-parser.service';
 
 /**
  * Service responsible for calculating element dimensions and positioning
@@ -11,7 +14,10 @@ import { Mesh } from '@babylonjs/core';
     providedIn: 'root'
 })
 export class ElementDimensionService {
-    constructor() { }
+    constructor(
+        private textRenderingService: TextRenderingService,
+        private textStyleParser: TextStyleParserService
+    ) { }
 
     /**
      * Calculate dimensions for an element based on its style and parent
@@ -19,8 +25,10 @@ export class ElementDimensionService {
     calculateDimensions(
         dom: BabylonDOM,
         render: BabylonRender,
+        element: DOMElement,
         style: StyleRule | undefined,
-        parent: Mesh
+        parent: Mesh,
+        styles: StyleRule[]
     ): {
         width: number;
         height: number;
@@ -61,9 +69,18 @@ export class ElementDimensionService {
                 } else if (typeof style.width === 'string' && style.width.endsWith('%')) {
                     const widthPercent = parseFloat(style.width);
                     width = (contentWidth * widthPercent) / 100;
+                } else if (style.width === 'auto') {
+                    if (element.type === 'button' || element.type === 'input') {
+                        width = this.calculateIntrinsicWidth(render, element, style, styles);
+                    } else {
+                        width = contentWidth; // Default fallback for auto width
+                    }
                 } else {
                     width = parseFloat(style.width);
                 }
+            } else if (element.type === 'button' || element.type === 'input') {
+                // If width is undefined, buttons/inputs should use intrinsic width
+                width = this.calculateIntrinsicWidth(render, element, style, styles);
             }
 
             // Calculate height - percentages are relative to parent's content height
@@ -197,5 +214,82 @@ export class ElementDimensionService {
             return (parseFloat(value) * referenceValue) / 100;
         }
         return parseFloat(value) || 0;
+    }
+
+    /**
+     * Calculate intrinsic width for elements like buttons and inputs
+     */
+    private calculateIntrinsicWidth(render: BabylonRender, element: DOMElement, style: StyleRule | undefined, styles: StyleRule[]): number {
+        const textStyle = this.getInheritedTextStyle(element, styles);
+        const textStyleProperties = this.textStyleParser.parseTextProperties(textStyle);
+
+        // Determine the relevant text for measurement
+        let textToMeasure = '';
+        if (element.type === 'button') {
+            textToMeasure = element.value || element.textContent || 'Button';
+        } else if (element.type === 'input') {
+            textToMeasure = element.value || element.placeholder || '';
+        }
+
+        // Measure text dimensions
+        let measuredWidth = 0;
+        if (textToMeasure) {
+            const dimensions = this.textRenderingService.calculateTextDimensions(textToMeasure, textStyleProperties);
+            measuredWidth = dimensions.width;
+        }
+
+        // Parse padding
+        const padding = this.parsePadding(render, style, undefined);
+        const totalPadding = padding.left + padding.right;
+
+        let finalWidth = measuredWidth + totalPadding;
+
+        // Apply minimum width for text inputs
+        if (element.type === 'input') {
+            finalWidth = Math.max(finalWidth, 170);
+        }
+
+        console.log(`[DIMENSION-INTRINSIC] ${element.type}#${element.id}: text="${textToMeasure}", measured=${measuredWidth}px, padding=${totalPadding}px, final=${finalWidth}px`);
+
+        return finalWidth;
+    }
+
+    /**
+     * Helper to get inherited text style
+     */
+    private getInheritedTextStyle(element: DOMElement, styles: StyleRule[]): StyleRule {
+        let inheritedStyle: StyleRule = {
+            selector: element.id ? `#${element.id}` : element.type,
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '16px',
+            fontWeight: 'normal',
+            color: '#000000'
+        };
+
+        // Apply element type defaults (simplified)
+        if (element.type === 'button') {
+            inheritedStyle.fontWeight = 'bold';
+        }
+
+        // Apply class styles
+        if (element.class) {
+            const classNames = element.class.split(' ').filter(c => c.trim());
+            for (const className of classNames) {
+                const classStyle = styles.find(s => s.selector === `.${className}` || s.selector === className);
+                if (classStyle) {
+                    inheritedStyle = { ...inheritedStyle, ...classStyle };
+                }
+            }
+        }
+
+        // Apply ID styles
+        if (element.id) {
+            const idStyle = styles.find(s => s.selector === `#${element.id}`);
+            if (idStyle) {
+                inheritedStyle = { ...inheritedStyle, ...idStyle };
+            }
+        }
+
+        return inheritedStyle;
     }
 }

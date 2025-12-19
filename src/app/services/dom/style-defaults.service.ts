@@ -166,6 +166,7 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         borderColor: '#bdc3c7',
         borderStyle: 'solid',
         padding: '8px',
+        width: 'auto',
         height: '40px',
         cursor: 'text'
     },
@@ -177,6 +178,7 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         borderRadius: '4px',
         borderWidth: '0px',
         padding: '10px 20px',
+        width: 'auto',
         height: '40px',
         cursor: 'pointer'
     },
