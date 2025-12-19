@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Scene, MeshBuilder, StandardMaterial, Color3, Vector3, Vector2, Mesh, Material, VertexData, PolygonMeshBuilder, DynamicTexture } from '@babylonjs/core';
+import { Scene, MeshBuilder, StandardMaterial, Color3, Vector3, Vector2, Mesh, Material, VertexData, PolygonMeshBuilder, DynamicTexture, ShaderMaterial, Effect } from '@babylonjs/core';
 import { BabylonCameraService } from './babylon-camera.service';
 import { CoordinateTransformService } from './coordinate-transform.service';
 import roundPolygon, { getSegments } from 'round-polygon';
@@ -960,6 +960,112 @@ export class BabylonMeshService {
     return material;
   }
 
+  createDropShadowMaterial(name: string, elementWidth: number, elementHeight: number, blur: number, color: string, offsetX: number, offsetY: number, borderRadius: number): ShaderMaterial {
+    if (!this.scene) {
+      throw new Error('Mesh service not initialized');
+    }
+
+    // Parse shadow color
+    const shadowColor = Color3.FromHexString(color);
+
+    // Register shaders if not already registered
+    if (!Effect.ShadersStore["dropShadowVertexShader"]) {
+      // Register vertex shader
+      Effect.ShadersStore["dropShadowVertexShader"] = `
+        precision highp float;
+        
+        attribute vec3 position;
+        attribute vec2 uv;
+        
+        uniform mat4 worldViewProjection;
+        
+        varying vec2 vUV;
+        
+        void main(void) {
+            gl_Position = worldViewProjection * vec4(position, 1.0);
+            vUV = uv;
+        }
+      `;
+
+      // Register fragment shader
+      Effect.ShadersStore["dropShadowFragmentShader"] = `
+        precision highp float;
+        
+        varying vec2 vUV;
+        
+        uniform vec2 elementSize;
+        uniform float shadowBlur;
+        uniform vec3 shadowColor;
+        uniform vec2 shadowOffset;
+        uniform float borderRadius;
+        
+        float roundedRectSDF(vec2 p, vec2 size, float radius) {
+            vec2 d = abs(p) - size + radius;
+            return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+        }
+        
+        void main(void) {
+            vec2 coord = vUV - 0.5;
+            
+            // Scale coordinates to element size (mesh is now same size as element)
+            vec2 scaledCoord = coord * elementSize;
+            
+            // Apply shadow offset
+            vec2 shadowCoord = scaledCoord - shadowOffset;
+            
+            // Calculate distance to the element rectangle with border radius
+            float elementDist = roundedRectSDF(shadowCoord, elementSize * 0.5, borderRadius);
+            
+            // Create shadow falloff - shadow starts right at element edge
+            float shadowFalloff = 1.0 - smoothstep(-shadowBlur * 0.2, shadowBlur * 0.8, elementDist);
+            
+            // Shadow is visible both inside and outside element, but stronger outside
+            float shadowAlpha = shadowFalloff * 0.4;
+            
+            // Reduce shadow inside the element to create proper drop shadow effect
+            if (elementDist < -shadowBlur * 0.1) {
+                shadowAlpha *= 0.05; // Much weaker inside element core
+            } else if (elementDist < 0.0) {
+                shadowAlpha *= 0.3; // Moderate shadow at element edges
+            }
+            
+            // Discard pixels with very low alpha to improve performance
+            if (shadowAlpha < 0.01) discard;
+            
+            gl_FragColor = vec4(shadowColor, shadowAlpha);
+        }
+      `;
+      
+      console.log(`🎨 Registered drop shadow shaders`);
+    }
+
+    // Create custom shader material for drop shadow
+    const shaderMaterial = new ShaderMaterial(`${name}-shader`, this.scene, "dropShadow", {
+      attributes: ["position", "uv"],
+      uniforms: ["worldViewProjection", "elementSize", "shadowBlur", "shadowColor", "shadowOffset", "borderRadius"]
+    });
+
+    // Set shader uniforms
+    shaderMaterial.setVector2("elementSize", new Vector2(elementWidth, elementHeight));
+    shaderMaterial.setFloat("shadowBlur", blur);
+    shaderMaterial.setColor3("shadowColor", shadowColor);
+    shaderMaterial.setVector2("shadowOffset", new Vector2(offsetX, offsetY));
+    shaderMaterial.setFloat("borderRadius", borderRadius);
+
+    // Enable transparency and proper depth testing
+    shaderMaterial.transparencyMode = Material.MATERIAL_ALPHABLEND;
+    shaderMaterial.backFaceCulling = false;
+    shaderMaterial.disableDepthWrite = true; // Don't write to depth buffer (allows proper transparency)
+    shaderMaterial.needDepthPrePass = true; // Ensure proper depth testing order for z-sorting
+    
+    // Set rendering group to ensure shadows render before other elements
+    // This helps with z-ordering issues during hover
+
+    console.log(`🎨 Created drop shadow shader material: ${name} blur=${blur} color=${color}`);
+
+    return shaderMaterial;
+  }
+
   createGradientMaterial(name: string, gradientData: any, opacity: number = 1.0, width: number, height: number): StandardMaterial {
     if (!this.scene) {
       throw new Error('Mesh service not initialized');
@@ -1075,54 +1181,23 @@ export class BabylonMeshService {
       throw new Error('Mesh service not initialized');
     }
 
-    // Create a parent mesh to hold all shadow layers
-    const shadowContainer = new Mesh(`${name}-container`, this.scene);
+    console.log(`🌒 Creating shader-based drop shadow: ${name}`);
+    console.log(`🌒 Shadow parameters: width=${width}, height=${height}, blur=${blur}, color=${color}, offset=(${offsetX}, ${offsetY})`);
 
-    // Parse color to get base RGB values
-    const baseColor = Color3.FromHexString(color);
+    // Create a single mesh with a custom shader material for the drop shadow effect
+    // Make shadow mesh same size as element - shader will handle the blur expansion
+    const shadowMesh = this.createSingleShadow(name, width, height, polygonType, borderRadius);
+    
+    // Create custom shader material for drop shadow effect
+    const shadowMaterial = this.createDropShadowMaterial(name, width, height, blur, color, offsetX, offsetY, borderRadius);
+    shadowMesh.material = shadowMaterial;
+    
+    // Shadow will inherit rendering group from its parent element
+    // This ensures it stays in the same rendering layer as the element
 
-    if (blur <= 0) {
-      // No blur - create single sharp shadow
-      const shadowMesh = this.createSingleShadow(`${name}-sharp`, width, height, polygonType, borderRadius);
-      const shadowMaterial = this.createMaterial(`${name}-shadow-material`, baseColor, undefined, 0.4);
-      shadowMesh.material = shadowMaterial;
-      shadowMesh.parent = shadowContainer;
+    console.log(`🌒 Created shader-based drop shadow: ${name} (${width}x${height}) blur=${blur}px color=${color}`);
 
-      console.log(`🌒 Created sharp shadow: ${name} (${width}x${height}) offset(${offsetX}, ${offsetY}) color=${color}`);
-    } else {
-      // Create blurred shadow with multiple layers for smooth gradients
-      const blurLayers = Math.min(Math.max(Math.ceil(blur / 6), 6), 16); // 6-16 layers for good performance and smoothness
-      const baseOpacity = 0.7; // Strong base opacity to ensure visibility
-
-      for (let i = 0; i < blurLayers; i++) {
-        const layerIndex = i + 1;
-        const normalizedIndex = layerIndex / blurLayers; // 0 to 1
-
-        // Smooth expansion curve - starts small, gradually increases
-        const expansionFactor = 1 + (blur * 0.06 * Math.pow(normalizedIndex, 1.2));
-
-        const layerWidth = width * expansionFactor;
-        const layerHeight = height * expansionFactor;
-
-        // Simple but effective opacity falloff - ensures all layers are visible
-        const falloffFactor = Math.pow(1 - normalizedIndex, 2); // Quadratic falloff
-        const layerOpacity = (baseOpacity / blurLayers) * (1 + falloffFactor * 2); // Inner layers stronger
-
-        console.log(`Layer ${layerIndex}: expansion=${expansionFactor.toFixed(3)}, opacity=${layerOpacity.toFixed(3)}`);
-
-        const layerMesh = this.createSingleShadow(`${name}-blur-${layerIndex}`, layerWidth, layerHeight, polygonType, borderRadius);
-        const layerMaterial = this.createMaterial(`${name}-blur-material-${layerIndex}`, baseColor, undefined, layerOpacity);
-        layerMesh.material = layerMaterial;
-        layerMesh.parent = shadowContainer;
-
-        // Stagger layers in Z to prevent z-fighting
-        layerMesh.position.z = -0.0005 * layerIndex;
-      }
-
-      console.log(`🌒 Created reliable blurred shadow: ${name} (${width}x${height}) blur=${blur}px (${blurLayers} layers) offset(${offsetX}, ${offsetY}) color=${color}`);
-    }
-
-    return shadowContainer;
+    return shadowMesh;
   }
 
   private createSingleShadow(name: string, width: number, height: number, polygonType: string, borderRadius: number = 0): Mesh {
@@ -1140,6 +1215,57 @@ export class BabylonMeshService {
     }
 
     return shadowMesh;
+  }
+
+  private createHollowShadow(name: string, width: number, height: number, polygonType: string, borderRadius: number = 0, shadowWidth: number = 2): Mesh {
+    if (!this.scene) {
+      throw new Error('Mesh service not initialized');
+    }
+
+    // Create a hollow shadow by creating a frame (outer shape minus inner shape)
+    // This creates the effect of a shadow that only appears around the edges
+    
+    const shadowFrameWidth = Math.max(shadowWidth, 1); // Minimum 1 unit shadow width
+    
+    if (polygonType === 'rectangle') {
+      // For rectangles, create a border frame
+      const borderMeshes = this.createRectangularBorderMesh(name, width, height, shadowFrameWidth);
+      
+      if (borderMeshes.length === 4) {
+        // Combine the 4 border pieces into a single mesh
+        const combinedMesh = new Mesh(`${name}-combined`, this.scene);
+        
+        // Parent all border pieces to the combined mesh
+        borderMeshes.forEach((borderMesh, index) => {
+          borderMesh.parent = combinedMesh;
+          // Position border pieces to form a frame
+          this.positionBorderFrames(borderMeshes, 0, 0, 0, width, height, shadowFrameWidth);
+        });
+        
+        return combinedMesh;
+      } else if (borderMeshes.length === 1) {
+        // Single border frame mesh (rounded borders)
+        return borderMeshes[0];
+      }
+    }
+    
+    // Fallback: create polygon border frame
+    const borderMeshes = this.createPolygonBorder(name, polygonType, width, height, shadowFrameWidth, borderRadius);
+    
+    if (borderMeshes.length === 1) {
+      return borderMeshes[0];
+    } else if (borderMeshes.length > 1) {
+      // Combine multiple border pieces
+      const combinedMesh = new Mesh(`${name}-combined`, this.scene);
+      borderMeshes.forEach(borderMesh => {
+        borderMesh.parent = combinedMesh;
+      });
+      return combinedMesh;
+    }
+    
+    // Final fallback: create a simple plane (shouldn't happen)
+    console.warn(`🌒 Fallback to plane shadow for ${name}`);
+    return this.createPlane(name, width, height);
   }
 
   positionMesh(mesh: Mesh, x: number, y: number, z: number): void {

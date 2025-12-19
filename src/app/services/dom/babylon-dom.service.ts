@@ -12,8 +12,7 @@ import { BabylonRender } from './interfaces/render.types';
 import { TableService } from './elements/table.service';
 import { DOMElement } from '../../types/dom-element';
 import { generateElementId } from './utils/element-id.util';
-// TEMPORARY: Comment out PositioningIntegrationService to debug
-// import { PositioningIntegrationService } from './positioning/positioning-integration.service';
+import { PositioningIntegrationService } from './positioning/positioning-integration.service';
 
 @Injectable({
   providedIn: 'root'
@@ -34,9 +33,8 @@ export class BabylonDOMService {
     private listService: ListService, 
     private elementService: ElementService, 
     private styleService: StyleService, 
-    private tableService: TableService
-    // TEMPORARY: Comment out PositioningIntegrationService to debug
-    // private positioningIntegration: PositioningIntegrationService
+    private tableService: TableService,
+    private positioningIntegration: PositioningIntegrationService
   ) { }
 
   public render?: BabylonRender;
@@ -51,7 +49,11 @@ export class BabylonDOMService {
         processFlexChildren: this.flexService.processFlexChildren.bind(this.flexService),
         requestElementRecreation: this.elementService.requestElementRecreation.bind(this.elementService),
         processTable: this.tableService.processTable.bind(this.tableService),
-        generateElementId
+        generateElementId,
+        // Positioning delegates
+        calculateElementPosition: this.positioningIntegration.calculateElementPosition.bind(this.positioningIntegration),
+        applyPositioning: this.positioningIntegration.applyPositioning.bind(this.positioningIntegration),
+        updateElementPosition: this.updateElementPosition.bind(this)
       },
       context: {
         elements: this.elements,
@@ -68,11 +70,11 @@ export class BabylonDOMService {
     this.scene = render.scene;
     this.elements.clear();
     
-    // TEMPORARY: Comment out viewport update to debug
-    // this.positioningIntegration.updateViewport({
-    //   width: viewportWidth,
-    //   height: viewportHeight
-    // });
+    // Update viewport service with actual dimensions
+    this.positioningIntegration.updateViewport({
+      width: viewportWidth,
+      height: viewportHeight
+    });
   }
 
   createSiteFromData(siteData: SiteData): void {
@@ -125,11 +127,6 @@ export class BabylonDOMService {
    * Integrates with existing mesh management
    */
   private updateElementPosition(elementId: string, newPosition: { x: number; y: number; z: number }): void {
-    // TEMPORARY: Disable positioning updates to debug
-    console.log('[DEBUG] updateElementPosition called but disabled for debugging');
-    return;
-    
-    /* ORIGINAL CODE - COMMENTED OUT FOR DEBUGGING
     if (!elementId) {
       throw new Error('Element ID is required for position update');
     }
@@ -145,7 +142,6 @@ export class BabylonDOMService {
 
     // Use positioning integration service to update position
     this.positioningIntegration.updateElementPosition(elementId, mesh, this.render);
-    */
   }
 
   cleanup(): void {

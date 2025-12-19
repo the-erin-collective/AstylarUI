@@ -1,40 +1,33 @@
 import { Injectable } from '@angular/core';
 import { DOMElement } from '../../../types/dom-element';
-import { ActionManager, Color3, ExecuteCodeAction, Material, Mesh, PointerEventTypes, StandardMaterial, Texture, Vector3 } from '@babylonjs/core';
+import { ActionManager, Color3, ExecuteCodeAction, Material, Mesh, PointerEventTypes, StandardMaterial, Texture, Vector3, ShaderMaterial, Vector2 } from '@babylonjs/core';
 import { StyleRule } from '../../../types/style-rule';
 import { BabylonDOM } from '../interfaces/dom.types';
 import { TransformData } from '../../../types/transform-data';
 import { BabylonRender } from '../interfaces/render.types';
 import { StyleDefaultsService } from '../style-defaults.service';
-// TEMPORARY: Comment out StackingContextManager to debug
-// import { StackingContextManager } from '../positioning/stacking-context.manager';
+import { StackingContextManager } from '../positioning/stacking-context.manager';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ElementService {
   constructor(
-    private styleDefaults: StyleDefaultsService
-    // TEMPORARY: Comment out StackingContextManager to debug
-    // private stackingContextManager: StackingContextManager
+    private styleDefaults: StyleDefaultsService,
+    private stackingContextManager: StackingContextManager
   ) { }
 
   public processChildren(dom: BabylonDOM, render: BabylonRender, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement?: DOMElement): void {
     console.log(`🔄 Processing ${children.length} children for parent:`, parent.name);
     console.log(`🔍 Children details:`, children.map(c => `${c.type}#${c.id}`));
-    
-    // SPECIAL DEBUG: Log when we're processing flex containers
-    if (parentElement?.id?.includes('container')) {
-      console.log(`🚨 [FLEX CONTAINER DEBUG] Processing ${parentElement.id} with ${children.length} children`);
-      console.log(`🚨 [FLEX CONTAINER DEBUG] Parent mesh:`, parent.name);
-      console.log(`🚨 [FLEX CONTAINER DEBUG] Children:`, children.map(c => `${c.type}#${c.id}`));
-    }
-    
+
+
+
     // Debug table cell children specifically
     if (parent.name === 'td-1-2' || parent.name === 'td-2-3') {
       console.log(`[PROCESS-CHILDREN] Processing children for spanning cell ${parent.name}:`, children.map(c => ({ type: c.type, id: c.id, class: c.class })));
     }
-    
+
     // Special debug for container
     const containerChild = children.find(c => c.id === 'complex-container');
     if (containerChild) {
@@ -47,9 +40,8 @@ export class ElementService {
       throw new Error("[PARENT TEST] No parent element.");
     }
 
-    // TEMPORARY: Skip positioning separation completely for debugging
-    const normalFlowChildren = children;
-    const positionedChildren: DOMElement[] = [];
+    // Separate positioned elements from normal flow elements
+    const { normalFlowChildren, positionedChildren } = this.separatePositionedElements(children, styles);
 
     // Check if parent is a list container (ul or ol)
     const isListContainer = parentElement?.type === 'ul' || parentElement?.type === 'ol';
@@ -59,7 +51,7 @@ export class ElementService {
     const isFlexContainer = parentElement ? dom.actions.isFlexContainer(render, parentElement, styles) : false;
 
     console.log(`🔍 Parent element type: ${parentElement?.type}, isListContainer: ${isListContainer}, isTableContainer: ${isTableContainer}`);
-    
+
     // Debug table cell children specifically
     if (parent.name === 'td-1-2' || parent.name === 'td-2-3') {
       console.log(`[PROCESS-PATH] Spanning cell ${parent.name} - parentElement: ${parentElement?.type}, isTable: ${isTableContainer}, isFlex: ${isFlexContainer}, taking path: ${isListContainer ? 'LIST' : isTableContainer ? 'TABLE' : isFlexContainer ? 'FLEX' : 'STANDARD'}`);
@@ -98,7 +90,7 @@ export class ElementService {
       // Standard processing for non-list, non-table, non-flex elements
       normalFlowChildren.forEach((child, index) => {
         console.log(`👶 Processing child ${index + 1}/${children.length}: ${child.type}#${child.id}`);
-        
+
         // Debug spanning cell children specifically
         if (parent.name === 'td-1-2' || parent.name === 'td-2-3') {
           console.log(`[STANDARD-CHILD] About to call createElement for ${child.type}#${child.id} in ${parent.name}`);
@@ -107,7 +99,25 @@ export class ElementService {
         try {
           const childMesh = this.createElement(dom, render, child, parent, styles);
           console.log(`✅ Created child mesh:`, childMesh.name, `Position:`, childMesh.position);
-          
+
+          // Always re-apply hover event wiring after mesh creation
+          const elementStyles = child.id ? dom.context.elementStyles.get(child.id) : undefined;
+          let hasClassHoverStyles = false;
+          if (child.class) {
+            const classNames = child.class.split(' ').filter(c => c.trim());
+            for (const className of classNames) {
+              const classStyle = dom.context.elementStyles.get('.' + className) || dom.context.elementStyles.get(className);
+              if (classStyle?.hover) {
+                hasClassHoverStyles = true;
+                break;
+              }
+            }
+          }
+          const hasHoverStyles = (elementStyles?.hover || hasClassHoverStyles);
+          if (child.id && hasHoverStyles) {
+            this.setupMouseEvents(dom, render, childMesh, child.id);
+          }
+
           // Debug spanning cell children specifically
           if (parent.name === 'td-1-2' || parent.name === 'td-2-3') {
             console.log(`[STANDARD-CHILD] Successfully created mesh for ${child.type}#${child.id}: ${childMesh.name}`);
@@ -126,7 +136,45 @@ export class ElementService {
       });
     }
 
-    // TEMPORARY: Skip positioned children processing for debugging
+    // Process positioned children (absolute, fixed) after normal flow
+    if (positionedChildren.length > 0) {
+      console.log(`🎯 Processing ${positionedChildren.length} positioned children`);
+      positionedChildren.forEach((child, index) => {
+        console.log(`🎯 Processing positioned child ${index + 1}/${positionedChildren.length}: ${child.type}#${child.id}`);
+
+        try {
+          const childMesh = this.createElement(dom, render, child, parent, styles);
+          console.log(`✅ Created positioned child mesh:`, childMesh.name, `Position:`, childMesh.position);
+
+          // Always re-apply hover event wiring after mesh creation
+          const elementStyles = child.id ? dom.context.elementStyles.get(child.id) : undefined;
+          let hasClassHoverStyles = false;
+          if (child.class) {
+            const classNames = child.class.split(' ').filter(c => c.trim());
+            for (const className of classNames) {
+              const classStyle = dom.context.elementStyles.get('.' + className) || dom.context.elementStyles.get(className);
+              if (classStyle?.hover) {
+                hasClassHoverStyles = true;
+                break;
+              }
+            }
+          }
+          const hasHoverStyles = (elementStyles?.hover || hasClassHoverStyles);
+          if (child.id && hasHoverStyles) {
+            this.setupMouseEvents(dom, render, childMesh, child.id);
+          }
+
+          if (child.children && child.children.length > 0) {
+            console.log(`🔄 Positioned child ${child.id} has ${child.children.length} sub-children`);
+            this.processChildren(dom, render, child.children, childMesh, styles, child);
+            console.log(`✅ Completed sub-children processing for positioned ${child.id}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error processing positioned child ${child.type}#${child.id}:`, error);
+          throw error;
+        }
+      });
+    }
 
     console.log(`✅ Finished processing all children for parent:`, parent.name);
   }
@@ -136,14 +184,9 @@ export class ElementService {
     if (element.type === 'div') {
       console.log(`[DIV-DEBUG] ${element.id || 'no-id'} class: ${element.class || 'none'} parent: ${parent?.name || 'none'} - ENTERING createElement`);
     }
-    
-    // SPECIAL DEBUG: Log when we're creating flex containers
-    if (element.id?.includes('container')) {
-      console.log(`🚨 [CONTAINER CREATE DEBUG] Creating ${element.id}`);
-      console.log(`🚨 [CONTAINER CREATE DEBUG] Element:`, element);
-      console.log(`🚨 [CONTAINER CREATE DEBUG] Parent mesh:`, parent.name);
-    }
-    
+
+
+
     // Debug: log element properties for table elements
     if (element.id && (element.id.includes('table') || element.id.includes('th-') || element.id.includes('td-') || element.id.includes('tf-'))) {
       console.log(`[ELEMENT DEBUG] createElement received element: id=${element.id}, type=${element.type}, class=${element.class}`);
@@ -151,7 +194,7 @@ export class ElementService {
     }
     // Get element styles (normal and hover) - check both ID and class
     const elementStyles = element.id ? dom.context.elementStyles.get(element.id) : undefined;
-    
+
     // Process multiple classes separately
     let mergedClassStyles: StyleRule | undefined = undefined;
     if (element.class) {
@@ -178,15 +221,10 @@ export class ElementService {
 
     // Merge class styles and ID styles (ID takes precedence over class, but only for explicitly set properties)
     let explicitStyle: StyleRule = { selector: element.id ? `#${element.id}` : element.type };
-    
+
     // Start with merged class styles if available
     if (mergedClassStyles) {
       explicitStyle = { ...explicitStyle, ...mergedClassStyles };
-    }
-    
-    // DEBUG: Log what we found in elementStyles
-    if (element.id?.includes('container')) {
-      console.log(`🔍 [CONTAINER STYLE DEBUG] ${element.id} elementStyles?.normal:`, JSON.stringify(elementStyles?.normal || 'NOT FOUND'));
     }
 
     // Then apply ID styles, but be careful about auto-generated table cell styles
@@ -195,7 +233,7 @@ export class ElementService {
       if ((element.type === 'th' || element.type === 'td') && mergedClassStyles) {
         const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
         const idStylesWithoutDefaults: Partial<StyleRule> = {};
-        
+
         // Only include ID style properties that are different from type defaults
         Object.keys(elementStyles.normal).forEach(key => {
           const typedKey = key as keyof StyleRule;
@@ -203,26 +241,14 @@ export class ElementService {
             (idStylesWithoutDefaults as any)[typedKey] = elementStyles.normal[typedKey];
           }
         });
-        
+
         explicitStyle = { ...explicitStyle, ...idStylesWithoutDefaults };
-        
-        if (element.id?.includes('container')) {
-          console.log(`🔍 [CONTAINER STYLE DEBUG] ${element.id} used table cell logic, idStylesWithoutDefaults:`, JSON.stringify(idStylesWithoutDefaults));
-        }
       } else {
         // For non-table cells or when no class styles, apply ID styles normally
         explicitStyle = { ...explicitStyle, ...elementStyles.normal };
-        
-        if (element.id?.includes('container')) {
-          console.log(`🔍 [CONTAINER STYLE DEBUG] ${element.id} used normal logic, applied elementStyles.normal:`, JSON.stringify(elementStyles.normal));
-        }
-      }
-    } else {
-      if (element.id?.includes('container')) {
-        console.log(`🔍 [CONTAINER STYLE DEBUG] ${element.id} NO elementStyles?.normal found!`);
       }
     }
-    
+
     console.log(`[ELEMENT DEBUG] Final merged explicitStyle: ${JSON.stringify(explicitStyle)}`);
     // Get default styles for this element type
     const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
@@ -231,24 +257,24 @@ export class ElementService {
     // Use centralized CSS-correct merging - explicitStyle should override typeDefaults
     const baseStyle = { selector: element.id ? `#${element.id}` : element.type, ...typeDefaults };
     console.log(`[ELEMENT DEBUG] 🔧 Base style (defaults + selector): ${JSON.stringify(baseStyle)}`);
-    
+
     const style: StyleRule = StyleDefaultsService.mergeStyles(baseStyle, explicitStyle) as StyleRule;
     console.log(`[ELEMENT DEBUG] 🎯 Final merged style after mergeStyles: ${JSON.stringify(style)}`);
-    
+
     // Additional debug for table cells to see what's happening
     if (element.type === 'th' || element.type === 'td') {
       console.log(`[TABLE CELL DEBUG] ${element.id} (${element.type}) - explicitStyle background: ${explicitStyle.background}`);
       console.log(`[TABLE CELL DEBUG] ${element.id} (${element.type}) - typeDefaults background: ${typeDefaults.background}`);
       console.log(`[TABLE CELL DEBUG] ${element.id} (${element.type}) - final style background: ${style.background}`);
     }
-    
+
     // Broader debug for complex table elements
     if (element.id && element.id.includes('complex')) {
       console.log(`[COMPLEX DEBUG] ${element.id} (${element.type}) - class: ${element.class}`);
       console.log(`[COMPLEX DEBUG] ${element.id} - explicitStyle: ${JSON.stringify(explicitStyle)}`);
       console.log(`[COMPLEX DEBUG] ${element.id} - final style: ${JSON.stringify(style)}`);
     }
-    
+
     // Specific debug for container positioning
     if (element.id === 'complex-container') {
       console.log(`[CONTAINER DEBUG] Container positioning - top: ${style.top}, left: ${style.left}, width: ${style.width}, height: ${style.height}`);
@@ -267,7 +293,7 @@ export class ElementService {
     console.log(`[ELEMENT DEBUG] 📋 Explicit style was: ${JSON.stringify(explicitStyle)}`);
     console.log(`[ELEMENT DEBUG] 🎨 Type defaults were: ${JSON.stringify(typeDefaults)}`);
     console.log(`[ELEMENT DEBUG] 🔀 Final merged style: ${JSON.stringify(style)}`);
-    
+
     // Debug for container element specifically
     if (element.id === 'complex-container') {
       console.log(`[CONTAINER DEBUG] *** CONTAINER ELEMENT FOUND ***`);
@@ -329,31 +355,25 @@ export class ElementService {
     console.log(`[ELEMENT DEBUG] [BABYLON MESH DEBUG] Created mesh for ${element.id} (type: ${element.type}, polygon: ${polygonType}, meshId: ${meshId}) with dimensions: width=${worldWidth}, height=${worldHeight}, borderRadius=${borderRadius}`);
 
     // Check if element needs CSS positioning (relative, absolute, fixed)
-    // TEMPORARY: Disable positioning to debug flex container issue
-    const needsPositioning = false;
-    
-    /* ORIGINAL CODE - COMMENTED OUT FOR DEBUGGING
-    const needsPositioning = typeof dom.actions.calculateElementPosition === 'function' && 
-                            style?.position && 
-                            style.position !== 'static';
-    */
+    const needsPositioning = typeof dom.actions.calculateElementPosition === 'function' &&
+      style?.position &&
+      style.position !== 'static';
 
     let worldX: number;
     let worldY: number;
     let zPosition: number;
 
     if (needsPositioning) {
-      // TEMPORARY: CSS positioning disabled for debugging
-      console.log(`[POSITIONING] CSS positioning disabled for debugging: ${element.id}`);
-    }
-    
-    // Use existing positioning logic (flex or normal flow)
-    {
+      // Use CSS positioning system
+      const position = dom.actions.calculateElementPosition(element);
+      worldX = position.x * scaleFactor;
+      worldY = position.y * scaleFactor;
+      zPosition = position.z;
+      console.log(`[POSITIONING] Using CSS positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (position: ${style.position})`);
+    } else {
       // Use existing positioning logic (flex or normal flow)
-      // TEMPORARY: Use old z-index calculation instead of stackingContextManager
-      const zIndex = this.parseZIndex(style?.zIndex);
-      const baseZPosition = this.calculateZPosition(zIndex);
-      zPosition = flexPosition ? flexPosition.z : baseZPosition;
+      const stackingZPosition = this.stackingContextManager.calculateZPosition(element);
+      zPosition = flexPosition ? flexPosition.z : stackingZPosition;
 
       if (flexPosition) {
         worldX = flexPosition.x * scaleFactor;
@@ -370,13 +390,16 @@ export class ElementService {
     render.actions.mesh.positionMesh(mesh, worldX, worldY, zPosition);
     render.actions.mesh.parentMesh(mesh, parent);
 
-    // TEMPORARY: CSS positioning disabled for debugging
+    // Apply CSS positioning if needed
+    if (needsPositioning && typeof dom.actions.applyPositioning === 'function') {
+      dom.actions.applyPositioning(element, mesh, render);
+    }
 
     // Debug checkpoint before material application
     if (element.type === 'div') {
       console.log(`[DIV-DEBUG] ${element.id || 'no-id'} - REACHED MATERIAL APPLICATION`);
     }
-    
+
     // Apply material (start with normal state) - pass merged style that includes type defaults
     this.applyElementMaterial(dom, render, mesh, element, false, style);
 
@@ -395,14 +418,9 @@ export class ElementService {
       }
     }
 
-    // Add or update box shadow mesh
-    if (element.id && parent instanceof Mesh) {
-      this.updateShadowMesh(dom, render, element.id, style, parent, dimensions, zPosition, borderRadius, polygonType, transform || undefined);
-    }
-
     // Add borders if specified - merge class and ID styles properly
     const borderElementStyles = element.id ? dom.context.elementStyles.get(element.id) : undefined;
-    
+
     // Process multiple classes for border styles
     let borderMergedClassStyles: StyleRule | undefined = undefined;
     if (element.class) {
@@ -418,7 +436,7 @@ export class ElementService {
         }
       }
     }
-    
+
     // Merge border styles (class first, then ID)
     let borderStyle: StyleRule = { selector: '' };
     if (borderMergedClassStyles) {
@@ -470,12 +488,25 @@ export class ElementService {
 
       // Apply border material to all frames with consistent rendering
       const borderOpacity = render.actions.style.parseOpacity(elementStyles?.normal?.opacity);
-      const borderMaterial = render.actions.mesh.createMaterial(
-        `${element.id}-border-material`,
-        borderProperties.color,
-        undefined,
-        borderOpacity
-      );
+      let borderMaterial;
+      // Check for 'transparent' before calling parseBackgroundColor
+      const borderColorRaw = borderElementStyles?.normal?.borderColor;
+      if (borderColorRaw === 'transparent' || borderProperties.color === null || borderProperties.color === undefined) {
+        borderMaterial = render.actions.mesh.createMaterial(
+          `${element.id}-border-material`,
+          new Color3(0, 0, 0),
+          undefined,
+          0
+        ); // Fully transparent
+      } else {
+        // Only pass a valid Color3
+        borderMaterial = render.actions.mesh.createMaterial(
+          `${element.id}-border-material`,
+          borderProperties.color,
+          undefined,
+          borderOpacity
+        );
+      }
 
       // DO NOT override emissive color - keep materials consistent
       // The createSharpEdgeMaterial already sets optimal values
@@ -535,6 +566,11 @@ export class ElementService {
       dom.context.hoverStates.set(element.id, false); // Start in normal state
       dom.context.elementTypes.set(element.id, element.type); // Store element type for hover handling
 
+      // Add or update box shadow mesh AFTER element is stored so it can be found for parenting
+      if (parent instanceof Mesh) {
+        this.updateShadowMesh(dom, render, element.id, style, parent, dimensions, zPosition, borderRadius, polygonType, transform || undefined);
+      }
+
       // Convert padding from world units to pixels for storage
       const pixelPadding = this.convertPaddingToPixels(dimensions.padding, render);
 
@@ -569,11 +605,11 @@ export class ElementService {
     const elementType = dom.context.elementTypes.get(elementId) || 'div';
     const element = { id: elementId, type: elementType } as DOMElement;
     const elementStyles = dom.context.elementStyles.get(elementId);
-    
+
     // Get class from stored element info if available
     const storedElement = dom.context.elementTypes.get(elementId);
     const elementClass = element.class; // This might be undefined, need to get from stored data
-    
+
     // Process multiple classes for recreation
     let recreationMergedClassStyles: StyleRule | undefined = undefined;
     if (elementClass) {
@@ -589,9 +625,9 @@ export class ElementService {
         }
       }
     }
-    
+
     const typeDefaults = this.styleDefaults.getElementTypeDefaults(elementType);
-    
+
     // Merge styles properly for recreation
     let mergedStyle = { ...typeDefaults };
     if (recreationMergedClassStyles) {
@@ -600,10 +636,10 @@ export class ElementService {
     if (elementStyles?.normal) {
       mergedStyle = { ...mergedStyle, ...elementStyles.normal };
     }
-    
+
     const style = styleType === 'hover' ? (() => {
       let hoverStyle = { ...mergedStyle };
-      
+
       // Process multiple classes for hover in recreation
       if (elementClass) {
         const classNames = elementClass.split(' ').filter(c => c.trim());
@@ -695,7 +731,7 @@ export class ElementService {
     }
 
     console.log('Parent dimensions:', { parentWidth, parentHeight });
-    
+
     // Special debug for container positioning
     if (style?.selector === '#complex-container') {
       console.log(`[CONTAINER DEBUG] calculateDimensions for container - parent: ${parent.name}, parentWidth: ${parentWidth}, parentHeight: ${parentHeight}`);
@@ -792,8 +828,8 @@ export class ElementService {
       } else {
         // CSS-semantic positioning: if no explicit top but element has block-level display,
         // default to top-aligned positioning to match CSS behavior
-        if (style.display === 'table' || style.display === 'block' || style.display === 'table-header-group' || 
-            style.display === 'table-row-group' || style.display === 'table-footer-group') {
+        if (style.display === 'table' || style.display === 'block' || style.display === 'table-header-group' ||
+          style.display === 'table-row-group' || style.display === 'table-footer-group') {
           // Calculate top-aligned position: top of parent - half element height
           // In BJSUI coordinate system: negative Y moves toward top, positive Y toward bottom
           y = (parentHeight / 2) - (height / 2);
@@ -946,6 +982,16 @@ export class ElementService {
       dimensions.height,
       borderRadius
     );
+
+    // Ensure the mesh is pickable for pointer events
+    imageMesh.isPickable = true;
+
+    // Store initial transform values
+    imageMesh.metadata = imageMesh.metadata || {};
+    imageMesh.metadata.initialTransform = {
+      scaling: { x: imageMesh.scaling.x, y: imageMesh.scaling.y, z: imageMesh.scaling.z },
+      rotation: { x: imageMesh.rotation.x, y: imageMesh.rotation.y, z: imageMesh.rotation.z }
+    };
 
     // Load texture using TextureService
     render.actions.texture.getTexture(imageSrc, render.scene)
@@ -1195,7 +1241,7 @@ export class ElementService {
 
   private applyElementMaterial(dom: BabylonDOM, render: BabylonRender, mesh: Mesh, element: DOMElement, isHovered: boolean, mergedStyle: StyleRule): void {
     // Elements without IDs can still have materials applied based on their classes and type defaults
-    
+
     // Debug material application for all divs
     if (element.type === 'div') {
       console.log(`[MATERIAL-DEBUG] ${element.id || 'no-id'} - ENTERING applyElementMaterial, background: ${mergedStyle?.background || 'none'}`);
@@ -1218,7 +1264,7 @@ export class ElementService {
     // If in hover state, apply hover styles on top of merged style
     if (isHovered) {
       const elementStyles = element.id ? dom.context.elementStyles.get(element.id) : undefined;
-      
+
       // Process multiple classes for hover styles
       let mergedClassHoverStyles: StyleRule | undefined = undefined;
       if (element.class) {
@@ -1234,7 +1280,7 @@ export class ElementService {
           }
         }
       }
-      
+
       // Merge hover styles properly (class hover first, then ID hover)
       let hoverStyle: StyleRule = { selector: '' };
       if (mergedClassHoverStyles) {
@@ -1243,14 +1289,14 @@ export class ElementService {
       if (elementStyles?.hover) {
         hoverStyle = { ...hoverStyle, ...elementStyles.hover };
       }
-      
+
       if (Object.keys(hoverStyle).length > 1) { // More than just selector
         activeStyle = { ...mergedStyle, ...hoverStyle };
       }
     }
 
     if (element.id && (element.id.includes('complete') || element.id.includes('th-') || element.id.includes('td-') || element.id.includes('tf-'))) {
-        console.log(`[MATERIAL-CREATE] ${element.id} hover:${isHovered} background:${activeStyle?.background || 'none'} selector:${activeStyle?.selector || 'none'}`);
+      console.log(`[MATERIAL-CREATE] ${element.id} hover:${isHovered} background:${activeStyle?.background || 'none'} selector:${activeStyle?.selector || 'none'}`);
     }
 
     // Parse opacity from the active style
@@ -1266,14 +1312,18 @@ export class ElementService {
 
       if (backgroundData?.type === 'solid') {
         // Solid color background
-        const backgroundColor = render.actions.style.parseBackgroundColor(backgroundToUse);
+        let backgroundColor: Color3 | null = null;
+        if (backgroundToUse === 'transparent') {
+          backgroundColor = null;
+        } else {
+          backgroundColor = render.actions.style.parseBackgroundColor(backgroundToUse);
+        }
+        const materialName = `${element.id || 'no-id'}-material-${isHovered ? 'hover' : 'normal'}`;
         if (backgroundColor === null) {
           // Transparent background - create a fully transparent material
           console.log(`Applied ${element.id || 'no-id'} ${isHovered ? 'hover' : 'normal'} transparent background - creating transparent material`);
-          const materialName = `${element.id || 'no-id'}-material-${isHovered ? 'hover' : 'normal'}`;
           material = render.actions.mesh.createMaterial(materialName, new Color3(0, 0, 0), undefined, 0); // Fully transparent
         } else {
-          const materialName = `${element.id || 'no-id'}-material-${isHovered ? 'hover' : 'normal'}`;
           material = render.actions.mesh.createMaterial(materialName, backgroundColor, undefined, opacity);
           console.log(`Applied ${element.id || 'no-id'} ${isHovered ? 'hover' : 'normal'} solid background:`, backgroundToUse, '-> parsed:', backgroundColor, 'opacity:', opacity);
         }
@@ -1287,30 +1337,30 @@ export class ElementService {
         console.log(`Applied ${element.id || 'no-id'} ${isHovered ? 'hover' : 'normal'} gradient background:`, backgroundData.type, backgroundData.gradient);
       } else {
         // Fallback for invalid background format
-        console.warn(`Invalid background format for ${element.id}: ${backgroundToUse}, using default purple`);
-        const fallbackColor = new Color3(0.7, 0.5, 0.9); // Light purple
-        material = render.actions.mesh.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, fallbackColor, undefined, opacity);
+        console.warn(`Invalid background format for ${element.id}: ${backgroundToUse}, using fully transparent material`);
+        const materialName = `${element.id}-material-${isHovered ? 'hover' : 'normal'}`;
+        material = render.actions.mesh.createMaterial(materialName, new Color3(0, 0, 0), undefined, 0); // Fully transparent
       }
     } else {
-      // This should not happen if type defaults are working correctly
-      console.error(`No background found for ${element.id} (type: ${element.type}) - type defaults may not be working!`);
-      const fallbackColor = new Color3(0.7, 0.5, 0.9); // Light purple
-      material = render.actions.mesh.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, fallbackColor, undefined, opacity);
+      // If no background is specified, treat as fully transparent
+      console.log(`No background found for ${element.id} (type: ${element.type}) - creating fully transparent material.`);
+      const materialName = `${element.id}-material-${isHovered ? 'hover' : 'normal'}`;
+      material = render.actions.mesh.createMaterial(materialName, new Color3(0, 0, 0), undefined, 0); // Fully transparent
     }
 
     mesh.material = material;
-    
+
     // Debug material application for spanning cells and their content divs
     if (element.id && (element.id === 'td-1-2' || element.id === 'td-2-3')) {
       console.log(`[MATERIAL-APPLY] ${element.id} material applied: ${material?.name || 'unnamed'} diffuseColor: ${material?.diffuseColor ? `RGB(${material.diffuseColor.r.toFixed(2)}, ${material.diffuseColor.g.toFixed(2)}, ${material.diffuseColor.b.toFixed(2)})` : 'none'}`);
       console.log(`[MATERIAL-APPLY] ${element.id} mesh.material.name: ${mesh.material?.name || 'none'}`);
     }
-    
+
     // Debug all div creation to see if content divs are being processed
     if (element.type === 'div') {
       console.log(`[DIV-DEBUG] ${element.id || 'no-id'} class: ${element.class || 'none'} parent: ${parent?.name || 'none'} background: ${activeStyle?.background || 'none'} materialCreated: ${material ? 'YES' : 'NO'}`);
     }
-    
+
     // Log mesh rotation and transform after material and transform application
     if (activeStyle?.transform) {
       console.log(`[MATERIAL DEBUG] ${element.id} transform string:`, activeStyle.transform);
@@ -1332,7 +1382,7 @@ export class ElementService {
     let activeStyle = mergedStyle;
     if (isHovered) {
       const elementStyles = dom.context.elementStyles.get(element.id);
-      
+
       // Process multiple classes for hover styles in image update
       let imageMergedClassHoverStyles: StyleRule | undefined = undefined;
       if (element.class) {
@@ -1348,7 +1398,7 @@ export class ElementService {
           }
         }
       }
-      
+
       // Merge hover styles properly (class hover first, then ID hover)
       let hoverStyle: StyleRule = { selector: '' };
       if (imageMergedClassHoverStyles) {
@@ -1357,7 +1407,7 @@ export class ElementService {
       if (elementStyles?.hover) {
         hoverStyle = { ...hoverStyle, ...elementStyles.hover };
       }
-      
+
       if (Object.keys(hoverStyle).length > 0) {
         activeStyle = { ...mergedStyle, ...hoverStyle };
       }
@@ -1403,13 +1453,24 @@ export class ElementService {
           }
         }
       } else {
-        // Reset transforms when not in hover state
-        mesh.scaling.x = 1;
-        mesh.scaling.y = 1;
-        mesh.scaling.z = 1;
-        mesh.rotation.x = 0;
-        mesh.rotation.y = 0;
-        mesh.rotation.z = 0;
+        // Restore initial transforms when not in hover state and no transform specified
+        const initial = mesh.metadata?.initialTransform;
+        if (initial) {
+          mesh.scaling.x = initial.scaling.x;
+          mesh.scaling.y = initial.scaling.y;
+          mesh.scaling.z = initial.scaling.z;
+          mesh.rotation.x = initial.rotation.x;
+          mesh.rotation.y = initial.rotation.y;
+          mesh.rotation.z = initial.rotation.z;
+          console.log(`↩️ Restored initial transform for ${element.id}`);
+        } else {
+          mesh.scaling.x = 1;
+          mesh.scaling.y = 1;
+          mesh.scaling.z = 1;
+          mesh.rotation.x = 0;
+          mesh.rotation.y = 0;
+          mesh.rotation.z = 0;
+        }
       }
     }
     // After applying transform, log mesh rotation and transform string
@@ -1723,14 +1784,6 @@ export class ElementService {
     normalFlowChildren: DOMElement[];
     positionedChildren: DOMElement[];
   } {
-    // TEMPORARY: Disable positioning separation to debug flex container issue
-    // All children go to normal flow for now
-    return {
-      normalFlowChildren: children,
-      positionedChildren: []
-    };
-
-    /* ORIGINAL CODE - COMMENTED OUT FOR DEBUGGING
     const normalFlowChildren: DOMElement[] = [];
     const positionedChildren: DOMElement[] = [];
 
@@ -1747,7 +1800,6 @@ export class ElementService {
     });
 
     return { normalFlowChildren, positionedChildren };
-    */
   }
 
   /**
@@ -1756,24 +1808,11 @@ export class ElementService {
   private getElementStyle(element: DOMElement, styles: StyleRule[]): StyleRule | undefined {
     // Find style that matches this element
     const elementSelector = element.class ? `.${element.class}` : `#${element.id}`;
-    return styles.find(style => 
-      style.selector === elementSelector || 
+    return styles.find(style =>
+      style.selector === elementSelector ||
       style.selector === element.type ||
       style.selector === `${element.type}#${element.id}`
     );
-  }
-
-  // TEMPORARY: Add back old z-index methods for debugging
-  private parseZIndex(zIndexValue: string | undefined): number {
-    if (!zIndexValue) return 0;
-    const zIndex = parseInt(zIndexValue, 10);
-    return isNaN(zIndex) ? 0 : zIndex;
-  }
-
-  private calculateZPosition(zIndex: number): number {
-    const baseZ = 0.01;
-    const zScale = 0.01;
-    return baseZ + (zIndex * zScale);
   }
 
   private getElementInfo(dom: BabylonDOM, elementId: string): { padding?: { top: number; right: number; bottom: number; left: number } } | null {
@@ -1833,12 +1872,22 @@ export class ElementService {
     console.log(`Applying border material for ${elementId}, isHovered: ${isHovered}, borderWidth: ${borderProperties.width}, borderColor:`, borderProperties.color, 'opacity:', opacity);
 
     if (borderProperties.width > 0) {
-      const borderMaterial = render.actions.mesh.createMaterial(
-        `${elementId}-border-material-${isHovered ? 'hover' : 'normal'}`,
-        borderProperties.color,
-        undefined,
-        opacity
-      );
+      let borderMaterial;
+      if (borderProperties.color === null || borderProperties.color === undefined) {
+        borderMaterial = render.actions.mesh.createMaterial(
+          `${elementId}-border-material-${isHovered ? 'hover' : 'normal'}`,
+          new Color3(0, 0, 0),
+          undefined,
+          0
+        ); // Fully transparent
+      } else {
+        borderMaterial = render.actions.mesh.createMaterial(
+          `${elementId}-border-material-${isHovered ? 'hover' : 'normal'}`,
+          borderProperties.color,
+          undefined,
+          opacity
+        );
+      }
       borderMesh.material = borderMaterial;
       console.log(`Applied ${elementId} border ${isHovered ? 'hover' : 'normal'} color:`, borderProperties.color, 'opacity:', opacity);
     } else {
@@ -1888,6 +1937,10 @@ export class ElementService {
       // Get the hover-merged style for geometry properties
       const elementStyles = dom.context.elementStyles.get(elementId);
       const hoverMergedStyle = elementStyles?.hover ? { ...baseMergedStyle, ...elementStyles.hover } : baseMergedStyle;
+
+      console.log(`🌒 Mouse over for ${elementId} - boxShadow in base style:`, baseMergedStyle.boxShadow);
+      console.log(`🌒 Mouse over for ${elementId} - boxShadow in hover style:`, elementStyles?.hover?.boxShadow);
+      console.log(`🌒 Mouse over for ${elementId} - boxShadow in merged hover style:`, hoverMergedStyle.boxShadow);
 
       const hoverRadius = this.parseBorderRadius(hoverMergedStyle?.borderRadius);
       const safeHoverRadius = isNaN(hoverRadius) ? 0 : hoverRadius;
@@ -1944,12 +1997,23 @@ export class ElementService {
           borderWidth * pixelToWorldScale
         );
         const borderOpacity = render.actions.style.parseOpacity(hoverMergedStyle?.opacity);
-        const borderMaterial = render.actions.mesh.createMaterial(
-          `${elementId}-border-material`,
-          borderColor,
-          undefined,
-          borderOpacity
-        );
+
+        let borderMaterial;
+        if (borderColor === null || borderColor === undefined) {
+          borderMaterial = render.actions.mesh.createMaterial(
+            `${elementId}-border-material`,
+            new Color3(0, 0, 0),
+            undefined,
+            0
+          ); // Fully transparent
+        } else {
+          borderMaterial = render.actions.mesh.createMaterial(
+            `${elementId}-border-material`,
+            borderColor,
+            undefined,
+            borderOpacity
+          );
+        }
 
         borderMeshes.forEach((borderMesh, index) => {
           borderMesh.material = borderMaterial;
@@ -1979,6 +2043,13 @@ export class ElementService {
             this.applyTransforms(borderMesh, borderTransform);
           }
         }
+
+        // Shadow automatically inherits transforms through parenting - no manual intervention needed
+        const shadowMesh = dom.context.elements.get(`${elementId}-shadow`);
+        if (shadowMesh) {
+          console.log(`🌒 HOVER: Shadow for ${elementId} will automatically inherit element transforms via parenting`);
+          console.log(`🌒 Element transform: scale=(${transform.scale.x}, ${transform.scale.y}), rotation=(${transform.rotate.x}, ${transform.rotate.y}, ${transform.rotate.z})`);
+        }
       }
       // After all style/geometry updates, log the mesh rotation and transform
       if (hoverMergedStyle.transform) {
@@ -1988,15 +2059,22 @@ export class ElementService {
     }));
 
     mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
+      console.log(`[DEBUG] Mouse out event fired for element: ${elementId}`);
       // Always get the latest mesh reference
       const mainMesh = dom.context.elements.get(elementId);
-      if (!mainMesh) return;
+      if (!mainMesh) {
+        console.log(`[DEBUG] Mouse out event: mainMesh not found for element: ${elementId}`);
+        return;
+      }
       const elementType = dom.context.elementTypes.get(elementId) || 'div';
       const element = { id: elementId, type: elementType } as DOMElement;
       const elementStyles = dom.context.elementStyles.get(elementId);
       const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
       const normalStyle = (elementStyles?.normal || {}) as StyleRule;
       const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle, selector: `#${elementId}` };
+
+      console.log(`🌒 Mouse out for ${elementId} - boxShadow in normal style:`, normalStyle.boxShadow);
+      console.log(`🌒 Mouse out for ${elementId} - boxShadow in merged style:`, mergedStyle.boxShadow);
       const normalRadius = this.parseBorderRadius(normalStyle?.borderRadius);
       const safeNormalRadius = isNaN(normalRadius) ? 0 : normalRadius;
       const dimensions = dom.context.elementDimensions.get(elementId);
@@ -2052,12 +2130,23 @@ export class ElementService {
           borderWidth * pixelToWorldScale
         );
         const borderOpacity = render.actions.style.parseOpacity(mergedStyle.opacity);
-        const borderMaterial = render.actions.mesh.createMaterial(
-          `${elementId}-border-material`,
-          borderColor,
-          undefined,
-          borderOpacity
-        );
+        let borderMaterial;
+        if (borderColor === null || borderColor === undefined) {
+          // Transparent: create a fully transparent material, do not set color
+          borderMaterial = render.actions.mesh.createMaterial(
+            `${elementId}-border-material`,
+            new Color3(0, 0, 0),
+            undefined,
+            0 // fully transparent
+          );
+        } else {
+          borderMaterial = render.actions.mesh.createMaterial(
+            `${elementId}-border-material`,
+            borderColor,
+            undefined,
+            borderOpacity
+          );
+        }
 
         borderMeshes.forEach((borderMesh, index) => {
           borderMesh.material = borderMaterial;
@@ -2086,6 +2175,13 @@ export class ElementService {
             render.actions.mesh.parentMesh(borderMesh, mainMesh);
           }
         }
+
+        // Shadow automatically inherits transforms through parenting - no manual intervention needed
+        const shadowMesh = dom.context.elements.get(`${elementId}-shadow`);
+        if (shadowMesh) {
+          console.log(`🌒 NORMAL: Shadow for ${elementId} will automatically inherit element transforms via parenting`);
+          console.log(`🌒 Element transform: scale=(${transform.scale.x}, ${transform.scale.y}), rotation=(${transform.rotate.x}, ${transform.rotate.y}, ${transform.rotate.z})`);
+        }
       } else {
         mainMesh.scaling.x = 1;
         mainMesh.scaling.y = 1;
@@ -2104,22 +2200,25 @@ export class ElementService {
             borderMesh.rotation.z = 0;
           }
         }
+
+        // Shadow automatically resets transforms through parenting - no manual intervention needed
+        const shadowMesh = dom.context.elements.get(`${elementId}-shadow`);
+        if (shadowMesh) {
+          console.log(`🌒 RESET: Shadow for ${elementId} will automatically reset transforms via parenting`);
+        }
+
+        // Position shadow behind element with proper depth separation
+        const currentShadowX = shadowMesh.position.x;
+        const currentShadowY = shadowMesh.position.y;
+        shadowMesh.position.set(currentShadowX, currentShadowY, -0.01);
+
+        console.log(`🌒 RESET: Reset shadow transforms and shader uniforms for ${elementId}`);
+        console.log(`🌒 Element position: (${mainMesh.position.x.toFixed(3)}, ${mainMesh.position.y.toFixed(3)}, ${mainMesh.position.z.toFixed(3)})`);
+        console.log(`🌒 Shadow position: (${shadowMesh.position.x.toFixed(3)}, ${shadowMesh.position.y.toFixed(3)}, ${shadowMesh.position.z.toFixed(3)})`);
       }
-      // Remove old shadow mesh
-      const oldShadow = dom.context.elements.get(`${elementId}-shadow`);
-      if (oldShadow) {
-        oldShadow.dispose();
-        dom.context.elements.delete(`${elementId}-shadow`);
-      }
-      // Calculate worldBorderRadius and polygonType for shadow
-      const shadowBorderRadius = safeNormalRadius * pixelToWorldScale;
-      const shadowPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
-      // Ensure parent is a Mesh
-      const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
-      // Add or update shadow mesh for normal
-      this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
+    }
     }));
-  }
+}
 
   /**
    * Converts a padding object from world units to pixels using the camera scale factor.
@@ -2128,54 +2227,131 @@ export class ElementService {
    * @returns The padding object in pixels.
    */
   private convertPaddingToPixels(padding: { top: number; right: number; bottom: number; left: number }, render: BabylonRender): { top: number; right: number; bottom: number; left: number } {
-    const scale = render.actions.camera.getPixelToWorldScale();
-    if (!scale || scale === 0) return { ...padding };
-    return {
-      top: Math.round(padding.top / scale),
-      right: Math.round(padding.right / scale),
-      bottom: Math.round(padding.bottom / scale),
-      left: Math.round(padding.left / scale)
-    };
-  }
+  const scale = render.actions.camera.getPixelToWorldScale();
+  if (!scale || scale === 0) return { ...padding };
+  return {
+    top: Math.round(padding.top / scale),
+    right: Math.round(padding.right / scale),
+    bottom: Math.round(padding.bottom / scale),
+    left: Math.round(padding.left / scale)
+  };
+}
 
   // Helper to parse RGBA color and multiply alpha
   private getBoxShadowColorWithOpacity(color: string, styleOpacity: number): string {
-    // Try to parse rgba/hsla or hex
-    const rgbaRegex = /rgba?\(([^)]+)\)/;
-    const match = color.match(rgbaRegex);
-    if (match) {
-      const parts = match[1].split(',').map(p => p.trim());
-      let r = parseFloat(parts[0]);
-      let g = parseFloat(parts[1]);
-      let b = parseFloat(parts[2]);
-      let a = parts[3] !== undefined ? parseFloat(parts[3]) : 1;
-      a = Math.max(0, Math.min(1, a * styleOpacity));
-      return `rgba(${r},${g},${b},${a})`;
-    }
-    // Hex or named color fallback: just return as is (no alpha multiplication)
-    return color;
+  // Try to parse rgba/hsla or hex
+  const rgbaRegex = /rgba?\(([^)]+)\)/;
+  const match = color.match(rgbaRegex);
+  if (match) {
+    const parts = match[1].split(',').map(p => p.trim());
+    let r = parseFloat(parts[0]);
+    let g = parseFloat(parts[1]);
+    let b = parseFloat(parts[2]);
+    let a = parts[3] !== undefined ? parseFloat(parts[3]) : 1;
+    a = Math.max(0, Math.min(1, a * styleOpacity));
+    return `rgba(${r},${g},${b},${a})`;
   }
+  // Hex or named color fallback: just return as is (no alpha multiplication)
+  return color;
+}
 
   // Helper to create or update the shadow mesh for an element
-  private updateShadowMesh(dom: BabylonDOM, render: BabylonRender, elementId: string, style: StyleRule, parent: Mesh, dimensions: any, zPosition: number, borderRadius: number, polygonType: string, transform?: TransformData) {
-    // Remove old shadow mesh if it exists
-    const oldShadow = dom.context.elements.get(`${elementId}-shadow`);
-    if (oldShadow) {
-      oldShadow.dispose();
+  private updateShadowMesh(dom: BabylonDOM, render: BabylonRender, elementId: string, style: StyleRule, parent: Mesh, dimensions: any, zPosition: number, borderRadius: number, polygonType: string, transform ?: TransformData) {
+  console.log(`🌒 updateShadowMesh called for ${elementId} with boxShadow: "${style?.boxShadow}"`);
+
+  const boxShadow = this.parseBoxShadow(style?.boxShadow);
+  const existingShadow = dom.context.elements.get(`${elementId}-shadow`);
+
+  console.log(`🌒 Parsed boxShadow for ${elementId}:`, boxShadow);
+
+  // Check if this is initial creation or hover update
+  const isHoverState = dom.context.hoverStates.get(elementId) || false;
+  console.log(`🌒 Shadow update context for ${elementId}: ${isHoverState ? 'HOVER' : 'NORMAL'} state`);
+
+  // If no box shadow is needed, remove existing shadow
+  if (!boxShadow) {
+    if (existingShadow) {
+      existingShadow.dispose();
       dom.context.elements.delete(`${elementId}-shadow`);
+      console.log(`🌒 Removed shadow for ${elementId} (no box-shadow style)`);
+    } else {
+      console.log(`🌒 No shadow to remove for ${elementId} (no box-shadow style and no existing shadow)`);
     }
-    const boxShadow = this.parseBoxShadow(style?.boxShadow);
-    if (!boxShadow) return;
-    const scaleFactor = render.actions.camera.getPixelToWorldScale();
-    const worldWidth = dimensions.width * scaleFactor;
-    const worldHeight = dimensions.height * scaleFactor;
-    const scaledOffsetX = boxShadow.offsetX * scaleFactor;
-    const scaledOffsetY = boxShadow.offsetY * scaleFactor;
-    const scaledBlur = boxShadow.blur * scaleFactor;
-    // Multiply color alpha by style opacity
-    const styleOpacity = render.actions.style.parseOpacity(style.opacity);
-    const shadowColor = this.getBoxShadowColorWithOpacity(boxShadow.color, styleOpacity);
-    const shadowMesh = render.actions.mesh.createShadow(
+    return;
+  }
+
+  const scaleFactor = render.actions.camera.getPixelToWorldScale();
+  const worldWidth = dimensions.width * scaleFactor;
+  const worldHeight = dimensions.height * scaleFactor;
+  const scaledOffsetX = boxShadow.offsetX * scaleFactor;
+  const scaledOffsetY = boxShadow.offsetY * scaleFactor;
+  const scaledBlur = boxShadow.blur * scaleFactor;
+
+  // Multiply color alpha by style opacity
+  const styleOpacity = render.actions.style.parseOpacity(style.opacity);
+  const shadowColor = this.getBoxShadowColorWithOpacity(boxShadow.color, styleOpacity);
+
+  console.log(`🌒 Shadow parameters for ${elementId}:`, {
+    originalBlur: boxShadow.blur,
+    scaledBlur: scaledBlur,
+    originalColor: boxShadow.color,
+    finalColor: shadowColor,
+    styleOpacity: styleOpacity,
+    worldSize: `${worldWidth.toFixed(1)}x${worldHeight.toFixed(1)}`
+  });
+
+  // Check if we can reuse existing shadow
+  let needsRecreation = !existingShadow;
+
+  if (existingShadow && existingShadow.metadata && existingShadow.metadata.shadowParams) {
+    const lastParams = existingShadow.metadata.shadowParams;
+
+    // More precise parameter comparison
+    const widthChanged = Math.abs(lastParams.width - worldWidth) > 0.001;
+    const heightChanged = Math.abs(lastParams.height - worldHeight) > 0.001;
+    const blurChanged = Math.abs(lastParams.blur - scaledBlur) > 0.001;
+    const colorChanged = lastParams.color !== shadowColor;
+    const radiusChanged = Math.abs(lastParams.borderRadius - borderRadius) > 0.001;
+    const typeChanged = lastParams.polygonType !== polygonType;
+
+    const paramChanged = widthChanged || heightChanged || blurChanged || colorChanged || radiusChanged || typeChanged;
+    needsRecreation = paramChanged;
+
+    if (!paramChanged) {
+      console.log(`🌒 ✅ Reusing existing shadow for ${elementId} (all parameters identical)`);
+    } else {
+      console.log(`🌒 ❌ Shadow parameters changed for ${elementId}:`, {
+        widthChanged: widthChanged ? `${lastParams.width} → ${worldWidth}` : 'unchanged',
+        heightChanged: heightChanged ? `${lastParams.height} → ${worldHeight}` : 'unchanged',
+        blurChanged: blurChanged ? `${lastParams.blur} → ${scaledBlur}` : 'unchanged',
+        colorChanged: colorChanged ? `${lastParams.color} → ${shadowColor}` : 'unchanged',
+        radiusChanged: radiusChanged ? `${lastParams.borderRadius} → ${borderRadius}` : 'unchanged',
+        typeChanged: typeChanged ? `${lastParams.polygonType} → ${polygonType}` : 'unchanged'
+      });
+    }
+  } else {
+    console.log(`🌒 🆕 No existing shadow metadata for ${elementId}, creating new shadow`);
+  }
+
+  // Remove old shadow if recreating
+  if (needsRecreation && existingShadow) {
+    existingShadow.dispose();
+    dom.context.elements.delete(`${elementId}-shadow`);
+    console.log(`🌒 Disposed existing shadow for ${elementId}`);
+  }
+
+  // Get the element mesh for parenting and positioning
+  const elementMesh = dom.context.elements.get(elementId);
+  if (!elementMesh) {
+    console.warn(`🌒 Could not find element mesh for shadow positioning: ${elementId}`);
+    return;
+  }
+
+  let shadowMesh: Mesh;
+
+  if (needsRecreation) {
+    // Create new shadow
+    shadowMesh = render.actions.mesh.createShadow(
       `${elementId}-shadow`,
       worldWidth,
       worldHeight,
@@ -2186,17 +2362,41 @@ export class ElementService {
       polygonType,
       borderRadius
     );
-    // Position shadow behind the element with offset
-    const shadowZ = zPosition - 0.001;
-    // Convert shadow position to world units
-    const shadowX = (dimensions.x + scaledOffsetX) * scaleFactor;
-    const shadowY = (dimensions.y - scaledOffsetY) * scaleFactor;
-    render.actions.mesh.positionMesh(shadowMesh, shadowX, shadowY, shadowZ);
-    render.actions.mesh.parentMesh(shadowMesh, parent);
-    // Apply transforms if present
-    if (transform) {
-      this.applyTransforms(shadowMesh, transform);
-    }
+
+    // Store shadow parameters for future comparison
+    shadowMesh.metadata = {
+      shadowParams: {
+        width: worldWidth,
+        height: worldHeight,
+        blur: scaledBlur,
+        color: shadowColor,
+        borderRadius: borderRadius,
+        polygonType: polygonType
+      }
+    };
+
+    // Parent shadow to the element itself so it follows the element's position and transforms
+    render.actions.mesh.parentMesh(shadowMesh, elementMesh);
     dom.context.elements.set(`${elementId}-shadow`, shadowMesh);
+
+    console.log(`🌒 Created shadow for ${elementId} (${worldWidth.toFixed(1)}x${worldHeight.toFixed(1)}) blur=${scaledBlur.toFixed(1)} color=${shadowColor}`);
+  } else {
+    shadowMesh = existingShadow!;
   }
+
+  // Set shadow position relative to parent element (only once during creation)
+  if (needsRecreation) {
+    const shadowX = scaledOffsetX; // Offset from element position
+    const shadowY = -scaledOffsetY; // Negative because CSS Y is inverted
+
+    // Position shadow relative to element (parenting will handle world positioning)
+    shadowMesh.position.set(shadowX, shadowY, -0.01); // Behind element in local space
+
+    console.log(`🌒 Set initial shadow offset for ${elementId}: (${shadowX.toFixed(3)}, ${shadowY.toFixed(3)}, -0.01)`);
+  }
+
+  // Since shadow is parented to element, it will automatically inherit all transforms and position changes
+  // No need to manually apply transforms - parenting handles this automatically
+  console.log(`🌒 Shadow will automatically follow element ${elementId} via parenting`);
+}
 } 

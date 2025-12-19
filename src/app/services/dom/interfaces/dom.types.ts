@@ -24,6 +24,10 @@ export interface BabylonDOMActions {
         parentElement: DOMElement
     ) => void;
     generateElementId: (parentId: string, type: string, index: number, className?: string) => string;
+    // Positioning delegates
+    calculateElementPosition: (element: DOMElement) => { x: number; y: number; z: number };
+    applyPositioning: (element: DOMElement, mesh: Mesh, render: BabylonRender) => void;
+    updateElementPosition: (elementId: string, newPosition: { x: number; y: number; z: number }) => void;
 }
 
 export interface BabylonDOMContext {
