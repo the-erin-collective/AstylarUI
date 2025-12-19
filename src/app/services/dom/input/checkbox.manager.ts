@@ -34,6 +34,7 @@ export class CheckboxManager {
             type: InputType.Checkbox,
             element: element,
             mesh: mesh,
+            style: style,
             value: element.value || false,
             focused: false,
             disabled: false,
@@ -53,6 +54,26 @@ export class CheckboxManager {
         checkbox.checkIndicatorMesh = this.createCheckIndicator(checkbox, render.scene);
         checkbox.labelMesh = this.createLabelMesh(checkbox, render, style);
 
+        // Attach interaction to the checkbox mesh directly
+        if (checkbox.mesh) {
+            checkbox.mesh.actionManager = new BABYLON.ActionManager(render.scene);
+
+            // Toggle on click
+            checkbox.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => this.toggleCheckbox(checkbox)
+            ));
+
+            // Toggle on click
+            checkbox.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => this.toggleCheckbox(checkbox)
+            ));
+
+            // Set cursor via metadata for global handler
+            checkbox.mesh.metadata = { ...checkbox.mesh.metadata, cursor: 'pointer', isTextMesh: false };
+        }
+
         return checkbox;
     }
 
@@ -70,6 +91,7 @@ export class CheckboxManager {
             type: InputType.Radio,
             element: element,
             mesh: mesh,
+            style: style, // Store style
             value: element.value || false,
             focused: false,
             disabled: false,
@@ -89,6 +111,26 @@ export class CheckboxManager {
 
         radio.selectionIndicatorMesh = this.createSelectionIndicator(radio, render.scene);
         radio.labelMesh = this.createLabelMesh(radio, render, style);
+
+        // Attach interaction to the radio mesh directly
+        if (radio.mesh) {
+            radio.mesh.actionManager = new BABYLON.ActionManager(render.scene);
+
+            // Select on click
+            radio.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => this.selectRadioButton(radio)
+            ));
+
+            // Select on click
+            radio.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => this.selectRadioButton(radio)
+            ));
+
+            // Set cursor via metadata for global handler
+            radio.mesh.metadata = { ...radio.mesh.metadata, cursor: 'pointer', isTextMesh: false };
+        }
 
         this.registerRadioButton(radio);
 
@@ -175,6 +217,24 @@ export class CheckboxManager {
 
         checkboxMesh.isPickable = true;
 
+        // Add Interactions
+        checkboxMesh.actionManager = new BABYLON.ActionManager(render.scene);
+
+        // Click to toggle
+        checkboxMesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPickTrigger,
+            () => {
+                // Find instance to toggle - we need a way to look up the CheckboxInput from the mesh
+                // Since this method creates it, we can't capture 'checkbox' variable here easily as it's not created yet.
+                // However, we are in 'createCheckboxMesh' called by 'createCheckbox'.
+                // We can't easily access the wrapper object here.
+
+                // Better approach: Return mesh, and attach action in createCheckbox where we have the object.
+            }
+        ));
+
+        // We will move the interaction attachment to createCheckbox and createRadioButton to allow access to the wrapper object.
+        // So for now, just return mesh.
         return checkboxMesh;
     }
 
@@ -207,16 +267,19 @@ export class CheckboxManager {
      * Creates the check mark indicator for checkbox
      */
     private createCheckIndicator(checkbox: CheckboxInput, scene: BABYLON.Scene): BABYLON.Mesh {
-        // Create a simple checkmark using a box (simplified)
-        // In production, this would be a proper checkmark shape
+        // Calculate size relative to parent mesh
+        const bounds = checkbox.mesh.getBoundingInfo().boundingBox.extendSize;
+        const parentWidth = bounds.x * 2;
+        const size = parentWidth * 0.6;
+
         const checkMark = BABYLON.MeshBuilder.CreateBox(`checkMark_${checkbox.element.id}`, {
-            width: this.CHECK_MARK_SIZE,
-            height: this.CHECK_MARK_SIZE,
+            width: size,
+            height: size,
             depth: 0.03
         }, scene);
 
         checkMark.parent = checkbox.mesh;
-        checkMark.position.z = 0.04; // In front of checkbox
+        checkMark.position.z = -0.1; // In front of checkbox
 
         // Create material
         const material = new BABYLON.StandardMaterial(`checkMarkMaterial_${checkbox.element.id}`, scene);
@@ -226,6 +289,12 @@ export class CheckboxManager {
 
         checkMark.isPickable = false;
         checkMark.isVisible = false;
+        checkMark.renderingGroupId = 2; // Ensure visibility on top
+
+        checkMark.renderingGroupId = 2; // Ensure visibility on top
+
+        // Defensive: Force cursor pointer and disable text mesh inference
+        checkMark.metadata = { cursor: 'pointer', isTextMesh: false };
 
         return checkMark;
     }
@@ -234,16 +303,26 @@ export class CheckboxManager {
      * Creates the selection indicator for radio button
      */
     private createSelectionIndicator(radio: RadioInput, scene: BABYLON.Scene): BABYLON.Mesh {
-        const radius = this.CHECK_MARK_SIZE / 2;
+        const bounds = radio.mesh.getBoundingInfo().boundingBox.extendSize;
+        const parentDiameter = bounds.x * 2;
+        const size = parentDiameter * 0.6;
 
         const indicator = BABYLON.MeshBuilder.CreateCylinder(`radioIndicator_${radio.element.id}`, {
-            diameter: radius * 2,
+            diameter: size,
             height: 0.03
         }, scene);
 
         indicator.rotation.x = Math.PI / 2; // Rotate to face forward
+
+        // Fix: Parent already rotated Math.PI/2.
+        // If indicator is cylinder (default Up-aligned), rotating X 90 makes it point Z.
+        // Parent radio mesh is rotated X 90.
+        // So indicator inherits X 90.
+        // If we rotate it another 90, it flips?
+        // Let's try setting rotation to Zero relative to parent, because parent is already facing camera!
+        indicator.rotation.x = 0;
         indicator.parent = radio.mesh;
-        indicator.position.z = 0.04; // In front of radio button
+        indicator.position.z = -0.1; // In front of radio button
 
         // Create material
         const material = new BABYLON.StandardMaterial(`radioIndicatorMaterial_${radio.element.id}`, scene);
@@ -253,6 +332,12 @@ export class CheckboxManager {
 
         indicator.isPickable = false;
         indicator.isVisible = false;
+        indicator.renderingGroupId = 2; // Ensure visibility on top
+
+        indicator.renderingGroupId = 2; // Ensure visibility on top
+
+        // Defensive: Force cursor pointer and disable text mesh inference
+        indicator.metadata = { cursor: 'pointer', isTextMesh: false };
 
         return indicator;
     }
@@ -295,6 +380,7 @@ export class CheckboxManager {
             );
 
             labelPlane.parent = input.mesh;
+            labelPlane.isPickable = true; // Ensure label handles clicks
 
             // Position to the right of the checkbox/radio (inverted coordinate system)
             // Use actual mesh bounds for more accurate positioning
@@ -332,6 +418,9 @@ export class CheckboxManager {
                     }
                 }
             ));
+
+            // Hover cursor for labels via metadata
+            labelPlane.metadata = { ...labelPlane.metadata, cursor: 'pointer' };
 
             return labelPlane;
 

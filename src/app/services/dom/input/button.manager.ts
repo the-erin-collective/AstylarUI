@@ -55,6 +55,7 @@ export class ButtonManager {
         const button: Button = {
             element,
             type: InputType.Button,
+            style, // Store style
             value: element.value || element.textContent || '',
             label: element.value || element.textContent || 'Button',
             state: ButtonState.Normal,

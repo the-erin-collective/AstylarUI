@@ -12,6 +12,8 @@ import { KeyboardInputHandler } from './keyboard-input.handler';
 import { FocusManager } from './focus.manager';
 import { FormValidatorService } from './form-validator.service';
 import { FormManager } from './form.manager';
+import { BabylonCameraService } from '../../babylon-camera.service';
+
 
 /**
  * Main orchestration service for input elements
@@ -30,7 +32,8 @@ export class InputElementService {
         private keyboardHandler: KeyboardInputHandler,
         private focusManager: FocusManager,
         private formValidator: FormValidatorService,
-        private formManager: FormManager
+        private formManager: FormManager,
+        private cameraService: BabylonCameraService
     ) {
         this.setupGlobalKeyboardListener();
     }
@@ -85,6 +88,11 @@ export class InputElementService {
         // Register input element
         this.registerInput(inputElement);
 
+        // Attach input events (click to focus, etc.)
+        if (render.scene) {
+            this.attachInputEvents(inputElement, render.scene);
+        }
+
         // Add validation rules if specified
         if (element.validationRules) {
             element.validationRules.forEach(rule => {
@@ -120,7 +128,7 @@ export class InputElementService {
     /**
      * Handles keyboard input for focused element
      */
-    handleKeyboardInput(event: KeyboardEvent, scene: BABYLON.Scene, style: StyleRule): void {
+    handleKeyboardInput(event: KeyboardEvent, render: BabylonRender, style: StyleRule): void {
         const focusedElement = this.focusManager.getFocusedElement();
 
         if (!focusedElement) return;
@@ -133,7 +141,7 @@ export class InputElementService {
         }
 
         // Route to appropriate handler
-        this.keyboardHandler.handleKeyboardEvent(event, focusedElement, scene, style);
+        this.keyboardHandler.handleKeyboardEvent(event, focusedElement, render, style);
     }
 
     /**
@@ -274,6 +282,24 @@ export class InputElementService {
                 if (focusedElement) {
                     // Prevent default browser behavior for input elements
                     this.keyboardHandler.preventEventPropagation(event);
+
+                    // Construct proper BabylonRender object
+                    const scene = focusedElement.mesh.getScene();
+                    const render: BabylonRender = {
+                        scene: scene,
+                        actions: {
+                            camera: this.cameraService
+                        },
+                        engine: scene.getEngine(),
+                        canvas: scene.getEngine().getRenderingCanvas()
+                    } as any;
+
+                    // Handle keyboard input
+                    this.handleKeyboardInput(
+                        event,
+                        render,
+                        focusedElement.style
+                    );
                 }
             });
         }
@@ -319,17 +345,77 @@ export class InputElementService {
             inputElement.mesh.actionManager = new BABYLON.ActionManager(scene);
         }
 
-        // Handle click to focus
+        // Handle click based on input type
         inputElement.mesh.actionManager.registerAction(
             new BABYLON.ExecuteCodeAction(
                 BABYLON.ActionManager.OnPickTrigger,
                 () => {
-                    if (!inputElement.disabled) {
-                        this.focusInputElement(inputElement);
+                    if (inputElement.disabled) return;
+
+                    switch (inputElement.type) {
+                        case InputType.Button:
+                        case InputType.Submit:
+                            // Focus and trigger button click
+                            this.focusInputElement(inputElement);
+                            this.buttonManager.handleButtonClick(inputElement as Button);
+                            break;
+
+                        case InputType.Checkbox:
+                            // Focus and toggle checkbox
+                            this.focusInputElement(inputElement);
+                            this.checkboxManager.toggleCheckbox(inputElement as CheckboxInput);
+                            break;
+
+                        case InputType.Radio:
+                            // Focus and select radio button
+                            this.focusInputElement(inputElement);
+                            this.checkboxManager.selectRadioButton(inputElement as RadioInput);
+                            break;
+
+                        case InputType.Select:
+                            // Focus and toggle dropdown
+                            this.focusInputElement(inputElement);
+                            const selectElement = inputElement as SelectElement;
+                            if (selectElement.dropdownOpen) {
+                                this.selectManager.closeDropdown(selectElement);
+                            } else {
+                                this.selectManager.openDropdown(selectElement, scene, inputElement.style);
+                            }
+                            break;
+
+                        default:
+                            // Text inputs and others just focus
+                            this.focusInputElement(inputElement);
+                            break;
                     }
                 }
             )
         );
+
+        // Add hover effects for buttons
+        if (inputElement.type === InputType.Button || inputElement.type === InputType.Submit) {
+            inputElement.mesh.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    BABYLON.ActionManager.OnPointerOverTrigger,
+                    () => {
+                        if (!inputElement.disabled) {
+                            this.buttonManager.handleButtonHover(inputElement as Button, true);
+                        }
+                    }
+                )
+            );
+
+            inputElement.mesh.actionManager.registerAction(
+                new BABYLON.ExecuteCodeAction(
+                    BABYLON.ActionManager.OnPointerOutTrigger,
+                    () => {
+                        if (!inputElement.disabled) {
+                            this.buttonManager.handleButtonHover(inputElement as Button, false);
+                        }
+                    }
+                )
+            );
+        }
     }
 
     /**

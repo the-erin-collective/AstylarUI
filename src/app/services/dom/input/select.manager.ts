@@ -18,6 +18,9 @@ export class SelectManager {
     private readonly OPTION_HEIGHT = 0.4;
     private readonly DROPDOWN_MAX_HEIGHT = 2.0;
 
+    // Track click-away observers for each open dropdown
+    private clickAwayObservers: Map<string, BABYLON.Observer<BABYLON.PointerInfo>> = new Map();
+
     constructor(
         private textRenderingService: TextRenderingService,
         private babylonMeshService: BabylonMeshService
@@ -55,6 +58,7 @@ export class SelectManager {
         const selectElement: SelectElement = {
             element,
             type: InputType.Select,
+            style, // Store style
             value: options[selectedIndex]?.value || null,
             options,
             selectedIndex,
@@ -70,6 +74,32 @@ export class SelectManager {
 
         // Create display mesh for selected value
         selectElement.displayMesh = this.createDisplayMesh(selectElement, render, style);
+        
+        // Store camera scale for consistent text sizing across select and dropdown
+        selectElement.cameraScale = render.actions.camera.getPixelToWorldScale();
+
+        // Attach Interactions to the Select Mesh
+        if (selectElement.mesh) {
+            selectElement.mesh.actionManager = new BABYLON.ActionManager(render.scene);
+
+            // Toggle dropdown on click
+            selectElement.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => {
+                    if (selectElement.dropdownOpen) {
+                        this.closeDropdown(selectElement);
+                    } else {
+                        // We checked render.scene is present at start of function
+                        if (render.scene) {
+                            this.openDropdown(selectElement, render.scene, style);
+                        }
+                    }
+                }
+            ));
+
+            // Set cursor via metadata for global handler
+            selectElement.mesh.metadata = { ...selectElement.mesh.metadata, cursor: 'pointer' };
+        }
 
         return selectElement;
     }
@@ -86,25 +116,13 @@ export class SelectManager {
         selectElement.dropdownMesh = this.createDropdownMesh(selectElement, scene, style);
 
         // Create option meshes
-        // We need render object here but signature only has scene. 
-        // We'll have to rely on scene for now or update signature. 
-        // Ideally we should pass render. For now, we'll try to get scale from scene if possible or default.
-        // Actually, let's update the signature to take render if we can, but openDropdown is called from interaction handler.
-        // For now, we'll use a default scale or try to derive it.
-        // Wait, we can pass 'render' if we update the caller. 
-        // But for this refactor, let's stick to scene and use a safe fallback for scale if render is not available, 
-        // OR we can assume we can get engine from scene.
-        // Let's use scene.getEngine() to calculate scale roughly if needed, or pass render.
-        // Since I can't easily change all callers right now, I'll use the scene-based scale calculation I saw earlier as fallback,
-        // or better, I'll update the signature since I am rewriting the file.
-        // But wait, openDropdown is called by the interaction logic which might not have 'render' handy?
-        // Let's look at how it's called. It's likely called from an action manager.
-        // I'll stick to scene for openDropdown for now to avoid breaking callers, 
-        // but I'll use a helper to get scale from scene.
         selectElement.optionMeshes = this.createOptionMeshes(selectElement, scene, style);
 
         // Position dropdown
         this.positionDropdown(selectElement);
+
+        // Add click-away listener to close dropdown when clicking outside
+        this.setupClickAwayListener(selectElement, scene);
     }
 
     /**
@@ -115,12 +133,151 @@ export class SelectManager {
 
         selectElement.dropdownOpen = false;
 
+        // Remove click-away listener
+        this.removeClickAwayListener(selectElement);
+
         // Dispose dropdown mesh
         if (selectElement.dropdownMesh) {
             selectElement.dropdownMesh.dispose();
             selectElement.dropdownMesh = undefined;
         }
 
+        // Dispose option meshes
+        if (selectElement.optionMeshes) {
+            selectElement.optionMeshes.forEach(mesh => mesh.dispose());
+            selectElement.optionMeshes = [];
+        }
+    }
+
+    /**
+     * Sets up click-away listener for dropdown
+     */
+    private setupClickAwayListener(selectElement: SelectElement, scene: BABYLON.Scene): void {
+        const elementId = selectElement.element.id || '';
+
+        // Remove any existing observer
+        this.removeClickAwayListener(selectElement);
+
+        // Add pointer down observer
+        const observer = scene.onPointerObservable.add((pointerInfo) => {
+            if (pointerInfo.type !== BABYLON.PointerEventTypes.POINTERDOWN) return;
+            if (!selectElement.dropdownOpen) return;
+
+            const pickedMesh = pointerInfo.pickInfo?.pickedMesh;
+
+            // Check if clicked on dropdown, options, select itself, or any descendant
+            // We use safe navigation because pickedMesh might be null
+            const isSelectMesh = pickedMesh && (pickedMesh === selectElement.mesh || pickedMesh.isDescendantOf(selectElement.mesh));
+            const isDropdownMesh = pickedMesh && (pickedMesh === selectElement.dropdownMesh || (selectElement.dropdownMesh && pickedMesh.isDescendantOf(selectElement.dropdownMesh)));
+
+            // Allow clicking display mesh
+            const isDisplayMesh = pickedMesh && (pickedMesh === selectElement.displayMesh || (selectElement.displayMesh && pickedMesh.isDescendantOf(selectElement.displayMesh)));
+
+            // If clicked outside all related meshes, close dropdown
+            if (!isSelectMesh && !isDropdownMesh && !isDisplayMesh) {
+                this.closeDropdown(selectElement);
+            }
+        });
+
+        if (observer) {
+            this.clickAwayObservers.set(elementId, observer);
+        }
+    }
+
+    /**
+     * Removes click-away listener for dropdown
+     */
+    private removeClickAwayListener(selectElement: SelectElement): void {
+        const elementId = selectElement.element.id || '';
+        const observer = this.clickAwayObservers.get(elementId);
+
+        if (observer) {
+            const scene = selectElement.mesh.getScene();
+            scene.onPointerObservable.remove(observer);
+            this.clickAwayObservers.delete(elementId);
+        }
+    }
+
+    /**
+     * Navigates between options using keyboard
+     */
+    navigateOptions(selectElement: SelectElement, direction: 'up' | 'down'): void {
+        if (!selectElement.dropdownOpen || selectElement.options.length === 0) return;
+
+        let newIndex = selectElement.selectedIndex;
+
+        if (direction === 'up') {
+            newIndex = Math.max(0, selectElement.selectedIndex - 1);
+        } else {
+            newIndex = Math.min(selectElement.options.length - 1, selectElement.selectedIndex + 1);
+        }
+
+        // Skip disabled options
+        while (selectElement.options[newIndex]?.disabled) {
+            if (direction === 'up') {
+                newIndex--;
+                if (newIndex < 0) {
+                    newIndex = selectElement.selectedIndex; // Stay on current
+                    break;
+                }
+            } else {
+                newIndex++;
+                if (newIndex >= selectElement.options.length) {
+                    newIndex = selectElement.selectedIndex; // Stay on current
+                    break;
+                }
+            }
+        }
+
+        if (newIndex !== selectElement.selectedIndex) {
+            // Update visual highlight
+            this.updateOptionHighlight(selectElement, selectElement.selectedIndex, newIndex);
+            selectElement.selectedIndex = newIndex;
+            selectElement.value = selectElement.options[newIndex].value;
+        }
+    }
+
+    /**
+     * Selects an option by index
+     */
+    selectOption(selectElement: SelectElement, index: number, render?: any, style?: StyleRule): void {
+        if (index < 0 || index >= selectElement.options.length) return;
+        if (selectElement.options[index].disabled) return;
+
+        selectElement.selectedIndex = index;
+        selectElement.value = selectElement.options[index].value;
+        selectElement.validationState.dirty = true;
+
+        // Always update display mesh when selection changes
+        if (selectElement.displayMesh) {
+            selectElement.displayMesh.dispose();
+            // Use stored camera scale instead of trying to recreate render object
+            selectElement.displayMesh = this.createDisplayMeshWithStoredScale(selectElement, selectElement.style);
+        }
+
+        // Close dropdown
+        this.closeDropdown(selectElement);
+    }
+
+    /**
+     * Updates the visual highlight on options during keyboard navigation
+     */
+    private updateOptionHighlight(selectElement: SelectElement, oldIndex: number, newIndex: number): void {
+        // Update old option material
+        if (selectElement.optionMeshes[oldIndex]) {
+            const oldMaterial = selectElement.optionMeshes[oldIndex].material as BABYLON.StandardMaterial;
+            if (oldMaterial) {
+                oldMaterial.diffuseColor = BABYLON.Color3.White();
+            }
+        }
+
+        // Update new option material
+        if (selectElement.optionMeshes[newIndex]) {
+            const newMaterial = selectElement.optionMeshes[newIndex].material as BABYLON.StandardMaterial;
+            if (newMaterial) {
+                newMaterial.diffuseColor = new BABYLON.Color3(0.9, 0.9, 1.0); // Highlight color
+            }
+        }
     }
 
     /**
@@ -153,19 +310,23 @@ export class SelectManager {
     }
 
     /**
-     * Creates the display mesh for showing selected value
+     * Creates the display mesh for showing selected value using stored camera scale
      */
-    private createDisplayMesh(selectElement: SelectElement, render: BabylonRender, style: StyleRule): BABYLON.Mesh {
+    private createDisplayMeshWithStoredScale(selectElement: SelectElement, style: StyleRule): BABYLON.Mesh {
         const options = selectElement.options;
         const selectedIndex = selectElement.selectedIndex;
         const selectedOption = options[selectedIndex];
         const textContent = selectedOption ? selectedOption.label : 'Select...';
 
+        // Use style as-is, matching text-input behavior
         const textStyle = { ...style };
-        if (!textStyle.fontSize) textStyle.fontSize = '14px';
+        // Use 16px to match other input elements (don't override)
+        if (!textStyle.fontSize) {
+            textStyle.fontSize = '16px';
+        }
+        // Ensure basic properties are set
         if (!textStyle.fontFamily) textStyle.fontFamily = 'Arial';
-        if (!textStyle.color) textStyle.color = '#000000'; // Default to black for select display
-        textStyle.textAlign = 'left';
+        if (!textStyle.color) textStyle.color = '#000000';
 
         try {
             const texture = this.textRenderingService.renderTextToTexture(
@@ -179,7 +340,75 @@ export class SelectManager {
             const textureWidthPx = textureSize.width;
             const textureHeightPx = textureSize.height;
 
-            // Convert to world units using camera's pixel-to-world scale
+            // Use stored camera scale for consistency
+            const scale = selectElement.cameraScale || 0.001;
+            const textureWidth = textureWidthPx * scale;
+            const textureHeight = textureHeightPx * scale;
+
+            // Create text mesh using BabylonMeshService
+            const displayPlane = this.babylonMeshService.createTextMesh(
+                `selectDisplay_${selectElement.element.id}`,
+                texture,
+                textureWidth,
+                textureHeight
+            );
+
+            displayPlane.parent = selectElement.mesh;
+            // Ensure display text sits IN FRONT of the Select Mesh (Positive Z, assuming Front is Positive)
+            displayPlane.position.z = 0.05;
+            displayPlane.isPickable = false;
+
+            // Align text to left edge - match text-input positioning logic
+            const selectWidth = selectElement.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
+            const padding = 1.5; // Match text-input padding
+            // Use same formula as text-input for consistency
+            displayPlane.position.x = (selectWidth / 2) - (textureWidth / 2) - padding;
+
+            return displayPlane;
+
+        } catch (error) {
+            console.error('Error creating select display:', error);
+            // Fallback
+            const scene = selectElement.mesh.getScene();
+            return BABYLON.MeshBuilder.CreatePlane(`selectDisplay_${selectElement.element.id}_fallback`, {
+                width: 1.8,
+                height: 0.3
+            }, scene);
+        }
+    }
+
+    /**
+     * Creates the display mesh for showing selected value
+     */
+    private createDisplayMesh(selectElement: SelectElement, render: BabylonRender, style: StyleRule): BABYLON.Mesh {
+        const options = selectElement.options;
+        const selectedIndex = selectElement.selectedIndex;
+        const selectedOption = options[selectedIndex];
+        const textContent = selectedOption ? selectedOption.label : 'Select...';
+
+        // Use style as-is, matching text-input behavior
+        const textStyle = { ...style };
+        // Use 16px to match other input elements (don't override)
+        if (!textStyle.fontSize) {
+            textStyle.fontSize = '16px';
+        }
+        // Ensure basic properties are set
+        if (!textStyle.fontFamily) textStyle.fontFamily = 'Arial';
+        if (!textStyle.color) textStyle.color = '#000000';
+
+        try {
+            const texture = this.textRenderingService.renderTextToTexture(
+                selectElement.element,
+                textContent,
+                textStyle
+            );
+
+            // Get texture dimensions
+            const textureSize = texture.getSize();
+            const textureWidthPx = textureSize.width;
+            const textureHeightPx = textureSize.height;
+
+            // Convert to world units using camera's pixel-to-world scale (same as button)
             const scale = render.actions.camera.getPixelToWorldScale();
             const textureWidth = textureWidthPx * scale;
             const textureHeight = textureHeightPx * scale;
@@ -193,12 +422,14 @@ export class SelectManager {
             );
 
             displayPlane.parent = selectElement.mesh;
-            displayPlane.position.z = -0.15; // In front of select box
+            // Ensure display text sits IN FRONT of the Select Mesh (Positive Z, assuming Front is Positive)
+            displayPlane.position.z = 0.05;
             displayPlane.isPickable = false;
 
-            // Align text to left edge (inverted coordinate system)
+            // Align text to left edge - match text-input positioning logic
             const selectWidth = selectElement.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
-            const padding = 1.5; // Aggressive left padding
+            const padding = 1.5; // Match text-input padding
+            // Use same formula as text-input for consistency
             displayPlane.position.x = (selectWidth / 2) - (textureWidth / 2) - padding;
 
             return displayPlane;
@@ -218,23 +449,37 @@ export class SelectManager {
      * Creates the dropdown background mesh
      */
     private createDropdownMesh(selectElement: SelectElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        const width = this.parseSize(style.width) || 2.0;
-        const optionsCount = selectElement.options.length;
-        const height = Math.min(optionsCount * this.OPTION_HEIGHT, this.DROPDOWN_MAX_HEIGHT);
+        // Use proper world width from parent select mesh to match dimensions exactly
+        const bounds = selectElement.mesh.getBoundingInfo().boundingBox.extendSize;
+        const width = bounds.x * 2;
 
-        const dropdownMesh = BABYLON.MeshBuilder.CreateBox(`dropdown_${selectElement.element.id}`, {
+        // Dynamic Option Height: Use select height as base
+        const optionHeight = bounds.y * 2;
+
+        const optionsCount = selectElement.options.length;
+        // Limit max height to e.g. 5 items
+        const maxHeight = optionHeight * 5;
+        const height = Math.min(optionsCount * optionHeight, maxHeight);
+
+        // Use plane instead of box for better 2D rendering
+        const dropdownMesh = BABYLON.MeshBuilder.CreatePlane(`dropdown_${selectElement.element.id}`, {
             width: width,
             height: height,
-            depth: 0.05
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE
         }, scene);
 
-        // Create material
+        // Create material with white background and subtle border
         const material = new BABYLON.StandardMaterial(`dropdownMaterial_${selectElement.element.id}`, scene);
-        material.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95);
+        material.diffuseColor = BABYLON.Color3.White(); // Pure white like HTML select
+        material.emissiveColor = BABYLON.Color3.White(); // Ensure visibility without light
+        material.disableLighting = true;
+        material.backFaceCulling = false; // Prevent culling issues
         dropdownMesh.material = material;
 
         dropdownMesh.parent = selectElement.mesh;
-        dropdownMesh.isPickable = false;
+        dropdownMesh.isPickable = true; // Must be pickable to block clicks to the underlying select button
+        dropdownMesh.metadata = { isTextMesh: false, cursor: 'default' }; // Ensure no text cursor
+        dropdownMesh.renderingGroupId = 2; // Ensure UI layer visibility
 
         return dropdownMesh;
     }
@@ -243,48 +488,101 @@ export class SelectManager {
      * Creates meshes for each option
      */
     private createOptionMeshes(selectElement: SelectElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh[] {
-        const width = this.parseSize(style.width) || 2.0;
+        // Use proper world width from parent select mesh
+        const bounds = selectElement.mesh.getBoundingInfo().boundingBox.extendSize;
+        const width = bounds.x * 2;
+        const optionHeight = bounds.y * 2; // Match select height
+
         const optionMeshes: BABYLON.Mesh[] = [];
 
         if (!selectElement.dropdownMesh) return [];
 
-        // Calculate scale roughly since we don't have render object here easily
-        // Assuming standard 1920 width and some camera distance, but better to use a fixed scale or derive from engine
-        const engine = scene.getEngine();
-        const scale = (engine.getRenderWidth() / engine.getHardwareScalingLevel()) / 1920 * 0.001; // Approximate
+        // Scale not needed if we use bounds
 
         selectElement.options.forEach((option, index) => {
-            // Background for option
+            // Background for option - minimal margin for tighter spacing
+            const margin = 0.005; // Very small fixed margin
             const optionMesh = BABYLON.MeshBuilder.CreatePlane(`option_${selectElement.element.id}_${index}`, {
-                width: width - 0.2,
-                height: this.OPTION_HEIGHT - 0.05
+                width: width - (margin * 2),
+                height: optionHeight - (margin * 2)
             }, scene);
 
             // Position relative to dropdown
             if (selectElement.dropdownMesh) {
                 optionMesh.parent = selectElement.dropdownMesh;
             }
-            optionMesh.position.y = (selectElement.options.length * this.OPTION_HEIGHT / 2) - (index * this.OPTION_HEIGHT) - (this.OPTION_HEIGHT / 2);
-            optionMesh.position.z = -0.06; // In front of dropdown background
+            // Position from top down with no extra spacing
+            optionMesh.position.y = (selectElement.options.length * optionHeight / 2) - (index * optionHeight) - (optionHeight / 2);
+            optionMesh.position.z = 0.05; // Slightly in front of dropdown background (assuming positive Z is front)
+            optionMesh.renderingGroupId = 2; // Ensure UI layer visibility
 
             // Create material
             const material = new BABYLON.StandardMaterial(`optionMaterial_${selectElement.element.id}_${index}`, scene);
-            material.diffuseColor = index === selectElement.selectedIndex
+            const baseColor = index === selectElement.selectedIndex
                 ? new BABYLON.Color3(0.9, 0.9, 1.0) // Highlight selected
                 : BABYLON.Color3.White();
-            material.emissiveColor = BABYLON.Color3.Black();
+
+            material.diffuseColor = baseColor;
+            material.emissiveColor = baseColor; // Ensure visibility
+            material.disableLighting = true;
+            material.backFaceCulling = false;
 
             optionMesh.material = material;
             optionMesh.isPickable = !option.disabled;
 
-            // Store option index in metadata for click handling
-            optionMesh.metadata = { optionIndex: index };
+            // Store option index in metadata for click handling and set cursor
+            optionMesh.metadata = { optionIndex: index, selectElement: selectElement, cursor: 'pointer' };
 
-            // Create text for option
+            // Add click handler for option selection
+            if (!option.disabled) {
+                optionMesh.actionManager = new BABYLON.ActionManager(scene);
+                optionMesh.actionManager.registerAction(
+                    new BABYLON.ExecuteCodeAction(
+                        BABYLON.ActionManager.OnPickTrigger,
+                        () => {
+                            this.selectOption(selectElement, index);
+                        }
+                    )
+                );
+
+                // Add hover effect - light blue like HTML select
+                optionMesh.actionManager.registerAction(
+                    new BABYLON.ExecuteCodeAction(
+                        BABYLON.ActionManager.OnPointerOverTrigger,
+                        () => {
+                            const mat = optionMesh.material as BABYLON.StandardMaterial;
+                            if (mat) {
+                                // Light blue hover like HTML select
+                                mat.diffuseColor = new BABYLON.Color3(0.7, 0.85, 1.0);
+                                mat.emissiveColor = new BABYLON.Color3(0.7, 0.85, 1.0);
+                            }
+                        }
+                    )
+                );
+
+                optionMesh.actionManager.registerAction(
+                    new BABYLON.ExecuteCodeAction(
+                        BABYLON.ActionManager.OnPointerOutTrigger,
+                        () => {
+                            const mat = optionMesh.material as BABYLON.StandardMaterial;
+                            if (mat) {
+                                const color = index === selectElement.selectedIndex
+                                    ? new BABYLON.Color3(0.9, 0.9, 1.0)
+                                    : BABYLON.Color3.White();
+                                mat.diffuseColor = color;
+                                mat.emissiveColor = color;
+                            }
+                        }
+                    )
+                );
+            }
+
+            // Use style as-is, matching text-input behavior
             const textStyle = { ...style };
-            textStyle.fontSize = '14px';
+            // Use 16px to match other input elements
+            textStyle.fontSize = '16px';
             textStyle.color = '#000000';
-            textStyle.textAlign = 'left';
+            if (!textStyle.fontFamily) textStyle.fontFamily = 'Arial';
 
             try {
                 const texture = this.textRenderingService.renderTextToTexture(
@@ -294,9 +592,12 @@ export class SelectManager {
                 );
 
                 const textureSize = texture.getSize();
-                // Use approximate scale
-                const textureWidth = textureSize.width * 0.002; // Rough scale
-                const textureHeight = textureSize.height * 0.002;
+
+                // Use the same camera scale as the select display for consistency
+                const cameraScale = selectElement.cameraScale || 0.001;
+                
+                const textureWidth = textureSize.width * cameraScale;
+                const textureHeight = textureSize.height * cameraScale;
 
                 const textMesh = this.babylonMeshService.createTextMesh(
                     `optionText_${selectElement.element.id}_${index}`,
@@ -306,8 +607,15 @@ export class SelectManager {
                 );
 
                 textMesh.parent = optionMesh;
-                textMesh.position.z = -0.01;
                 textMesh.isPickable = false;
+                // Increase z-position to ensure text is in front of option background
+                textMesh.position.z = 0.1;
+                textMesh.renderingGroupId = 3; // Higher rendering group to ensure it's on top
+                
+                // Align text to left edge - match text-input positioning logic
+                const padding = 1.5; // Match text-input padding
+                // Use same formula as text-input for consistency
+                textMesh.position.x = (width / 2) - (textureWidth / 2) - padding;
 
             } catch (e) {
                 console.error('Failed to create option text', e);
@@ -326,9 +634,47 @@ export class SelectManager {
         if (!selectElement.dropdownMesh) return;
 
         // Position dropdown below select field
+        // Use actual mesh height instead of hardcoded constant to prevent overlap
+        const selectHeight = selectElement.mesh.getBoundingInfo().boundingBox.extendSize.y * 2;
         const dropdownHeight = selectElement.dropdownMesh.getBoundingInfo().boundingBox.extendSize.y * 2;
-        selectElement.dropdownMesh.position.y = -(this.SELECT_HEIGHT / 2 + dropdownHeight / 2 + 0.1);
-        selectElement.dropdownMesh.position.z = 0;
+
+        selectElement.dropdownMesh.position.y = -(selectHeight / 2 + dropdownHeight / 2 + 0.05);
+        selectElement.dropdownMesh.position.z = 0.15; // Move forward (Positive Z) to avoid Z-fighting/hiding
+        
+        // Add border to dropdown for HTML-like appearance
+        this.addDropdownBorder(selectElement);
+    }
+    
+    /**
+     * Adds a border around the dropdown for HTML-like styling
+     */
+    private addDropdownBorder(selectElement: SelectElement): void {
+        if (!selectElement.dropdownMesh) return;
+        
+        const scene = selectElement.dropdownMesh.getScene();
+        const bounds = selectElement.dropdownMesh.getBoundingInfo().boundingBox.extendSize;
+        const width = bounds.x * 2;
+        const height = bounds.y * 2;
+        const borderWidth = 0.02; // Thin border
+        
+        // Create border as a slightly larger plane behind the dropdown
+        const borderMesh = BABYLON.MeshBuilder.CreatePlane(`dropdownBorder_${selectElement.element.id}`, {
+            width: width + borderWidth * 2,
+            height: height + borderWidth * 2,
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE
+        }, scene);
+        
+        const borderMaterial = new BABYLON.StandardMaterial(`dropdownBorderMaterial_${selectElement.element.id}`, scene);
+        borderMaterial.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.7); // Gray border
+        borderMaterial.emissiveColor = new BABYLON.Color3(0.7, 0.7, 0.7);
+        borderMaterial.disableLighting = true;
+        borderMaterial.backFaceCulling = false;
+        borderMesh.material = borderMaterial;
+        
+        borderMesh.parent = selectElement.dropdownMesh;
+        borderMesh.position.z = -0.01; // Behind the dropdown
+        borderMesh.isPickable = false;
+        borderMesh.renderingGroupId = 2;
     }
 
     /**

@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { BabylonRender } from '../interfaces/render.types';
 import { InputElement, TextInput, Button, CheckboxInput, RadioInput, SelectElement, InputType, CursorDirection } from '../../../types/input-types';
 import { TextInputManager } from './text-input.manager';
 import { ButtonManager } from './button.manager';
@@ -27,7 +28,7 @@ export class KeyboardInputHandler {
     handleKeyboardEvent(
         event: KeyboardEvent,
         inputElement: InputElement,
-        scene: BABYLON.Scene,
+        render: BabylonRender,
         style: StyleRule
     ): void {
         if (!inputElement.focused) return;
@@ -38,7 +39,7 @@ export class KeyboardInputHandler {
             case InputType.Email:
             case InputType.Number:
             case InputType.Textarea:
-                this.handleTextInput(event, inputElement as TextInput, scene, style);
+                this.handleTextInput(event, inputElement as TextInput, render, style);
                 break;
 
             case InputType.Button:
@@ -55,7 +56,8 @@ export class KeyboardInputHandler {
                 break;
 
             case InputType.Select:
-                this.handleSelectKeyboard(event, inputElement as SelectElement);
+            case InputType.Select:
+                this.handleSelectKeyboard(event, inputElement as SelectElement, render, style);
                 break;
         }
     }
@@ -63,48 +65,42 @@ export class KeyboardInputHandler {
     /**
      * Handles keyboard input for text fields
      */
-    private handleTextInput(event: KeyboardEvent, textInput: TextInput, scene: BABYLON.Scene, style: StyleRule): void {
+    private handleTextInput(event: KeyboardEvent, textInput: TextInput, render: BabylonRender, style: StyleRule): void {
+
         switch (event.key) {
             case 'ArrowLeft':
-                // TODO: Implement moveCursor method in TextInputManager
-                // this.textInputManager.moveCursor(textInput, CursorDirection.Left, event.shiftKey);
+                this.textInputManager.moveCursor(textInput, CursorDirection.Left, event.shiftKey);
                 event.preventDefault();
                 break;
 
             case 'ArrowRight':
-                // TODO: Implement moveCursor method in TextInputManager
-                // this.textInputManager.moveCursor(textInput, CursorDirection.Right, event.shiftKey);
+                this.textInputManager.moveCursor(textInput, CursorDirection.Right, event.shiftKey);
                 event.preventDefault();
                 break;
 
             case 'Home':
-                // TODO: Implement moveCursor method in TextInputManager
-                // this.textInputManager.moveCursor(textInput, CursorDirection.Home, event.shiftKey);
+                this.textInputManager.moveCursor(textInput, CursorDirection.Home, event.shiftKey);
                 event.preventDefault();
                 break;
 
             case 'End':
-                // TODO: Implement moveCursor method in TextInputManager
-                // this.textInputManager.moveCursor(textInput, CursorDirection.End, event.shiftKey);
+                this.textInputManager.moveCursor(textInput, CursorDirection.End, event.shiftKey);
                 event.preventDefault();
                 break;
 
             case 'Backspace':
-                // TODO: Implement deleteCharacter method in TextInputManager
-                // this.textInputManager.deleteCharacter(textInput, -1, scene, style);
+                this.textInputManager.deleteCharacter(textInput, -1, render, style);
                 event.preventDefault();
                 break;
 
             case 'Delete':
-                // TODO: Implement deleteCharacter method in TextInputManager
-                // this.textInputManager.deleteCharacter(textInput, 1, scene, style);
+                this.textInputManager.deleteCharacter(textInput, 1, render, style);
                 event.preventDefault();
                 break;
 
             case 'Enter':
                 if (textInput.type === InputType.Textarea) {
-                    // TODO: Implement insertTextAtCursor method in TextInputManager
-                    // this.textInputManager.insertTextAtCursor(textInput, '\n', scene, style);
+                    this.textInputManager.insertTextAtCursor(textInput, '\n', render, style);
                 }
                 event.preventDefault();
                 break;
@@ -116,8 +112,7 @@ export class KeyboardInputHandler {
             default:
                 // Insert printable characters
                 if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
-                    // TODO: Implement insertTextAtCursor method in TextInputManager
-                    // this.textInputManager.insertTextAtCursor(textInput, event.key, scene, style);
+                    this.textInputManager.insertTextAtCursor(textInput, event.key, render, style);
                     event.preventDefault();
                 }
                 break;
@@ -157,28 +152,36 @@ export class KeyboardInputHandler {
     /**
      * Handles keyboard input for select dropdowns
      */
-    private handleSelectKeyboard(event: KeyboardEvent, selectElement: SelectElement): void {
+    private handleSelectKeyboard(event: KeyboardEvent, selectElement: SelectElement, render: BabylonRender, style: StyleRule): void {
         switch (event.key) {
             case 'ArrowUp':
                 if (selectElement.dropdownOpen) {
-                    // TODO: Implement navigateOptions method in SelectManager
-                    // this.selectManager.navigateOptions(selectElement, 'up');
+                    this.selectManager.navigateOptions(selectElement, 'up');
                 }
                 event.preventDefault();
                 break;
 
             case 'ArrowDown':
                 if (selectElement.dropdownOpen) {
-                    // TODO: Implement navigateOptions method in SelectManager
-                    // this.selectManager.navigateOptions(selectElement, 'down');
+                    this.selectManager.navigateOptions(selectElement, 'down');
                 }
                 event.preventDefault();
                 break;
 
             case 'Enter':
+                if (selectElement.dropdownOpen) {
+                    // Select current option and close
+                    this.selectManager.selectOption(selectElement, selectElement.selectedIndex);
+                } else {
+                    // Open dropdown
+                    this.selectManager.openDropdown(selectElement, selectElement.mesh.getScene(), style);
+                }
+                event.preventDefault();
+                break;
+
             case ' ':
                 if (!selectElement.dropdownOpen) {
-                    this.selectManager.openDropdown(selectElement, {} as BABYLON.Scene, {} as StyleRule);
+                    this.selectManager.openDropdown(selectElement, selectElement.mesh.getScene(), style);
                 }
                 event.preventDefault();
                 break;

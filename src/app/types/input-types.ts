@@ -1,5 +1,6 @@
 import { DOMElement } from './dom-element';
 import * as BABYLON from '@babylonjs/core';
+import { StyleRule } from './style-rule';
 
 /**
  * Enum defining all supported input element types
@@ -93,6 +94,7 @@ export interface InputElement {
     validationRules: ValidationRule[];
     validationState: ValidationState;
     mesh: BABYLON.Mesh;
+    style: StyleRule;
     interactionHandler?: InputInteractionHandler;
 }
 
@@ -163,6 +165,7 @@ export interface SelectElement extends InputElement {
     dropdownMesh?: BABYLON.Mesh;
     optionMeshes: BABYLON.Mesh[];
     displayMesh?: BABYLON.Mesh;
+    cameraScale?: number; // Store camera scale for consistent text sizing
 }
 
 /**

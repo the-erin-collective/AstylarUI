@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import * as BABYLON from '@babylonjs/core';
 import { InputElement, TextInput, InputType } from '../../../types/input-types';
 import { TextCursorRenderer } from './text-cursor.renderer';
+import { TextInputManager } from './text-input.manager';
 
 /**
  * Service responsible for managing focus state and tab navigation
@@ -14,7 +15,10 @@ export class FocusManager {
     private tabOrder: InputElement[] = [];
     private focusIndicators: Map<string, BABYLON.Mesh> = new Map();
 
-    constructor(private cursorRenderer: TextCursorRenderer) { }
+    constructor(
+        private cursorRenderer: TextCursorRenderer,
+        private textInputManager: TextInputManager
+    ) { }
 
     /**
      * Focuses an input element
@@ -31,8 +35,9 @@ export class FocusManager {
         // Show focus indicator
         this.showFocusIndicator(inputElement);
 
-        // Start cursor blinking for text inputs
+        // Handle text input focus (hide placeholder, start cursor blinking)
         if (this.isTextInput(inputElement)) {
+            this.textInputManager.handleFocus(inputElement as TextInput);
             this.cursorRenderer.startBlinking(inputElement as TextInput);
         }
 
@@ -49,8 +54,9 @@ export class FocusManager {
         // Hide focus indicator
         this.hideFocusIndicator(inputElement);
 
-        // Stop cursor blinking for text inputs
+        // Handle text input blur (show placeholder if empty, stop cursor blinking)
         if (this.isTextInput(inputElement)) {
+            this.textInputManager.handleBlur(inputElement as TextInput);
             this.cursorRenderer.stopBlinking(inputElement as TextInput);
         }
 

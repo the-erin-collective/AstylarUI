@@ -166,7 +166,8 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         borderColor: '#bdc3c7',
         borderStyle: 'solid',
         padding: '8px',
-        height: '40px'
+        height: '40px',
+        cursor: 'text'
     },
     button: {
         fontSize: '16px',
