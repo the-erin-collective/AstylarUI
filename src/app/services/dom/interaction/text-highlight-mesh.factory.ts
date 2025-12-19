@@ -150,14 +150,13 @@ export class TextHighlightMeshFactory {
       actualContentWidth = cssMetrics.lines.reduce((max: number, line: any) => Math.max(max, line.width ?? 0), 0);
     }
 
-    const scale = actualContentWidth > 0 ? textWidth / actualContentWidth : metrics.scale;
+    // If text is clipped/scrolled, textWidth corresponds to the visible window, not the full content width.
+    // In that case, we should rely on the stored scale if available, or derive it carefully.
+    // Using metrics.scale is usually safer if known.
+    const scale = metrics.scale ?? (actualContentWidth > 0 ? textWidth / actualContentWidth : 1);
+    const scrollOffset = entry.scrollOffset || 0;
 
-    console.log(`[TextHighlight] Scale calculation: textWidth=${textWidth}, actualContentWidth=${actualContentWidth}, scale=${scale}`);
-
-
-
-
-
+    console.log(`[TextHighlight] Scale calculation: textWidth=${textWidth}, actualContentWidth=${actualContentWidth}, scale=${scale}, scrollOffset=${scrollOffset}`);
 
     for (const line of cssMetrics.lines) {
       const lineChars = lineCharMap.get(line.index) ?? [];
@@ -175,16 +174,6 @@ export class TextHighlightMeshFactory {
 
       console.log(`[TextHighlight] Line ${line.index} caret positions: lineStartCaret=${lineStartCaret}, lineEndCaret=${lineEndCaret}`);
 
-      // Calculate width using character positions directly
-      const widthCss = Math.abs(lineEndCaret - lineStartCaret);
-
-      if (widthCss <= 0) {
-        continue;
-      }
-
-      // Convert CSS pixels to world units
-      const widthWorld = Math.max(widthCss * scale, MIN_SEGMENT_WIDTH);
-
       // Character x positions in CSS metrics are relative to line start (x=0)
       // We need to add lineOffset if text is aligned (center/right)
       const textAlign = entry.style?.textAlign?.toLowerCase() ?? 'left';
@@ -198,8 +187,27 @@ export class TextHighlightMeshFactory {
         lineOffset = (totalWidth - lineWidth) / 2;
       }
 
-      const startXWorld = (lineStartCaret + lineOffset) * scale;
-      const endXWorld = (lineEndCaret + lineOffset) * scale;
+      // Convert to world units, applying scroll offset
+      // Coordinates are relative to the *content* start, scrollOffset shifts the visual window.
+      // visible_x = (absolute_x - scroll_offset)
+      const startXCss = lineStartCaret + lineOffset - scrollOffset;
+      const endXCss = lineEndCaret + lineOffset - scrollOffset;
+
+      let startXWorld = startXCss * scale;
+      let endXWorld = endXCss * scale;
+
+      // Clamp values to the visible text area [0, textWidth]
+      // This handles cases where parts of the selection are scrolled out of view
+      startXWorld = Math.max(0, Math.min(startXWorld, textWidth));
+      endXWorld = Math.max(0, Math.min(endXWorld, textWidth));
+
+      // Calculate width from clamped world positions
+      const widthWorld = Math.max(endXWorld - startXWorld, 0);
+
+      // If segment is effectively invisible (or reversed due to clamping? shouldn't happen), skip
+      if (widthWorld <= MIN_SEGMENT_WIDTH) {
+        continue;
+      }
 
       // Calculate center position directly from start and end positions
       // Map from text content coordinate system to text mesh coordinate system
@@ -218,7 +226,7 @@ export class TextHighlightMeshFactory {
       const centerY = (topOffsetWorld + (heightWorld / 2)) - halfHeight;
 
       // Debug logging for calculated positions
-      console.log(`[TextHighlight] Line ${line.index}: widthCss=${widthCss}, startXWorld=${startXWorld}, endXWorld=${endXWorld}, centerX=${centerX}, centerY=${centerY}`);
+      console.log(`[TextHighlight] Line ${line.index}: startXWorld=${startXWorld}, endXWorld=${endXWorld}, centerX=${centerX}, centerY=${centerY}`);
       console.log(`[TextHighlight] Line ${line.index}: widthWorld=${widthWorld}, heightWorld=${heightWorld}`);
 
       segments.push({
