@@ -56,9 +56,9 @@
 
 - [ ] 5. Fix default alignment behavior for containers
   - Integrate into existing code and check for existing code that deals with this first and in that case modify it 
-  - Update default alignItems behavior to 'stretch' instead of centering
-  - Update default justifyContent behavior to 'flex-start' instead of centering
-  - Ensure containers align to start of cross-axis when no explicit alignment is specified
+  - Update default alignItems behavior to 'stretch' instead of centering (only when processing flex elements)
+  - Update default justifyContent behavior to 'flex-start' instead of centering (only when processing flex elements)
+  - Ensure containers align to start of cross-axis when no explicit alignment is specified (only when processing flex elements)
   - Add debug logging for effective alignment values being applied
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
@@ -67,25 +67,25 @@
   - Ensure gap works correctly with justifyContent: 'space-between' and other justify-content values
   - Ensure gap works correctly with alignItems: 'center' and other align-items values
   - Verify gap behavior with flexWrap: 'wrap' for multi-line layouts
-  - Test gap interaction with flex-grow and flex-shrink calculations
+  - Create test site data for testing gap interaction with flex-grow and flex-shrink calculations
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
 - [ ] 7. Handle gap with margins to prevent double-spacing
   - Integrate into existing code and check for existing code that deals with this first and in that case modify it 
   - Ensure gap spacing and margin spacing are applied correctly without overlap
   - Update margin calculations to work alongside gap spacing
-  - Verify that items with both margins and gap have correct total spacing
+  - Create test site data for testing that items with both margins and gap have correct total spacing
   - _Requirements: 3.6, 1.9_
 
 - [ ] 10. Validate implementation with visual test of flexgrowshrink test data
-  - Test that page container displays 40px gaps between the three test containers
+  - Create test site data for testing that page container displays 40px gaps between the three test containers
   - Test that grow-container, shrink-container, and mixed-container are left-aligned
   - Test that each test container displays 10px gaps between child items
   - Verify no regression in existing flex-grow and flex-shrink behavior
   - _Requirements: 4.1, 4.2, 4.3, 4.6_
 
 - [ ] 11. Visual test of gap functionality across all flex directions and wrap scenarios
-  - Test gap in flexDirection: 'row' layouts
+  - Create test site data for testing gap in flexDirection: 'row' layouts
   - Test gap in flexDirection: 'column' layouts
   - Test gap in flexDirection: 'row-reverse' and 'column-reverse' layouts
   - Test gap behavior with flexWrap: 'wrap' and 'wrap-reverse'

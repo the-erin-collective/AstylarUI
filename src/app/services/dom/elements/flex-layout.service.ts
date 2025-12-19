@@ -47,6 +47,9 @@ export interface FlexContainer {
   justifyContent: string;
   alignItems: string;
   alignContent: string;
+  gap: number;
+  rowGap: number;
+  columnGap: number;
 }
 
 @Injectable({
@@ -69,38 +72,43 @@ export class FlexLayoutService {
       return lines;
     }
 
+    // Calculate row-gap spacing between lines
+    const rowGapSpacing = lines.length > 1 ? container.rowGap * (lines.length - 1) : 0;
     const totalLinesSize = lines.reduce((sum, line) => sum + line.crossSize, 0);
-    const remainingSpace = Math.max(0, availableCrossSpace - totalLinesSize);
+    const gapAdjustedAvailableSpace = availableCrossSpace - rowGapSpacing;
+    const remainingSpace = Math.max(0, gapAdjustedAvailableSpace - totalLinesSize);
+    
+    console.log(`[FLEX-GAP] applyAlignContent: availableCrossSpace=${availableCrossSpace}px, rowGapSpacing=${rowGapSpacing}px, totalLinesSize=${totalLinesSize}px, remainingSpace=${remainingSpace}px`);
     
     let result: FlexLine[];
     
     switch (container.alignContent) {
       case 'flex-start':
-        result = this.alignContentFlexStart(lines);
+        result = this.alignContentFlexStart(lines, container);
         break;
       
       case 'flex-end':
-        result = this.alignContentFlexEnd(lines, remainingSpace);
+        result = this.alignContentFlexEnd(lines, remainingSpace, container);
         break;
       
       case 'center':
-        result = this.alignContentCenter(lines, remainingSpace);
+        result = this.alignContentCenter(lines, remainingSpace, container);
         break;
       
       case 'space-between':
-        result = this.alignContentSpaceBetween(lines, remainingSpace);
+        result = this.alignContentSpaceBetween(lines, remainingSpace, container);
         break;
       
       case 'space-around':
-        result = this.alignContentSpaceAround(lines, remainingSpace);
+        result = this.alignContentSpaceAround(lines, remainingSpace, container);
         break;
       
       case 'space-evenly':
-        result = this.alignContentSpaceEvenly(lines, remainingSpace);
+        result = this.alignContentSpaceEvenly(lines, remainingSpace, container);
         break;
       
       case 'stretch':
-        result = this.alignContentStretch(lines, remainingSpace);
+        result = this.alignContentStretch(lines, remainingSpace, container);
         break;
       
       default:
@@ -112,42 +120,42 @@ export class FlexLayoutService {
     return result;
   }
 
-  private alignContentFlexStart(lines: FlexLine[]): FlexLine[] {
+  private alignContentFlexStart(lines: FlexLine[], container: FlexContainer): FlexLine[] {
     // Lines are packed at the start of the cross axis
     let currentOffset = 0;
-    return lines.map(line => {
+    return lines.map((line, index) => {
       const result = {
         ...line,
         crossOffset: currentOffset,
         crossSize: line.crossSize
       };
-      currentOffset += line.crossSize;
+      // Add row-gap after each line except the last
+      currentOffset += line.crossSize + (index < lines.length - 1 ? container.rowGap : 0);
       return result;
     });
   }
 
-  private alignContentFlexEnd(lines: FlexLine[], remainingSpace: number): FlexLine[] {
+  private alignContentFlexEnd(lines: FlexLine[], remainingSpace: number, container: FlexContainer): FlexLine[] {
     // Lines are packed at the end of the cross axis
     let currentOffset = remainingSpace;
-    return lines.map(line => {
+    return lines.map((line, index) => {
       const result = {
         ...line,
         crossOffset: currentOffset,
         crossSize: line.crossSize
       };
-      currentOffset += line.crossSize;
+      // Add row-gap after each line except the last
+      currentOffset += line.crossSize + (index < lines.length - 1 ? container.rowGap : 0);
       return result;
     });
   }
 
-  private alignContentCenter(lines: FlexLine[], remainingSpace: number): FlexLine[] {
+  private alignContentCenter(lines: FlexLine[], remainingSpace: number, container: FlexContainer): FlexLine[] {
     // Lines are centered in the cross axis
-    const totalLinesSize = lines.reduce((sum, line) => sum + line.crossSize, 0);
-    
-    // Calculate the starting offset to center all lines
-    // This should be half of the remaining space
     const startOffset = remainingSpace / 2;
     let currentOffset = startOffset;
+    
+    console.log(`[FLEX-ALIGN] Center: ${lines.length} lines, remainingSpace=${remainingSpace}px, startOffset=${startOffset}px, rowGap=${container.rowGap}px`);
     
     return lines.map((line, index) => {
       const result = {
@@ -156,21 +164,24 @@ export class FlexLayoutService {
         crossSize: line.crossSize
       };
       
-      currentOffset += line.crossSize;
+      console.log(`[FLEX-ALIGN] Center line ${index}: crossOffset=${currentOffset}px, crossSize=${line.crossSize}px`);
+      
+      // Add row-gap after each line except the last
+      currentOffset += line.crossSize + (index < lines.length - 1 ? container.rowGap : 0);
       return result;
     });
   }
 
-  private alignContentSpaceBetween(lines: FlexLine[], remainingSpace: number): FlexLine[] {
+  private alignContentSpaceBetween(lines: FlexLine[], remainingSpace: number, container: FlexContainer): FlexLine[] {
     // Lines are evenly distributed with first line at start and last at end
     if (lines.length === 1) {
-      return this.alignContentFlexStart(lines);
+      return this.alignContentFlexStart(lines, container);
     }
     
     const spacing = remainingSpace / (lines.length - 1);
     let currentOffset = 0;
     
-    console.log(`[FLEX-ALIGN] Space-between: ${lines.length} lines, remainingSpace=${remainingSpace}px, spacing=${spacing}px`);
+    console.log(`[FLEX-ALIGN] Space-between: ${lines.length} lines, remainingSpace=${remainingSpace}px, spacing=${spacing}px, rowGap=${container.rowGap}px`);
     
     return lines.map((line, index) => {
       const result = {
@@ -181,9 +192,9 @@ export class FlexLayoutService {
       
       console.log(`[FLEX-ALIGN] Space-between line ${index}: crossOffset=${currentOffset}px, crossSize=${line.crossSize}px`);
       
-      // Add spacing after each line except the last one
+      // Add line size, row-gap, and spacing after each line except the last one
       if (index < lines.length - 1) {
-        currentOffset += line.crossSize + spacing;
+        currentOffset += line.crossSize + container.rowGap + spacing;
       } else {
         currentOffset += line.crossSize;
       }
@@ -192,12 +203,12 @@ export class FlexLayoutService {
     });
   }
 
-  private alignContentSpaceAround(lines: FlexLine[], remainingSpace: number): FlexLine[] {
+  private alignContentSpaceAround(lines: FlexLine[], remainingSpace: number, container: FlexContainer): FlexLine[] {
     // Lines are evenly distributed with equal space around each line
     const spacing = remainingSpace / lines.length;
     let currentOffset = spacing / 2;
     
-    console.log(`[FLEX-ALIGN] Space-around: ${lines.length} lines, remainingSpace=${remainingSpace}px, spacing=${spacing}px, startOffset=${currentOffset}px`);
+    console.log(`[FLEX-ALIGN] Space-around: ${lines.length} lines, remainingSpace=${remainingSpace}px, spacing=${spacing}px, startOffset=${currentOffset}px, rowGap=${container.rowGap}px`);
     
     return lines.map((line, index) => {
       const result = {
@@ -208,40 +219,47 @@ export class FlexLayoutService {
       
       console.log(`[FLEX-ALIGN] Space-around line ${index}: crossOffset=${currentOffset}px, crossSize=${line.crossSize}px`);
       
-      currentOffset += line.crossSize + spacing;
+      // Add line size, row-gap, and spacing after each line except the last
+      if (index < lines.length - 1) {
+        currentOffset += line.crossSize + container.rowGap + spacing;
+      } else {
+        currentOffset += line.crossSize + spacing;
+      }
       return result;
     });
   }
 
-  private alignContentSpaceEvenly(lines: FlexLine[], remainingSpace: number): FlexLine[] {
+  private alignContentSpaceEvenly(lines: FlexLine[], remainingSpace: number, container: FlexContainer): FlexLine[] {
     // Lines are evenly distributed with equal space between and around them
     const spacing = remainingSpace / (lines.length + 1);
     let currentOffset = spacing;
     
-    return lines.map(line => {
+    return lines.map((line, index) => {
       const result = {
         ...line,
         crossOffset: currentOffset,
         crossSize: line.crossSize
       };
-      currentOffset += line.crossSize + spacing;
+      // Add line size, row-gap, and spacing after each line
+      currentOffset += line.crossSize + (index < lines.length - 1 ? container.rowGap : 0) + spacing;
       return result;
     });
   }
 
-  private alignContentStretch(lines: FlexLine[], remainingSpace: number): FlexLine[] {
+  private alignContentStretch(lines: FlexLine[], remainingSpace: number, container: FlexContainer): FlexLine[] {
     // Lines stretch to fill the available cross space
     const extraSpace = remainingSpace / lines.length;
     let currentOffset = 0;
     
-    return lines.map(line => {
+    return lines.map((line, index) => {
       const newCrossSize = line.crossSize + extraSpace;
       const result = {
         ...line,
         crossOffset: currentOffset,
         crossSize: newCrossSize
       };
-      currentOffset += newCrossSize;
+      // Add stretched line size and row-gap after each line except the last
+      currentOffset += newCrossSize + (index < lines.length - 1 ? container.rowGap : 0);
       return result;
     });
   }
@@ -258,6 +276,11 @@ export class FlexLayoutService {
   ): FlexItem[] {
     const isRow = container.flexDirection === 'row' || container.flexDirection === 'row-reverse';
     
+    // Calculate gap spacing that needs to be subtracted from available space
+    const gapSpacing = this.calculateGapSpacing(items, container, isRow);
+    const gapAdjustedAvailableSpace = availableMainSpace - gapSpacing;
+    
+    console.log(`[FLEX-GAP] calculateFlexItemSizes: originalAvailableSpace=${availableMainSpace}px, gapSpacing=${gapSpacing}px, adjustedAvailableSpace=${gapAdjustedAvailableSpace}px`);
 
     // Step 1: Calculate flex-basis for each item (in pixels)
     const itemsWithBasis = items.map(item => ({
@@ -265,7 +288,6 @@ export class FlexLayoutService {
       calculatedFlexBasis: this.calculateFlexBasis(item, container, isRow)
     }));
     
-
 
     // Step 2: Calculate total used space and remaining space (all in pixels)
     const totalBasisSize = itemsWithBasis.reduce((sum, item) => {
@@ -275,7 +297,7 @@ export class FlexLayoutService {
       return sum + item.calculatedFlexBasis + marginSize;
     }, 0);
 
-    const remainingSpace = availableMainSpace - totalBasisSize;
+    const remainingSpace = gapAdjustedAvailableSpace - totalBasisSize;
     
 
 
@@ -295,6 +317,25 @@ export class FlexLayoutService {
     }
     
     return result;
+  }
+
+  /**
+   * Calculate total gap spacing for a line of flex items
+   * All calculations are done in screen units (pixels)
+   */
+  private calculateGapSpacing(items: FlexItem[], container: FlexContainer, isRow: boolean): number {
+    if (items.length <= 1) {
+      return 0; // No gaps needed for single item or empty
+    }
+    
+    // Use column-gap for row direction, row-gap for column direction
+    const gapValue = isRow ? container.columnGap : container.rowGap;
+    const gapCount = items.length - 1; // Gaps between items
+    const totalGapSpacing = gapValue * gapCount;
+    
+    console.log(`[FLEX-GAP] calculateGapSpacing: isRow=${isRow}, gapValue=${gapValue}px, gapCount=${gapCount}, totalGapSpacing=${totalGapSpacing}px`);
+    
+    return totalGapSpacing;
   }
 
   /**

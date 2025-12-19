@@ -66,7 +66,11 @@ export class FlexService {
     const alignItems = parentStyle.alignItems || 'stretch';
     const flexWrap = parentStyle.flexWrap || 'nowrap';
     
+    // Parse gap properties
+    const gapProperties = this.parseGapProperties(parentStyle);
+    
     console.log(`[FLEX] Container: width=${containerWidth}px, height=${containerHeight}px, flexDirection=${flexDirection}, justifyContent=${justifyContent}, alignItems=${alignItems}, flexWrap=${flexWrap}`);
+    console.log(`[FLEX-GAP] Gap properties parsed: gap=${gapProperties.gap}px, rowGap=${gapProperties.rowGap}px, columnGap=${gapProperties.columnGap}px`);
     
     // Create flex container configuration
     const flexContainer: FlexContainer = {
@@ -77,8 +81,13 @@ export class FlexService {
       justifyContent,
       alignItems,
       flexWrap,
-      alignContent: parentStyle.alignContent || 'stretch'
+      alignContent: parentStyle.alignContent || 'stretch',
+      gap: gapProperties.gap,
+      rowGap: gapProperties.rowGap,
+      columnGap: gapProperties.columnGap
     };
+
+    console.log(`[FLEX-GAP] FlexContainer created with gap integration: gap=${flexContainer.gap}px, rowGap=${flexContainer.rowGap}px, columnGap=${flexContainer.columnGap}px`);
 
     // Get child items with their styles and dimensions - using FlexLayoutService
     const childItems: FlexItem[] = children.map(child => {
@@ -208,7 +217,8 @@ export class FlexService {
         flexWrap,
         alignContent: parentStyle.alignContent || 'stretch'
       },
-      render
+      render,
+      flexContainer
     );
     
     console.log('[FLEX] Layout with FlexLayoutService:', layout);
@@ -264,7 +274,8 @@ export class FlexService {
       flexWrap: string;
       alignContent: string;
     },
-    render: BabylonRender
+    render: BabylonRender,
+    flexContainer: FlexContainer
   ): Array<{
     position: { x: number; y: number; z: number };
     size: { width: number; height: number };
@@ -272,8 +283,8 @@ export class FlexService {
     const isRow = flexProps.flexDirection === 'row' || flexProps.flexDirection === 'row-reverse';
     const isReverse = flexProps.flexDirection.includes('reverse');
     
-    // Calculate available space for items
-    const availableMainSpace = isRow
+    // Calculate available space for items (before gap adjustments)
+    const baseAvailableMainSpace = isRow
       ? containerWidth - padding.left - padding.right
       : containerHeight - padding.top - padding.bottom;
     
@@ -281,10 +292,14 @@ export class FlexService {
       ? containerHeight - padding.top - padding.bottom
       : containerWidth - padding.left - padding.right;
     
-    console.log(`[FLEX] Available space: main=${availableMainSpace}px, cross=${availableCrossSpace}px`);
+    console.log(`[FLEX-GAP] Base available space: main=${baseAvailableMainSpace}px, cross=${availableCrossSpace}px`);
     
-    // Create flex lines based on wrapping
-    const lines = this.createFlexLines(childItems, availableMainSpace, flexProps.flexWrap, isRow);
+    // Create flex lines based on wrapping (using base available space for wrapping decisions)
+    const lines = this.createFlexLines(childItems, baseAvailableMainSpace, flexProps.flexWrap, isRow, {
+      gap: flexContainer.gap,
+      rowGap: flexContainer.rowGap,
+      columnGap: flexContainer.columnGap
+    });
     console.log(`[FLEX] Created ${lines.length} flex lines:`, lines);
     
     // Apply align-content if we have multiple lines
@@ -294,16 +309,7 @@ export class FlexService {
     console.log(`[FLEX] Should apply align-content: ${shouldApplyAlignContent}, lines: ${lines.length}, flexWrap: ${flexProps.flexWrap}, alignContent: ${flexProps.alignContent || 'stretch'}`);
     
     const alignedLines = shouldApplyAlignContent
-      ? this.flexLayoutService.applyAlignContent(lines, {
-          width: containerWidth,
-          height: containerHeight,
-          padding,
-          flexDirection: flexProps.flexDirection,
-          flexWrap: flexProps.flexWrap,
-          justifyContent: flexProps.justifyContent,
-          alignItems: flexProps.alignItems,
-          alignContent: flexProps.alignContent || 'stretch'
-        }, availableCrossSpace)
+      ? this.flexLayoutService.applyAlignContent(lines, flexContainer, availableCrossSpace)
       : lines;
     
     console.log(`[FLEX] After align-content, alignedLines:`, 
@@ -325,11 +331,17 @@ export class FlexService {
       // Use the crossOffset calculated by alignContent instead of our own counter
       const crossOffset = line.crossOffset !== undefined ? line.crossOffset : 0;
       
+      // Calculate gap-adjusted available main space for this line
+      // Account for column-gap spacing between items in the same line
+      const columnGapSpacing = line.items.length > 1 ? flexContainer.columnGap * (line.items.length - 1) : 0;
+      const gapAdjustedAvailableMainSpace = baseAvailableMainSpace - columnGapSpacing;
+      
+      console.log(`[FLEX-GAP] Line ${lineIndex} main-axis gap adjustment: baseAvailableMainSpace=${baseAvailableMainSpace}px, columnGapSpacing=${columnGapSpacing}px, adjustedAvailableMainSpace=${gapAdjustedAvailableMainSpace}px`);
       console.log(`[FLEX] Positioning line ${lineIndex}: crossOffset=${crossOffset}px, crossSize=${line.crossSize}px`);
       
       const lineLayout = this.positionItemsInLine(
         line.items,
-        availableMainSpace,
+        gapAdjustedAvailableMainSpace,
         line.crossSize,
         crossOffset,
         containerWidth,
@@ -337,7 +349,12 @@ export class FlexService {
         padding,
         flexProps,
         isRow,
-        isReverse
+        isReverse,
+        {
+          gap: flexContainer.gap,
+          rowGap: flexContainer.rowGap,
+          columnGap: flexContainer.columnGap
+        }
       );
       
       layout.push(...lineLayout);
@@ -411,13 +428,52 @@ export class FlexService {
   }
 
   /**
+   * Parse gap properties from style rule
+   * Handles pixel values (e.g., "10px"), numeric values (e.g., "10"), and invalid values with fallback to 0
+   * Prioritizes specific rowGap/columnGap over general gap property
+   */
+  private parseGapProperties(style: StyleRule): { gap: number; rowGap: number; columnGap: number } {
+    // Helper function to parse a single gap value
+    const parseGapValue = (value?: string): number => {
+      if (!value) return 0;
+      
+      // Handle pixel values (e.g., "10px")
+      if (typeof value === 'string' && value.endsWith('px')) {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) || parsed < 0 ? 0 : parsed;
+      }
+      
+      // Handle numeric values (e.g., "10" or 10)
+      const parsed = parseFloat(value);
+      return isNaN(parsed) || parsed < 0 ? 0 : parsed;
+    };
+
+    // Parse general gap property
+    const generalGap = parseGapValue(style.gap);
+    
+    // Parse specific gap properties, prioritizing them over general gap
+    const rowGap = style.rowGap ? parseGapValue(style.rowGap) : generalGap;
+    const columnGap = style.columnGap ? parseGapValue(style.columnGap) : generalGap;
+
+    console.log(`[FLEX-GAP] Parsed gap properties: gap=${generalGap}px, rowGap=${rowGap}px, columnGap=${columnGap}px`);
+    console.log(`[FLEX-GAP] Original style values: gap="${style.gap}", rowGap="${style.rowGap}", columnGap="${style.columnGap}"`);
+
+    return {
+      gap: generalGap,
+      rowGap,
+      columnGap
+    };
+  }
+
+  /**
    * Create flex lines based on wrapping behavior
    */
   private createFlexLines(
     items: FlexItem[],
     availableMainSpace: number,
     flexWrap: string,
-    isRow: boolean
+    isRow: boolean,
+    gapProperties?: { gap: number; rowGap: number; columnGap: number }
   ): FlexLine[] {
     console.log(`[FLEX-WRAP] Creating flex lines: availableMainSpace=${availableMainSpace}px, flexWrap=${flexWrap}, isRow=${isRow}`);
     
@@ -465,13 +521,20 @@ export class FlexService {
         : item.margin.top + item.margin.bottom;
       const totalItemSize = itemMainSize + itemMarginMain;
       
-      // Check if item fits in current line
-      console.log(`[FLEX] Wrapping check for ${item.element.id}: currentLineSize=${currentLineSize}px + totalItemSize=${totalItemSize}px = ${currentLineSize + totalItemSize}px vs availableMainSpace=${availableMainSpace}px`);
+      // Calculate gap spacing needed if this item is added to the current line
+      const gapSpacing = gapProperties && currentLine.length > 0 
+        ? (isRow ? gapProperties.columnGap : gapProperties.rowGap)
+        : 0;
       
-      if (currentLine.length === 0 || currentLineSize + totalItemSize <= availableMainSpace) {
+      const totalSizeWithGap = totalItemSize + gapSpacing;
+      
+      // Check if item fits in current line
+      console.log(`[FLEX-GAP] Wrapping check for ${item.element.id}: currentLineSize=${currentLineSize}px + totalItemSize=${totalItemSize}px + gapSpacing=${gapSpacing}px = ${currentLineSize + totalSizeWithGap}px vs availableMainSpace=${availableMainSpace}px`);
+      
+      if (currentLine.length === 0 || currentLineSize + totalSizeWithGap <= availableMainSpace) {
         console.log(`[FLEX] Item ${item.element.id} fits in current line`);
         currentLine.push(item);
-        currentLineSize += totalItemSize;
+        currentLineSize += totalSizeWithGap;
       } else {
         console.log(`[FLEX] Item ${item.element.id} does NOT fit, starting new line`);
         // Start new line
@@ -538,7 +601,8 @@ export class FlexService {
       alignContent: string;
     },
     isRow: boolean,
-    isReverse: boolean
+    isReverse: boolean,
+    gapProperties: { gap: number; rowGap: number; columnGap: number }
   ): Array<{
     position: { x: number; y: number; z: number };
     size: { width: number; height: number };
@@ -552,7 +616,10 @@ export class FlexService {
       justifyContent: flexProps.justifyContent,
       alignItems: flexProps.alignItems,
       flexWrap: flexProps.flexWrap,
-      alignContent: flexProps.alignContent || 'stretch'
+      alignContent: flexProps.alignContent || 'stretch',
+      gap: gapProperties.gap,
+      rowGap: gapProperties.rowGap,
+      columnGap: gapProperties.columnGap
     };
     
     console.log(`[FLEX-POSITION] Line container: width=${containerWidth}px, height=${containerHeight}px, flexDirection=${flexProps.flexDirection}, alignItems=${flexProps.alignItems}, lineCrossSize=${lineCrossSize}px`);
@@ -676,8 +743,12 @@ export class FlexService {
                 const availableHeight = containerHeight - padding.top - padding.bottom;
                 item.height = availableHeight - item.margin.top - item.margin.bottom;
                 console.log(`[FLEX-POSITION] Item ${item.element.id} single-line align: stretch, new height=${item.height}px`);
+                y = 0; // Center of container when stretched to full height
+              } else {
+                // Item has explicit height, so it can't stretch - position at flex-start instead
+                y = (containerHeight / 2) - padding.top - item.margin.top - (item.height / 2);
+                console.log(`[FLEX-POSITION] Item ${item.element.id} single-line align: stretch with explicit height, positioned at flex-start, y=${y}`);
               }
-              y = 0; // Center of container
               console.log(`[FLEX-POSITION] Item ${item.element.id} single-line align: stretch, y=${y}`);
               break;
             default:
@@ -712,8 +783,12 @@ export class FlexService {
               if (!item.style?.height) {
                 item.height = lineCrossSize - item.margin.top - item.margin.bottom;
                 console.log(`[FLEX-POSITION] Item ${item.element.id} align-self: stretch, new height=${item.height}px`);
+                y = (containerHeight / 2) - baseCrossPos - (lineCrossSize / 2);
+              } else {
+                // Item has explicit height, so it can't stretch - position at flex-start instead
+                y = (containerHeight / 2) - baseCrossPos - item.margin.top - (item.height / 2);
+                console.log(`[FLEX-POSITION] Item ${item.element.id} align-self: stretch with explicit height, positioned at flex-start, y=${y}`);
               }
-              y = (containerHeight / 2) - baseCrossPos - (lineCrossSize / 2);
               console.log(`[FLEX-POSITION] Item ${item.element.id} align-self: stretch, y=${y}`);
               break;
             default:
@@ -722,7 +797,9 @@ export class FlexService {
           }
         }
         
-        currentOffset += item.width + item.margin.left + item.margin.right + spacing;
+        // Add gap spacing between items (except after the last item)
+        const gapSpacing = index < itemsToProcess.length - 1 ? gapProperties.columnGap : 0;
+        currentOffset += item.width + item.margin.left + item.margin.right + spacing + gapSpacing;
       } else {
         // Calculate Y position (main axis)
         const itemTop = padding.top + currentOffset + item.margin.top;
@@ -757,8 +834,12 @@ export class FlexService {
                 const availableWidth = containerWidth - padding.left - padding.right;
                 item.width = availableWidth - item.margin.left - item.margin.right;
                 console.log(`[FLEX-POSITION] Item ${item.element.id} single-line align: stretch, new width=${item.width}px`);
+                x = 0; // Center of container when stretched to full width
+              } else {
+                // Item has explicit width, so it can't stretch - position at flex-start instead
+                x = -(containerWidth / 2) + padding.left + item.margin.left + (item.width / 2);
+                console.log(`[FLEX-POSITION] Item ${item.element.id} single-line align: stretch with explicit width, positioned at flex-start, x=${x}`);
               }
-              x = 0; // Center of container
               console.log(`[FLEX-POSITION] Item ${item.element.id} single-line align: stretch, x=${x}`);
               break;
             default:
@@ -793,8 +874,12 @@ export class FlexService {
               if (!item.style?.width) {
                 item.width = lineCrossSize - item.margin.left - item.margin.right;
                 console.log(`[FLEX-POSITION] Item ${item.element.id} align-self: stretch, new width=${item.width}px`);
+                x = -(containerWidth / 2) + baseCrossPos + (lineCrossSize / 2);
+              } else {
+                // Item has explicit width, so it can't stretch - position at flex-start instead
+                x = -(containerWidth / 2) + baseCrossPos + item.margin.left + (item.width / 2);
+                console.log(`[FLEX-POSITION] Item ${item.element.id} align-self: stretch with explicit width, positioned at flex-start, x=${x}`);
               }
-              x = -(containerWidth / 2) + baseCrossPos + (lineCrossSize / 2);
               console.log(`[FLEX-POSITION] Item ${item.element.id} align-self: stretch, x=${x}`);
               break;
             default:
@@ -803,7 +888,9 @@ export class FlexService {
           }
         }
         
-        currentOffset += item.height + item.margin.top + item.margin.bottom + spacing;
+        // Add gap spacing between items (except after the last item)
+        const gapSpacing = index < itemsToProcess.length - 1 ? gapProperties.rowGap : 0;
+        currentOffset += item.height + item.margin.top + item.margin.bottom + spacing + gapSpacing;
       }
       
       layout.push({

@@ -16,9 +16,9 @@ const globalDefaultStyle: Partial<StyleRule> = {
     // Flexbox defaults (match browser spec)
     flexDirection: 'row',
     flexWrap: 'nowrap',
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
-    alignContent: 'stretch',
+    justifyContent: 'normal',
+    alignItems: 'left',
+    alignContent: 'left',
     order: '0',
     flexGrow: '0',
     flexShrink: '1',
