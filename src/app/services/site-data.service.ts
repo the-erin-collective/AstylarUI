@@ -433,13 +433,18 @@ export class SiteDataService {
           width: '25%',
           height: '12%',
           href: '/site/about', // Relative URL to another site
-          target: '_self'
+          target: '_self',
+          borderWidth: '3px',
+          borderColor: '#196099',
+          borderStyle: 'solid'
         },
 
         {
           selector: '#relative-link:hover',
           background: '#2980b9', // Lighter blue on hover
           borderColor: '#3498db',
+          borderWidth: '3px',
+          borderStyle: 'solid',
           transform: 'scale(1.05)'
         },
 
@@ -454,6 +459,7 @@ export class SiteDataService {
           borderColor: '#19bb42',
           href: 'https://www.example.com',
           borderWidth: '15px',
+          borderStyle: 'solid',
           target: '_blank'
         },
 
@@ -462,6 +468,7 @@ export class SiteDataService {
           background: '#27ae60', // Green on hover
           borderColor: '#2ecc71',
           borderWidth: '15px',
+          borderStyle: 'solid',
           transform: 'scale(1.25)'
         },
 
@@ -474,14 +481,17 @@ export class SiteDataService {
           height: '12%',
           onclick: 'console.log("Custom button clicked!")',
           background: '#e67e22', // Orange background
-          borderWidth: '15px',
-          borderColor: '#d35400'
+          borderWidth: '3px',
+          borderColor: '#d35400',
+          borderStyle: 'solid'
         },
 
         {
           selector: '#onclick-link:hover',
           background: '#f39c12', // Lighter orange on hover
           borderColor: '#e67e22',
+          borderWidth: '15px',
+          borderStyle: 'solid',
           transform: 'scale(1.25)'
         },
 
@@ -498,6 +508,7 @@ export class SiteDataService {
           background: '#9b59b6', // Purple background
           borderColor: '#8e44ad',
           borderWidth: '10px',
+          borderStyle: 'solid',
           borderRadius: '40px'
         },
 
@@ -505,6 +516,8 @@ export class SiteDataService {
           selector: '#combined-link:hover',
           background: '#be7bd9', // Lighter purple on hover
           borderColor: '#9b59b6',
+          borderWidth: '10px',
+          borderStyle: 'solid',
           transform: 'scale(1.25)'
         },
 
@@ -519,7 +532,8 @@ export class SiteDataService {
           target: '_blank',
           background: '#e74c3c', // Red background
           borderWidth: '15px',
-          borderColor: '#c0392b'
+          borderColor: '#c0392b',
+          borderStyle: 'solid'
         },
 
         {
@@ -527,6 +541,7 @@ export class SiteDataService {
           background: '#ec7063', // Lighter red on hover
           borderColor: '#e74c3c',
           borderWidth: '15px',
+          borderStyle: 'solid',
           borderRadius: '60px'
         },
 

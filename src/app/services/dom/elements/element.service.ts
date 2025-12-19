@@ -233,7 +233,7 @@ export class ElementService {
         polygonType,
         worldWidth,
         worldHeight,
-        borderProperties.width * scaleFactor, // border width in world units
+        borderProperties.width, // border width in world units (already scaled)
         borderRadius
       );
 
@@ -260,7 +260,7 @@ export class ElementService {
         borderZPosition,
         worldWidth,
         worldHeight,
-        borderProperties.width * scaleFactor
+        borderProperties.width // already in world units
       );
 
       // Apply border material to all frames with consistent rendering
@@ -907,8 +907,13 @@ export class ElementService {
   }
 
 
-  private applyElementMaterial(dom: BabylonDOM, render: BabylonRender, mesh: Mesh, element: DOMElement, isHovered: boolean, mergedStyle?: StyleRule): void {
+  private applyElementMaterial(dom: BabylonDOM, render: BabylonRender, mesh: Mesh, element: DOMElement, isHovered: boolean, mergedStyle: StyleRule): void {
     if (!element.id) return;
+
+    // Ensure mergedStyle is provided
+    if (!mergedStyle) {
+      throw new Error(`mergedStyle is required for element ${element.id || 'unknown'}`);
+    }
 
     // Special handling for image elements - preserve textures and only modify properties like opacity
     if (element.type === 'img') {
@@ -916,23 +921,19 @@ export class ElementService {
       return;
     }
 
-    let activeStyle;
-    if (mergedStyle) {
-      // Use the merged style that includes type defaults
-      activeStyle = mergedStyle;
+    // Use the merged style that includes type defaults
+    let activeStyle = mergedStyle;
 
-      // If in hover state, apply hover styles on top of merged style
-      if (isHovered) {
-        const elementStyles = dom.context.elementStyles.get(element.id);
-        if (elementStyles?.hover) {
-          activeStyle = { ...mergedStyle, ...elementStyles.hover };
-        }
-      }
-    } else {
-      // Fallback to stored element styles only (shouldn't happen with new approach)
+    // If in hover state, apply hover styles on top of merged style
+    if (isHovered) {
       const elementStyles = dom.context.elementStyles.get(element.id);
-      if (!elementStyles) return;
-      activeStyle = isHovered && elementStyles.hover ? elementStyles.hover : elementStyles.normal;
+      console.log(`[HOVER DEBUG] ${element.id} - elementStyles: ${JSON.stringify(elementStyles)}`);
+      console.log(`[HOVER DEBUG] ${element.id} - mergedStyle before hover: ${JSON.stringify(mergedStyle)}`);
+      if (elementStyles?.hover) {
+        console.log(`[HOVER DEBUG] ${element.id} - hover style: ${JSON.stringify(elementStyles.hover)}`);
+        activeStyle = { ...mergedStyle, ...elementStyles.hover };
+        console.log(`[HOVER DEBUG] ${element.id} - activeStyle after merge: ${JSON.stringify(activeStyle)}`);
+      }
     }
 
     console.log(`🎨 Material creation for ${element.id}, hover: ${isHovered}, background: ${activeStyle?.background}`);
@@ -982,14 +983,19 @@ export class ElementService {
     console.log(`[MATERIAL DEBUG] ${element.id} mesh.rotation after material:`, mesh.rotation);
   }
 
-  private applyImageMaterialUpdate(dom: BabylonDOM, render: BabylonRender, mesh: Mesh, element: DOMElement, isHovered: boolean, mergedStyle?: StyleRule): void {
+  private applyImageMaterialUpdate(dom: BabylonDOM, render: BabylonRender, mesh: Mesh, element: DOMElement, isHovered: boolean, mergedStyle: StyleRule): void {
     if (!mesh.material || !element.id) return;
+
+    // Ensure mergedStyle is provided
+    if (!mergedStyle) {
+      throw new Error(`mergedStyle is required for element ${element.id || 'unknown'}`);
+    }
 
     console.log(`🖼️ Updating image material for ${element.id}, hover: ${isHovered}`);
 
     // Get the active style (merged + hover if needed)
     let activeStyle = mergedStyle;
-    if (isHovered && mergedStyle) {
+    if (isHovered) {
       const elementStyles = dom.context.elementStyles.get(element.id);
       if (elementStyles?.hover) {
         activeStyle = { ...mergedStyle, ...elementStyles.hover };
@@ -1381,10 +1387,7 @@ export class ElementService {
     const numericValue = parseFloat(width.replace('px', ''));
     // Use camera-calculated scaling factor for accurate conversion
     const scaleFactor = render.actions.camera.getPixelToWorldScale();
-
-    // Apply a slight reduction to compensate for 3D perspective effects that make borders appear thicker
-    const perspectiveAdjustment = 0.8; // Reduce border width by 20% to account for 3D perspective
-    return numericValue * scaleFactor * perspectiveAdjustment;
+    return numericValue * scaleFactor;
   }
 
   private applyBorderMaterial(dom: BabylonDOM, render: BabylonRender, borderMesh: Mesh, elementId: string, isHovered: boolean): void {
@@ -1431,6 +1434,26 @@ export class ElementService {
     }
   }
 
+  private createHoverMergedStyle(dom: BabylonDOM, elementId: string, isHovered: boolean): StyleRule {
+    const elementType = dom.context.elementTypes.get(elementId) || 'div';
+    const elementStyles = dom.context.elementStyles.get(elementId);
+    const typeDefaults = this.styleDefaults.getElementTypeDefaults(elementType);
+    const normalStyle = (elementStyles?.normal || {}) as StyleRule;
+    
+    // Create base merged style using the same method as initial element creation
+    const baseMergedStyle: StyleRule = StyleDefaultsService.mergeStyles(
+      { selector: `#${elementId}`, ...typeDefaults },
+      normalStyle
+    ) as StyleRule;
+    
+    // If hovering, merge hover styles on top
+    if (isHovered && elementStyles?.hover) {
+      return { ...baseMergedStyle, ...elementStyles.hover };
+    }
+    
+    return baseMergedStyle;
+  }
+
   private setupMouseEvents(dom: BabylonDOM, render: BabylonRender, mesh: Mesh, elementId: string): void {
     let needsRecreation = false;
 
@@ -1446,22 +1469,23 @@ export class ElementService {
       if (!mainMesh) return;
       const elementType = dom.context.elementTypes.get(elementId) || 'div';
       const element = { id: elementId, type: elementType } as DOMElement;
-      const elementStyles = dom.context.elementStyles.get(elementId);
-      const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
-      const normalStyle = (elementStyles?.normal || {}) as StyleRule;
-      const hoverStyle = (elementStyles?.hover || {}) as StyleRule;
-      const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle, ...hoverStyle, selector: `#${elementId}` };
+      
+      // Create base merged style (without hover) for applyElementMaterial to handle hover merging
+      const baseMergedStyle = this.createHoverMergedStyle(dom, elementId, false);
 
-      const normalRadius = this.parseBorderRadius(normalStyle?.borderRadius);
-      const safeNormalRadius = isNaN(normalRadius) ? 0 : normalRadius;
-      const hoverRadius = this.parseBorderRadius(hoverStyle?.borderRadius);
+      // Get the hover-merged style for geometry properties
+      const elementStyles = dom.context.elementStyles.get(elementId);
+      const hoverMergedStyle = elementStyles?.hover ? { ...baseMergedStyle, ...elementStyles.hover } : baseMergedStyle;
+      
+      const hoverRadius = this.parseBorderRadius(hoverMergedStyle?.borderRadius);
+      const safeHoverRadius = isNaN(hoverRadius) ? 0 : hoverRadius;
       const dimensions = dom.context.elementDimensions.get(elementId);
       const pixelToWorldScale = render.actions.camera.getPixelToWorldScale(); // <-- moved here
       if (dimensions) {
-        const worldBorderRadius = (hoverStyle?.borderRadius !== undefined ? hoverRadius : safeNormalRadius) * pixelToWorldScale;
+        const worldBorderRadius = safeHoverRadius * pixelToWorldScale;
         const worldWidth = dimensions.width * pixelToWorldScale;
         const worldHeight = dimensions.height * pixelToWorldScale;
-        const polygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+        const polygonType = this.parsePolygonType(hoverMergedStyle?.polygonType) || 'rectangle';
         // Update mesh geometry for hover border radius
         const vertexData = render.actions.mesh.generatePolygonVertexData(
           polygonType,
@@ -1480,8 +1504,9 @@ export class ElementService {
           }
         }
         // Create new border meshes for hover
-        const borderWidth = this.parseBorderWidth(render, hoverStyle?.borderWidth ?? normalStyle.borderWidth);
-        const borderColor = render.actions.style.parseBackgroundColor(hoverStyle?.borderColor ?? normalStyle.borderColor);
+        const borderWidth = this.parseBorderWidth(render, hoverMergedStyle?.borderWidth);
+        const borderColor = render.actions.style.parseBackgroundColor(hoverMergedStyle?.borderColor);
+        console.log(`[BORDER DEBUG] ${elementId} hover - borderWidth: ${borderWidth}, borderColor: ${JSON.stringify(borderColor)}, borderStyle: ${hoverMergedStyle?.borderStyle}`);
         const borderMeshes = render.actions.mesh.createPolygonBorder(
           `${elementId}-border`,
           polygonType,
@@ -1490,72 +1515,64 @@ export class ElementService {
           borderWidth,
           worldBorderRadius
         );
+        
+        // Parent all border frames to main mesh BEFORE positioning for correct transform inheritance
+        borderMeshes.forEach(borderMesh => {
+          render.actions.mesh.parentMesh(borderMesh, mainMesh);
+        });
+        
         const borderZPosition = mainMesh.position.z + 0.001;
         render.actions.mesh.positionBorderFrames(
           borderMeshes,
-          mainMesh.position.x,
-          mainMesh.position.y,
+          0, // x relative to main mesh
+          0, // y relative to main mesh
           borderZPosition,
           worldWidth,
           worldHeight,
-          borderWidth
+          borderWidth * pixelToWorldScale
         );
-        const borderOpacity = render.actions.style.parseOpacity(hoverStyle?.opacity ?? normalStyle.opacity);
+        const borderOpacity = render.actions.style.parseOpacity(hoverMergedStyle?.opacity);
         const borderMaterial = render.actions.mesh.createMaterial(
           `${elementId}-border-material`,
           borderColor,
           undefined,
           borderOpacity
         );
+        
         borderMeshes.forEach((borderMesh, index) => {
           borderMesh.material = borderMaterial;
-          if (mainMesh.parent && mainMesh.parent instanceof Mesh) {
-            render.actions.mesh.parentMesh(borderMesh, mainMesh.parent);
-          }
           dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
           console.log(`[ELEMENT HOVER DEBUG] Created hover border mesh: ${elementId}-border-${index}`);
         });
         // Calculate worldBorderRadius and polygonType for shadow
-        const shadowBorderRadius = (hoverStyle?.borderRadius !== undefined ? hoverRadius : safeNormalRadius) * pixelToWorldScale;
-        const shadowPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+        const shadowBorderRadius = safeHoverRadius * pixelToWorldScale;
+        const shadowPolygonType = this.parsePolygonType(hoverMergedStyle?.polygonType) || 'rectangle';
         // Ensure parent is a Mesh
         const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
         // Add or update shadow mesh for hover
-        this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
+        this.updateShadowMesh(dom, render, elementId, hoverMergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(hoverMergedStyle.transform) || undefined);
       }
       dom.context.hoverStates.set(elementId, true);
-      this.applyElementMaterial(dom, render, mainMesh, element, true, mergedStyle);
-      const transform = this.parseTransform(mergedStyle?.transform);
+      this.applyElementMaterial(dom, render, mainMesh, element, true, baseMergedStyle);
+      const transform = this.parseTransform(hoverMergedStyle?.transform);
       if (transform) {
         this.applyTransforms(mainMesh, transform);
-        // Also apply to all border meshes and parent them to the main mesh
+        // For borders, we want them to inherit position but not scaling
         for (let i = 0; i < 4; i++) {
           const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
           if (borderMesh) {
-            this.applyTransforms(borderMesh, transform);
-            // Parent border mesh to main mesh for transform inheritance
-            render.actions.mesh.parentMesh(borderMesh, mainMesh);
+            // Apply only translation and rotation, not scaling
+            const borderTransform = { ...transform };
+            borderTransform.scale = { x: 1, y: 1, z: 1 }; // Reset scaling for borders
+            this.applyTransforms(borderMesh, borderTransform);
           }
         }
       }
       // After all style/geometry updates, log the mesh rotation and transform
-      if (mergedStyle.transform) {
-        console.log(`[HOVER DEBUG] ${elementId} transform string:`, mergedStyle.transform);
+      if (hoverMergedStyle.transform) {
+        console.log(`[HOVER DEBUG] ${elementId} transform string:`, hoverMergedStyle.transform);
       }
       console.log(`[HOVER DEBUG] ${elementId} mesh.rotation after hover:`, mainMesh.rotation);
-      // Remove old shadow mesh
-      const oldShadow = dom.context.elements.get(`${elementId}-shadow`);
-      if (oldShadow) {
-        oldShadow.dispose();
-        dom.context.elements.delete(`${elementId}-shadow`);
-      }
-      // Calculate worldBorderRadius and polygonType for shadow
-      const shadowBorderRadius = (hoverStyle?.borderRadius !== undefined ? hoverRadius : safeNormalRadius) * pixelToWorldScale;
-      const shadowPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
-      // Ensure parent is a Mesh
-      const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
-      // Add or update shadow mesh for hover
-      this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
     }));
 
     mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
@@ -1595,8 +1612,9 @@ export class ElementService {
           }
         }
         // Create new border meshes for normal
-        const borderWidth = this.parseBorderWidth(render, normalStyle.borderWidth);
-        const borderColor = render.actions.style.parseBackgroundColor(normalStyle.borderColor);
+        const borderWidth = this.parseBorderWidth(render, mergedStyle.borderWidth);
+        const borderColor = render.actions.style.parseBackgroundColor(mergedStyle.borderColor);
+        console.log(`[BORDER DEBUG] ${elementId} normal - borderWidth: ${borderWidth}, borderColor: ${JSON.stringify(borderColor)}, borderStyle: ${mergedStyle?.borderStyle}`);
         const borderMeshes = render.actions.mesh.createPolygonBorder(
           `${elementId}-border`,
           polygonType,
@@ -1605,28 +1623,32 @@ export class ElementService {
           borderWidth,
           worldBorderRadius
         );
+        
+        // Parent all border frames to main mesh BEFORE positioning for correct transform inheritance
+        borderMeshes.forEach(borderMesh => {
+          render.actions.mesh.parentMesh(borderMesh, mainMesh);
+        });
+        
         const borderZPosition = mainMesh.position.z + 0.001;
         render.actions.mesh.positionBorderFrames(
           borderMeshes,
-          mainMesh.position.x,
-          mainMesh.position.y,
+          0, // x relative to main mesh
+          0, // y relative to main mesh
           borderZPosition,
           worldWidth,
           worldHeight,
-          borderWidth
+          borderWidth * pixelToWorldScale
         );
-        const borderOpacity = render.actions.style.parseOpacity(normalStyle.opacity);
+        const borderOpacity = render.actions.style.parseOpacity(mergedStyle.opacity);
         const borderMaterial = render.actions.mesh.createMaterial(
           `${elementId}-border-material`,
           borderColor,
           undefined,
           borderOpacity
         );
+        
         borderMeshes.forEach((borderMesh, index) => {
           borderMesh.material = borderMaterial;
-          if (mainMesh.parent && mainMesh.parent instanceof Mesh) {
-            render.actions.mesh.parentMesh(borderMesh, mainMesh.parent);
-          }
           dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
           console.log(`[ELEMENT HOVER DEBUG] Created normal border mesh: ${elementId}-border-${index}`);
         });
