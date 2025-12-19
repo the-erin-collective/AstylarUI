@@ -306,7 +306,7 @@ export class InputElementService {
                 break;
 
             case InputType.Select:
-                this.selectManager.disposeSelectElement(inputElement as SelectElement);
+                this.selectManager.disposeSelect(inputElement as SelectElement);
                 break;
         }
     }

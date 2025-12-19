@@ -4,6 +4,8 @@ import { BabylonRender } from '../interfaces/render.types';
 import { DOMElement } from '../../../types/dom-element';
 import { StyleRule } from '../../../types/style-rule';
 import { CheckboxInput, RadioInput, InputType, ValidationState } from '../../../types/input-types';
+import { TextRenderingService } from '../../text/text-rendering.service';
+import { BabylonMeshService } from '../../babylon-mesh.service';
 
 @Injectable({
     providedIn: 'root'
@@ -13,7 +15,10 @@ export class CheckboxManager {
     private readonly CHECK_MARK_SIZE = 0.3;
     private radioGroups: Map<string, RadioInput[]> = new Map();
 
-    constructor() { }
+    constructor(
+        private textRenderingService: TextRenderingService,
+        private babylonMeshService: BabylonMeshService
+    ) { }
 
     /**
      * Creates a checkbox input
@@ -46,7 +51,7 @@ export class CheckboxManager {
         };
 
         checkbox.checkIndicatorMesh = this.createCheckIndicator(checkbox, render.scene);
-        checkbox.labelMesh = this.createLabelMesh(checkbox, render.scene, style);
+        checkbox.labelMesh = this.createLabelMesh(checkbox, render, style);
 
         return checkbox;
     }
@@ -83,7 +88,7 @@ export class CheckboxManager {
         };
 
         radio.selectionIndicatorMesh = this.createSelectionIndicator(radio, render.scene);
-        radio.labelMesh = this.createLabelMesh(radio, render.scene, style);
+        radio.labelMesh = this.createLabelMesh(radio, render, style);
 
         this.registerRadioButton(radio);
 
@@ -255,26 +260,71 @@ export class CheckboxManager {
     /**
      * Creates label mesh for checkbox or radio button
      */
-    private createLabelMesh(input: CheckboxInput | RadioInput, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        // Create a simple plane for the label
-        // In production, this would use TextRenderingService
-        const labelPlane = BABYLON.MeshBuilder.CreatePlane(`label_${input.element.id}`, {
-            width: 1.5,
-            height: 0.3
-        }, scene);
+    private createLabelMesh(input: CheckboxInput | RadioInput, render: BabylonRender, style: StyleRule): BABYLON.Mesh {
+        const textContent = input.value || 'Option'; // Use value as label
 
-        labelPlane.parent = input.mesh;
-        labelPlane.position.x = 1.0; // To the right of checkbox/radio
-        labelPlane.position.z = 0.01;
-        labelPlane.isPickable = true; // Allow clicking label
+        const textStyle = { ...style };
+        if (!textStyle.fontSize) textStyle.fontSize = '14px';
+        if (!textStyle.fontFamily) textStyle.fontFamily = 'Arial';
+        if (!textStyle.color) textStyle.color = '#FFFFFF'; // Default to white for labels
+        textStyle.textAlign = 'left';
 
-        // Create label material
-        const material = new BABYLON.StandardMaterial(`labelMaterial_${input.element.id}`, scene);
-        material.diffuseColor = BABYLON.Color3.Black();
-        labelPlane.material = material;
+        try {
+            const texture = this.textRenderingService.renderTextToTexture(
+                input.element,
+                textContent,
+                textStyle
+            );
 
-        return labelPlane;
+            // Get texture dimensions
+            const textureSize = texture.getSize();
+            const textureWidthPx = textureSize.width;
+            const textureHeightPx = textureSize.height;
+
+            // Convert to world units using camera's pixel-to-world scale
+            const scale = render.actions.camera.getPixelToWorldScale();
+            const textureWidth = textureWidthPx * scale;
+            const textureHeight = textureHeightPx * scale;
+
+            // Create text mesh using BabylonMeshService
+            const labelPlane = this.babylonMeshService.createTextMesh(
+                `label_${input.element.id}`,
+                texture,
+                textureWidth,
+                textureHeight
+            );
+
+            labelPlane.parent = input.mesh;
+            // Position to the right of the checkbox/radio
+            // Checkbox size is roughly 0.5, so center is 0. Right edge is 0.25.
+            // Add padding.
+            const padding = 0.1;
+            labelPlane.position.x = 0.25 + (textureWidth / 2) + padding;
+            labelPlane.position.z = 0.0; // Same plane
+            labelPlane.isPickable = true; // Allow clicking label
+
+            // Add interaction
+            labelPlane.actionManager = new BABYLON.ActionManager(render.scene);
+            labelPlane.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => {
+                    if (input.type === InputType.Checkbox) {
+                        this.toggleCheckbox(input as CheckboxInput);
+                    } else if (input.type === InputType.Radio) {
+                        this.selectRadioButton(input as RadioInput);
+                    }
+                }
+            ));
+
+            return labelPlane;
+
+        } catch (error) {
+            console.error('Error creating label mesh:', error);
+            // Fallback
+            return BABYLON.MeshBuilder.CreatePlane('fallback_label', { size: 0.5 }, render.scene);
+        }
     }
+
 
     /**
      * Registers a radio button in its group

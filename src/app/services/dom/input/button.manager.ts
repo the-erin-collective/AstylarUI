@@ -6,6 +6,7 @@ import { StyleRule } from '../../../types/style-rule';
 import { BabylonRender } from '../interfaces/render.types';
 import { TextRenderingService } from '../../text/text-rendering.service';
 import { ElementBorderService } from '../elements/element-border.service';
+import { BabylonMeshService } from '../../babylon-mesh.service';
 
 /**
  * Service responsible for managing button elements
@@ -19,7 +20,8 @@ export class ButtonManager {
 
     constructor(
         private textRenderingService: TextRenderingService,
-        private borderService: ElementBorderService
+        private borderService: ElementBorderService,
+        private babylonMeshService: BabylonMeshService
     ) { }
 
     /**
@@ -54,7 +56,7 @@ export class ButtonManager {
             element,
             type: InputType.Button,
             value: element.value || element.textContent || '',
-            label: element.textContent || element.value || 'Button',
+            label: element.value || element.textContent || 'Button',
             state: ButtonState.Normal,
             buttonType,
             focused: false,
@@ -67,7 +69,7 @@ export class ButtonManager {
 
         // Create label mesh
         if (button.label) {
-            button.labelMesh = this.createLabelMesh(button, render.scene, style);
+            button.labelMesh = this.createLabelMesh(button, render, style);
         }
 
         // Apply initial state styling
@@ -246,8 +248,8 @@ export class ButtonManager {
     /**
      * Creates the button label mesh
      */
-    private createLabelMesh(button: Button, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        const textContent = button.element.textContent || 'Button';
+    private createLabelMesh(button: Button, render: BabylonRender, style: StyleRule): BABYLON.Mesh {
+        const textContent = button.label || 'Button';
 
         const textStyle = { ...style };
         if (!textStyle.fontSize) textStyle.fontSize = '16px';
@@ -261,38 +263,40 @@ export class ButtonManager {
                 textStyle
             );
 
-            const buttonWidth = button.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
-            const buttonHeight = button.mesh.getBoundingInfo().boundingBox.extendSize.y * 2;
+            // Get texture dimensions
+            const textureSize = texture.getSize();
+            const textureWidthPx = textureSize.width;
+            const textureHeightPx = textureSize.height;
 
-            const labelPlane = BABYLON.MeshBuilder.CreatePlane(`buttonLabel_${button.element.id}`, {
-                width: buttonWidth,
-                height: buttonHeight
-            }, scene);
+            // Convert to world units using camera's pixel-to-world scale
+            const scale = render.actions.camera.getPixelToWorldScale();
+            const textureWidth = textureWidthPx * scale;
+            const textureHeight = textureHeightPx * scale;
+
+            // Use BabylonMeshService to create text mesh (same as working text elements)
+            const labelPlane = this.babylonMeshService.createTextMesh(
+                `buttonLabel_${button.element.id}`,
+                texture,
+                textureWidth,
+                textureHeight
+            );
 
             labelPlane.parent = button.mesh;
-            labelPlane.position.z = -0.06;
+            labelPlane.position.z = -0.15; // Slightly in front
             labelPlane.isPickable = false;
 
-            const material = new BABYLON.StandardMaterial(`labelMaterial_${button.element.id}`, scene);
-            material.diffuseTexture = texture;
-            material.diffuseTexture.hasAlpha = true;
-            material.useAlphaFromDiffuseTexture = true;
-            material.emissiveColor = BABYLON.Color3.White();
-            material.disableLighting = true;
-
-            labelPlane.material = material;
             return labelPlane;
         } catch (error) {
             console.error('Error creating button label:', error);
-            const labelPlane = BABYLON.MeshBuilder.CreatePlane(`buttonLabel_${button.element.id}`, {
+            const labelPlane = BABYLON.MeshBuilder.CreatePlane(`buttonLabel_${button.element.id}_fallback`, {
                 width: 1.2,
                 height: 0.3
-            }, scene);
+            }, render.scene);
 
             labelPlane.parent = button.mesh;
             labelPlane.position.z = -0.06;
 
-            const material = new BABYLON.StandardMaterial(`labelMaterial_${button.element.id}`, scene);
+            const material = new BABYLON.StandardMaterial(`labelMaterial_${button.element.id}`, render.scene);
             material.diffuseColor = BABYLON.Color3.Black();
             labelPlane.material = material;
 

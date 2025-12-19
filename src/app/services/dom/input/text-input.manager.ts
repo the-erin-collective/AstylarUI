@@ -6,6 +6,7 @@ import { TextCursorRenderer } from './text-cursor.renderer';
 import { TextRenderingService } from '../../text/text-rendering.service';
 import { StyleRule } from '../../../types/style-rule';
 import { BabylonRender } from '../interfaces/render.types';
+import { BabylonMeshService } from '../../babylon-mesh.service';
 
 /**
  * Service responsible for managing text input fields
@@ -16,12 +17,10 @@ import { BabylonRender } from '../interfaces/render.types';
 export class TextInputManager {
     constructor(
         private cursorRenderer: TextCursorRenderer,
-        private textRenderingService: TextRenderingService
+        private textRenderingService: TextRenderingService,
+        private babylonMeshService: BabylonMeshService
     ) { }
 
-    /**
-     * Creates a text input element
-     */
     /**
      * Creates a text input element
      */
@@ -72,17 +71,9 @@ export class TextInputManager {
             cursorState
         };
 
-        // Create cursor mesh
-        // TODO: Re-enable cursor creation once text input is fully implemented
-        // const cursorHeight = this.calculateCursorHeight(style, render);
-        // if (render.scene) {
-        //     textInput.cursorMesh = this.cursorRenderer.createCursor(render.scene, cursorHeight);
-        //     textInput.cursorMesh.parent = inputMesh;
-        // }
-
         // Create text mesh if there's initial content or placeholder
         if ((textInput.textContent || textInput.placeholder) && render.scene) {
-            this.updateTextDisplay(textInput, render.scene, style);
+            this.updateTextDisplay(textInput, render, style);
         }
 
         return textInput;
@@ -91,7 +82,7 @@ export class TextInputManager {
     /**
      * Updates the text display mesh
      */
-    private updateTextDisplay(textInput: TextInput, scene: BABYLON.Scene, style: StyleRule): void {
+    private updateTextDisplay(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
         // Dispose existing text mesh
         if (textInput.textMesh) {
             textInput.textMesh.dispose();
@@ -103,6 +94,8 @@ export class TextInputManager {
 
         // Determine style (placeholder vs normal)
         const textStyle = { ...style };
+        if (!textStyle.color) textStyle.color = '#000000'; // Default to black
+
         if (!textInput.value && textInput.placeholder) {
             textStyle.color = '#888888'; // Placeholder color
             // Ensure font style is present
@@ -112,45 +105,47 @@ export class TextInputManager {
 
         try {
             // Get texture from service
-            // We use the mesh width as a rough guide for max width, but converted to pixels?
-            // For now, let's pass undefined for maxWidth to avoid wrapping issues until we have precise pixel width
             const texture = this.textRenderingService.renderTextToTexture(
                 textInput.element,
                 textToRender,
                 textStyle
             );
 
-            // Create plane for text
-            // Use the input mesh dimensions
-            const width = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
-            const height = textInput.mesh.getBoundingInfo().boundingBox.extendSize.y * 2;
+            // Get texture dimensions
+            const textureSize = texture.getSize();
+            const textureWidthPx = textureSize.width;
+            const textureHeightPx = textureSize.height;
 
-            const textMesh = BABYLON.MeshBuilder.CreatePlane(`text_${textInput.element.id}`, {
-                width: width,
-                height: height
-            }, scene);
+            // Convert to world units using camera's pixel-to-world scale
+            const scale = render.actions.camera.getPixelToWorldScale();
+            const textureWidth = textureWidthPx * scale;
+            const textureHeight = textureHeightPx * scale;
 
-            const material = new BABYLON.StandardMaterial(`textMaterial_${textInput.element.id}`, scene);
-            material.diffuseTexture = texture;
-            material.diffuseTexture.hasAlpha = true;
-            material.useAlphaFromDiffuseTexture = true;
-            material.emissiveColor = BABYLON.Color3.White();
-            material.disableLighting = true;
+            // Create text mesh using BabylonMeshService
+            const textMesh = this.babylonMeshService.createTextMesh(
+                `text_${textInput.element.id}`,
+                texture,
+                textureWidth,
+                textureHeight
+            );
 
-            textMesh.material = material;
-
-            // Parent to input mesh and offset slightly
             textMesh.parent = textInput.mesh;
-            textMesh.position.z = -0.01; // Slightly in front
+            textMesh.position.z = -0.15; // Slightly in front
+            textMesh.isPickable = false;
+
+            // Align text to start
+            // Calculate offset based on texture width and input width
+            const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
+            // Center is 0, left edge is -inputWidth/2. Add padding.
+            const padding = 0.1; // World units padding
+            textMesh.position.x = -inputWidth / 2 + textureWidth / 2 + padding;
 
             textInput.textMesh = textMesh;
 
         } catch (error) {
-            console.error('Error rendering text:', error);
+            console.error('Error creating text input mesh:', error);
         }
     }
-
-    // ... (insertTextAtCursor, deleteCharacter, moveCursor, selectText, clearSelection, deleteSelection, renderSelection methods remain unchanged for now)
 
     /**
      * Creates the input field background mesh
@@ -171,11 +166,15 @@ export class TextInputManager {
             sideOrientation: BABYLON.Mesh.DOUBLESIDE // Ensure visibility from both sides
         }, render.scene);
 
-        // Create material
+        // Create material with CSS background color
         const material = new BABYLON.StandardMaterial(`inputMaterial_${element.id}`, render.scene);
-        material.diffuseColor = BABYLON.Color3.White();
+
+        // Apply CSS background color instead of hard-coded white
+        const bgColor = this.parseColor(style?.background);
+        material.diffuseColor = bgColor;
         material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
         material.backFaceCulling = false; // Ensure visibility
+
         inputMesh.material = material;
 
         return inputMesh;
@@ -212,6 +211,37 @@ export class TextInputManager {
         if (!value) return undefined;
         const num = parseFloat(value);
         return isNaN(num) ? undefined : num;
+    }
+
+    /**
+     * Parses CSS color to Babylon Color3
+     */
+    private parseColor(color: string | undefined): BABYLON.Color3 {
+        if (!color) return BABYLON.Color3.White();
+
+        // Handle hex colors
+        if (color.startsWith('#')) {
+            const hex = color.substring(1);
+            const r = parseInt(hex.substring(0, 2), 16) / 255;
+            const g = parseInt(hex.substring(2, 4), 16) / 255;
+            const b = parseInt(hex.substring(4, 6), 16) / 255;
+            return new BABYLON.Color3(r, g, b);
+        }
+
+        // Handle rgb/rgba
+        if (color.startsWith('rgb')) {
+            const match = color.match(/\d+/g);
+            if (match && match.length >= 3) {
+                return new BABYLON.Color3(
+                    parseInt(match[0]) / 255,
+                    parseInt(match[1]) / 255,
+                    parseInt(match[2]) / 255
+                );
+            }
+        }
+
+        // Default fallback
+        return BABYLON.Color3.White();
     }
 
     /**

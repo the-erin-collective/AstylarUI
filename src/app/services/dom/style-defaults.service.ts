@@ -131,35 +131,6 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         borderRadius: '4px',
     },
 
-    // INPUT ELEMENTS
-    input: {
-        display: 'inline-block',
-        background: 'rgba(0, 0, 0, 0.2)',     // Semi-transparent dark background
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: '#666666',                // Medium gray border
-        borderRadius: '4px',
-        padding: '8px',
-        cursor: 'text',
-        fontSize: '14px',
-        color: '#ffffff',                      // White text
-    },
-
-    // BUTTON ELEMENTS
-    button: {
-        display: 'inline-block',
-        background: '#2c3e50',                 // Default button fill (dark blue-gray)
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: '#34495e',
-        borderRadius: '4px',
-        padding: '8px 16px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        color: '#ffffff',
-        fontWeight: 'bold',
-    },
-
     // CHECKBOX ELEMENTS
     checkbox: {
         display: 'inline-block',
@@ -185,19 +156,40 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         height: '20px',
         cursor: 'pointer',
     },
-
-    // SELECT DROPDOWN ELEMENTS
-    select: {
-        display: 'inline-block',
-        background: 'rgba(0, 0, 0, 0.2)',
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: '#666666',
+    input: {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: '#2c3e50',
+        background: '#ffffff',
         borderRadius: '4px',
+        borderWidth: '1px',
+        borderColor: '#bdc3c7',
+        borderStyle: 'solid',
         padding: '8px',
-        cursor: 'pointer',
-        fontSize: '14px',
+        height: '40px'
+    },
+    button: {
+        fontSize: '16px',
+        fontFamily: 'Arial',
         color: '#ffffff',
+        background: '#3498db',
+        borderRadius: '4px',
+        borderWidth: '0px',
+        padding: '10px 20px',
+        height: '40px',
+        cursor: 'pointer'
+    },
+    select: {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: '#2c3e50',
+        background: '#ffffff',
+        borderRadius: '4px',
+        borderWidth: '1px',
+        borderColor: '#bdc3c7',
+        borderStyle: 'solid',
+        padding: '8px',
+        height: '40px'
     },
 };
 
