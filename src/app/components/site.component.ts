@@ -9,6 +9,7 @@ import { SiteDataService } from '../services/site-data.service';
 import { BabylonRender } from '../services/dom/interfaces/render.types';
 import { TextureService } from '../services/texture.service';
 import { StyleService } from '../services/dom/style.service';
+import { StyleDefaultsService } from '../services/dom/style-defaults.service';
 
 @Component({
   selector: 'app-site',
@@ -182,6 +183,7 @@ export class SiteComponent {
   private textureService = inject(TextureService);
   private styleService = inject(StyleService);
   private siteDataService = inject(SiteDataService);
+  private styleDefaultsService = inject(StyleDefaultsService);
 
   // ViewChild for canvas element
   private babylonCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('babylonCanvas');
@@ -262,7 +264,7 @@ export class SiteComponent {
           findStyleForElement: this.styleService.findStyleForElement.bind(this.styleService),
           parseBackgroundColor: this.styleService.parseBackgroundColor.bind(this.styleService),
           parseOpacity: this.styleService.parseOpacity.bind(this.styleService),
-          getElementTypeDefaults: this.styleService.getElementTypeDefaults.bind(this.styleService),
+          getElementTypeDefaults: this.styleDefaultsService.getElementTypeDefaults.bind(this.styleService),
           parseAlignContent: this.styleService.parseAlignContent.bind(this.styleService),
           parseFlexGrow: this.styleService.parseFlexGrow.bind(this.styleService),
           parseFlexShrink: this.styleService.parseFlexShrink.bind(this.styleService),

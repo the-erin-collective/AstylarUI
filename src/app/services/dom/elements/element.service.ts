@@ -5,11 +5,13 @@ import { StyleRule } from '../../../types/style-rule';
 import { BabylonDOM } from '../interfaces/dom.types';
 import { TransformData } from '../../../types/transform-data';
 import { BabylonRender } from '../interfaces/render.types';
+import { StyleDefaultsService } from '../style-defaults.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ElementService {
+  constructor(private styleDefaults: StyleDefaultsService) {}
 
   public processChildren(dom: BabylonDOM, render: BabylonRender, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement?: DOMElement): void {
     console.log(`🔄 Processing ${children.length} children for parent:`, parent.name);
@@ -19,9 +21,9 @@ export class ElementService {
     const isListContainer = parentElement?.type === 'ul' || parentElement?.type === 'ol';
 
     // Check if parent is a flex container
-    const isFlexContainer = parentElement ? dom.actions.isFlexContainer(render, parentElement, styles) : false;
+   // const isFlexContainer = parentElement ? dom.actions.isFlexContainer(render, parentElement, styles) : false;
 
-    console.log(`🔍 Parent element type: ${parentElement?.type}, isListContainer: ${isListContainer}, isFlexContainer: ${isFlexContainer}`);
+    console.log(`🔍 Parent element type: ${parentElement?.type}, isListContainer: ${isListContainer}`);
 
     if (isListContainer) {
       console.log(`📋 Parent is list container (${parentElement?.type}), applying automatic stacking to ${children.length} items`);
@@ -32,7 +34,7 @@ export class ElementService {
         console.error(`❌ Error in processListChildren for ${parentElement?.type}:`, error);
         throw error;
       }
-    } else if (isFlexContainer && parentElement) {
+    }/* else if (isFlexContainer && parentElement) {
       console.log(`🔀 Parent is flex container, applying flexbox layout to ${children.length} items`);
       try {
         dom.actions.processFlexChildren(dom, render, children, parent, styles, parentElement);
@@ -41,7 +43,7 @@ export class ElementService {
         console.error(`❌ Error in processFlexChildren for ${parentElement?.id}:`, error);
         throw error;
       }
-    } else {
+    } */else {
       console.log(`📄 Parent is NOT a list or flex container, using standard processing`);
       // Standard processing for non-list, non-flex elements
       children.forEach((child, index) => {
@@ -72,7 +74,7 @@ export class ElementService {
     const explicitStyle = elementStyles?.normal;
 
     // Get default styles for this element type
-    const typeDefaults = render.actions.style.getElementTypeDefaults(element.type);
+    const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
     console.log(`🎨 Type defaults for ${element.type}:`, typeDefaults);
 
     // Merge defaults with explicit styles (explicit styles override defaults)
@@ -100,12 +102,11 @@ export class ElementService {
     // Parse border radius and scale it to world coordinates
     const borderRadiusPixels = this.parseBorderRadius(style?.borderRadius);
 
-    // Scale border radius from pixels to world coordinates using a reasonable conversion factor
-    // Based on typical screen dimensions, 1 world unit ≈ 100-200 pixels in our coordinate system
-    const pixelToWorldScale = 0.01; // Adjust this factor to get the right visual balance
-    const borderRadius = borderRadiusPixels * pixelToWorldScale;
+    // Scale border radius from pixels to world coordinates using camera scale factor
+    const scaleFactor = render.actions.camera.getPixelToWorldScale();
+    const borderRadius = borderRadiusPixels * scaleFactor;
 
-    console.log(`🔧 Border radius scaling: ${borderRadiusPixels}px → ${borderRadius.toFixed(3)} world units (scale: ${pixelToWorldScale}, shape: ${dimensions.width.toFixed(1)}×${dimensions.height.toFixed(1)})`);
+    console.log(`🔧 Border radius scaling: ${borderRadiusPixels}px → ${borderRadius.toFixed(3)} world units (scale: ${scaleFactor.toFixed(6)}, shape: ${dimensions.width.toFixed(1)}×${dimensions.height.toFixed(1)})`);
 
     // Parse polygon properties
     const polygonType = this.parsePolygonType(style?.polygonType);
@@ -140,6 +141,7 @@ export class ElementService {
         borderRadius
       );
     }
+    console.log(`[BABYLON MESH DEBUG] Created mesh for ${element.id} (type: ${element.type}, polygon: ${polygonType}) with dimensions: width=${dimensions.width}, height=${dimensions.height}, borderRadius=${borderRadius}`);
 
     // Calculate Z position based on z-index, but prefer flex position Z if available
     const zIndex = this.parseZIndex(style?.zIndex);
@@ -162,17 +164,16 @@ export class ElementService {
 
     // Use flex positioning if provided, otherwise use normal positioning
     if (flexPosition) {
-      // For flex positioning, use the flex coordinates and Z position directly
-      // The Z position already includes index-based layering when coming from flex layout
-      actualZPosition = zPosition; // Store the actual Z position used
-      console.log(`🔀 Using flex positioning for ${element.id}: (${flexPosition.x.toFixed(2)}, ${flexPosition.y.toFixed(2)}, ${zPosition.toFixed(6)})`);
-      render.actions.mesh.positionMesh(mesh, flexPosition.x, flexPosition.y, zPosition);
+      const scaleFactor = render.actions.camera.getPixelToWorldScale();
+      const worldX = flexPosition.x * scaleFactor;
+      const worldY = flexPosition.y * scaleFactor;
+      render.actions.mesh.positionMesh(mesh, worldX, worldY, zPosition);
+      render.actions.mesh.parentMesh(mesh, parent);
+      console.log(`🔀 Using flex positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from flex: ${flexPosition.x}, ${flexPosition.y}) scaleFactor: ${scaleFactor}`);
     } else {
       render.actions.mesh.positionMesh(mesh, dimensions.x, dimensions.y, zPosition);
+      render.actions.mesh.parentMesh(mesh, parent);
     }
-
-    // Parent the mesh so it inherits parent's transformations
-    render.actions.mesh.parentMesh(mesh, parent);
 
     // Apply material (start with normal state) - pass merged style that includes type defaults
     this.applyElementMaterial(dom, render, mesh, element, false, style);
@@ -187,9 +188,9 @@ export class ElementService {
     const boxShadow = this.parseBoxShadow(style?.boxShadow);
     if (boxShadow) {
       // Scale box shadow values from pixels to world coordinates
-      const scaledOffsetX = boxShadow.offsetX * pixelToWorldScale;
-      const scaledOffsetY = boxShadow.offsetY * pixelToWorldScale;
-      const scaledBlur = boxShadow.blur * pixelToWorldScale;
+      const scaledOffsetX = boxShadow.offsetX * scaleFactor;
+      const scaledOffsetY = boxShadow.offsetY * scaleFactor;
+      const scaledBlur = boxShadow.blur * scaleFactor;
 
       console.log(`🎭 Box shadow scaling for ${element.id}: offset (${boxShadow.offsetX}px, ${boxShadow.offsetY}px) → (${scaledOffsetX.toFixed(3)}, ${scaledOffsetY.toFixed(3)}) world units, blur ${boxShadow.blur}px → ${scaledBlur.toFixed(3)} world units`);
 
@@ -298,7 +299,6 @@ export class ElementService {
       position: mesh.position,
       dimensions,
       parentId: parent.name,
-      style
     });
 
     // Store reference
@@ -327,7 +327,7 @@ export class ElementService {
     const elementType = dom.context.elementTypes.get(elementId) || 'div';
     const element = { id: elementId, type: elementType } as DOMElement;
     const elementStyles = dom.context.elementStyles.get(elementId);
-    const typeDefaults = render.actions.style.getElementTypeDefaults(elementType);
+    const typeDefaults = this.styleDefaults.getElementTypeDefaults(elementType);
     const style = styleType === 'hover'
       ? { ...typeDefaults, ...elementStyles?.normal, ...elementStyles?.hover, selector: `#${elementId}` }
       : { ...typeDefaults, ...elementStyles?.normal, selector: `#${elementId}` };
@@ -446,6 +446,11 @@ export class ElementService {
         const scaledMarginLeft = margin.left * (render.actions.camera.getPixelToWorldScale()); // Use camera-calculated scale factor
 
         x = (-parentWidth / 2) + scaledMarginLeft + ((leftPercent / 100) * availableWidth) + (width / 2);
+        
+        // FIX: Flip X coordinate to correct the coordinate system issue
+        // The coordinate calculation is correct, but the visual output is flipped
+        // This suggests a fundamental coordinate system mismatch
+        x = -x;
       }
 
       if (style.top !== undefined) {
@@ -1354,7 +1359,7 @@ export class ElementService {
       const elementType = dom.context.elementTypes.get(elementId) || 'div';
       const element = { id: elementId, type: elementType } as DOMElement;
       const elementStyles = dom.context.elementStyles.get(elementId);
-      const typeDefaults = render.actions.style.getElementTypeDefaults(element.type);
+      const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
       const normalStyle = (elementStyles?.normal || {}) as StyleRule;
       const hoverStyle = (elementStyles?.hover || {}) as StyleRule;
       const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle, ...hoverStyle, selector: `#${elementId}` };
@@ -1498,7 +1503,7 @@ export class ElementService {
       const elementType = dom.context.elementTypes.get(elementId) || 'div';
       const element = { id: elementId, type: elementType } as DOMElement;
       const elementStyles = dom.context.elementStyles.get(elementId);
-      const typeDefaults = render.actions.style.getElementTypeDefaults(element.type);
+      const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
       const normalStyle = (elementStyles?.normal || {}) as StyleRule;
       const hoverStyle = (elementStyles?.hover || {}) as StyleRule;
       

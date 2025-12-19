@@ -30,7 +30,7 @@ export class BabylonCameraService {
       throw new Error('Camera not initialized');
     }
 
-    const cameraDistance = 30; // Camera is at Z=+30
+    const cameraDistance = Math.abs(this.camera.position.z); // Use actual camera distance
     const fov = this.camera.fov || Math.PI / 3; // Default FOV is about 60 degrees
     
     // Calculate height based on FOV: height = 2 * distance * tan(fov/2)

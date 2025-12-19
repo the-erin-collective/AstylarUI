@@ -7,7 +7,11 @@ export interface StyleRule {
   bottom?: string;
   width?: string;
   height?: string;
-
+  minWidth?: string;
+  maxWidth?: string;
+  minHeight?: string;
+  maxHeight?: string;
+  
   // Background and border
   background?: string;
   borderWidth?: string;

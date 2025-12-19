@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Scene, Color3, Vector3, Mesh, ActionManager, ExecuteCodeAction, Texture, StandardMaterial, Material, PointerEventTypes } from '@babylonjs/core';
 import { StyleRule } from '../../types/style-rule';
 import { SiteData } from '../../types/site-data';
-import { FlexService } from './elements/flex.service';
+//import { FlexService } from './elements/flex.service';
 import { BabylonDOM } from './interfaces/dom.types';
 import { RootService } from './elements/root.service';
 import { ListService } from './elements/list.service';
@@ -23,7 +23,7 @@ export class BabylonDOMService {
   private elementTypes: Map<string, string> = new Map(); // Store element types for hover handling
   private elementDimensions: Map<string, { width: number, height: number, padding: { top: number; right: number; bottom: number; left: number } }> = new Map();
 
-  constructor( private flexService: FlexService, private rootService: RootService, private listService: ListService, private elementService: ElementService, private styleService: StyleService) { }
+  constructor( /*private flexService: FlexService, */private rootService: RootService, private listService: ListService, private elementService: ElementService, private styleService: StyleService) { }
 
   public render?: BabylonRender;
 
@@ -32,9 +32,9 @@ export class BabylonDOMService {
       actions: {
         processChildren: this.elementService.processChildren.bind(this.elementService),
         createElement: this.elementService.createElement.bind(this.elementService),
-        isFlexContainer: this.flexService.isFlexContainer.bind(this.flexService),
+        //isFlexContainer: this.flexService.isFlexContainer.bind(this.flexService),
         processListChildren: this.listService.processListChildren.bind(this.listService),
-        processFlexChildren: this.flexService.processFlexChildren.bind(this.flexService),
+        //processFlexChildren: this.flexService.processFlexChildren.bind(this.flexService),
         requestElementRecreation: this.elementService.requestElementRecreation.bind(this.elementService),
       },
       context: {

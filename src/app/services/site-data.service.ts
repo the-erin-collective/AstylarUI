@@ -216,6 +216,7 @@ export class SiteDataService {
         // List items for unordered list (will be automatically positioned)
         {
           selector: '#ul-item-1',
+          background: '#f0f0f0', // Added default background for visibility
           // No positioning needed - automatic stacking
         },
         {
@@ -224,8 +225,9 @@ export class SiteDataService {
         },
         {
           selector: '#ul-item-3',
-          borderColor: '#e74c3c',
-          borderWidth: '2px'
+          borderColor: '#cccccc', // Added default border color
+          borderWidth: '2px',
+          background: '#f0f0f0', // Added default background for visibility
         },
 
         // === ORDERED LIST (Right Side) ===
@@ -248,6 +250,7 @@ export class SiteDataService {
         },
         {
           selector: '#ol-item-2',
+          background: '#f0f0f0', // Added default background for visibility
           // Default list item styling
         },
         {
@@ -418,6 +421,7 @@ export class SiteDataService {
         // Relative link (same window) - top-left
         {
           selector: '#relative-link',
+          background: '#196099',
           top: '15%',
           left: '10%',
           width: '25%',
@@ -440,6 +444,8 @@ export class SiteDataService {
           left: '40%',
           width: '25%',
           height: '12%',
+          background: '#609919',
+          borderColor: '#19bb42',
           href: 'https://www.example.com',
           borderWidth: '15px',
           target: '_blank'
@@ -959,7 +965,7 @@ export class SiteDataService {
           selector: '#flex-nested-left-2',
           background: '#9b59b6', // Purple
           borderWidth: '1px',
-          borderColor: '#8e44ad',
+          borderColor: '#cccccc', // Added default border color
           borderStyle: 'solid',
           borderRadius: '50%',
           flexBasis: '25%'
@@ -1188,10 +1194,10 @@ export class SiteDataService {
         // === TEST 1: Wrap with many items ===
         {
           selector: '#flex-wrap-container',
-          top: '5%',
+          top: '15%',
           left: '5%',
           width: '40%',
-          height: '40%',
+          height: '30%',
           background: '#34495e',
           borderWidth: '2px',
           borderColor: '#5d6d7e',
@@ -1201,6 +1207,7 @@ export class SiteDataService {
           flexDirection: 'row',
           justifyContent: 'flex-start',
           alignItems: 'flex-start',
+          alignContent: 'flex-start',
           flexWrap: 'wrap',
           gap: '10px' // Test gap between items
         },
@@ -1213,7 +1220,10 @@ export class SiteDataService {
           borderColor: '#c0392b',
           borderStyle: 'solid',
           borderRadius: '4px',
-          flexBasis: '30%'
+          flexBasis: '30%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '60px'
         },
         {
           selector: '#wrap-item-2',
@@ -1222,7 +1232,10 @@ export class SiteDataService {
           borderColor: '#e67e22',
           borderStyle: 'solid',
           borderRadius: '4px',
-          flexBasis: '35%'
+          flexBasis: '35%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '60px'
         },
         {
           selector: '#wrap-item-3',
@@ -1231,7 +1244,10 @@ export class SiteDataService {
           borderColor: '#2ecc71',
           borderStyle: 'solid',
           borderRadius: '4px',
-          flexBasis: '40%'
+          flexBasis: '40%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '60px'
         },
         {
           selector: '#wrap-item-4',
@@ -1240,7 +1256,10 @@ export class SiteDataService {
           borderColor: '#2980b9',
           borderStyle: 'solid',
           borderRadius: '4px',
-          flexBasis: '25%'
+          flexBasis: '25%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '60px'
         },
         {
           selector: '#wrap-item-5',
@@ -1249,7 +1268,10 @@ export class SiteDataService {
           borderColor: '#8e44ad',
           borderStyle: 'solid',
           borderRadius: '4px',
-          flexBasis: '30%'
+          flexBasis: '30%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '60px'
         },
         {
           selector: '#wrap-item-6',
@@ -1258,16 +1280,19 @@ export class SiteDataService {
           borderColor: '#c2185b',
           borderStyle: 'solid',
           borderRadius: '4px',
-          flexBasis: '45%'
+          flexBasis: '45%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '60px'
         },
 
         // === TEST 2: Wrap-reverse ===
         {
           selector: '#flex-wrap-reverse-container',
-          top: '5%',
+          top: '15%',
           left: '55%',
           width: '40%',
-          height: '40%',
+          height: '30%',
           background: '#8e44ad',
           borderWidth: '2px',
           borderColor: '#9b59b6',
@@ -1277,6 +1302,7 @@ export class SiteDataService {
           flexDirection: 'row',
           justifyContent: 'center',
           alignItems: 'center',
+          alignContent: 'flex-start',
           flexWrap: 'wrap-reverse',
           rowGap: '15px',
           columnGap: '8px' // Test separate row and column gaps
@@ -1290,7 +1316,10 @@ export class SiteDataService {
           borderColor: '#f39c12',
           borderStyle: 'solid',
           borderRadius: '50%',
-          flexBasis: '25%'
+          flexBasis: '25%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '50px'
         },
         {
           selector: '#wrap-rev-item-2',
@@ -1299,7 +1328,10 @@ export class SiteDataService {
           borderColor: '#d35400',
           borderStyle: 'solid',
           borderRadius: '50%',
-          flexBasis: '30%'
+          flexBasis: '30%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '50px'
         },
         {
           selector: '#wrap-rev-item-3',
@@ -1308,7 +1340,10 @@ export class SiteDataService {
           borderColor: '#7f8c8d',
           borderStyle: 'solid',
           borderRadius: '50%',
-          flexBasis: '35%'
+          flexBasis: '35%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '50px'
         },
         {
           selector: '#wrap-rev-item-4',
@@ -1317,7 +1352,10 @@ export class SiteDataService {
           borderColor: '#1abc9c',
           borderStyle: 'solid',
           borderRadius: '50%',
-          flexBasis: '40%'
+          flexBasis: '40%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '50px'
         },
 
         // === TEST 3: Column wrap ===
@@ -1326,7 +1364,7 @@ export class SiteDataService {
           top: '55%',
           left: '5%',
           width: '40%',
-          height: '40%',
+          height: '30%',
           background: '#c0392b',
           borderWidth: '2px',
           borderColor: '#e74c3c',
@@ -1336,6 +1374,7 @@ export class SiteDataService {
           flexDirection: 'column',
           justifyContent: 'space-between',
           alignItems: 'stretch',
+          alignContent: 'flex-start',
           flexWrap: 'wrap',
           gap: '12px' // Test gap in column layout
         },
@@ -1348,7 +1387,10 @@ export class SiteDataService {
           borderColor: '#2980b9',
           borderStyle: 'solid',
           borderRadius: '3px',
-          flexBasis: '20%'
+          flexBasis: '20%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '40px'
         },
         {
           selector: '#col-wrap-item-2',
@@ -1357,7 +1399,10 @@ export class SiteDataService {
           borderColor: '#2ecc71',
           borderStyle: 'solid',
           borderRadius: '3px',
-          flexBasis: '25%'
+          flexBasis: '25%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '40px'
         },
         {
           selector: '#col-wrap-item-3',
@@ -1366,7 +1411,10 @@ export class SiteDataService {
           borderColor: '#e67e22',
           borderStyle: 'solid',
           borderRadius: '3px',
-          flexBasis: '30%'
+          flexBasis: '30%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '40px'
         },
         {
           selector: '#col-wrap-item-4',
@@ -1375,7 +1423,10 @@ export class SiteDataService {
           borderColor: '#8e44ad',
           borderStyle: 'solid',
           borderRadius: '3px',
-          flexBasis: '35%'
+          flexBasis: '35%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '40px'
         },
         {
           selector: '#col-wrap-item-5',
@@ -1384,7 +1435,10 @@ export class SiteDataService {
           borderColor: '#c0392b',
           borderStyle: 'solid',
           borderRadius: '3px',
-          flexBasis: '25%'
+          flexBasis: '25%',
+          flexGrow: '0',
+          flexShrink: '1',
+          height: '40px'
         },
 
         // === TEST 4: Nowrap with overflow (comparison) ===
@@ -1393,7 +1447,7 @@ export class SiteDataService {
           top: '55%',
           left: '55%',
           width: '40%',
-          height: '40%',
+          height: '30%',
           background: '#16a085',
           borderWidth: '2px',
           borderColor: '#1abc9c',
@@ -1403,6 +1457,7 @@ export class SiteDataService {
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
+          alignContent: 'flex-start',
           flexWrap: 'nowrap'
         },
 
@@ -1414,7 +1469,9 @@ export class SiteDataService {
           borderColor: '#f39c12',
           borderStyle: 'solid',
           borderRadius: '6px',
-          flexBasis: '30%'
+          flexBasis: '30%',
+          flexGrow: '0',
+          flexShrink: '1'
         },
         {
           selector: '#nowrap-item-2',
@@ -1423,7 +1480,9 @@ export class SiteDataService {
           borderColor: '#c2185b',
           borderStyle: 'solid',
           borderRadius: '6px',
-          flexBasis: '35%'
+          flexBasis: '35%',
+          flexGrow: '0',
+          flexShrink: '1'
         },
         {
           selector: '#nowrap-item-3',
@@ -1432,7 +1491,9 @@ export class SiteDataService {
           borderColor: '#7b1fa2',
           borderStyle: 'solid',
           borderRadius: '6px',
-          flexBasis: '40%'
+          flexBasis: '40%',
+          flexGrow: '0',
+          flexShrink: '1'
         }
       ],
       root: {
@@ -1625,18 +1686,21 @@ export class SiteDataService {
           selector: '#g-item-1',
           background: '#f94144',
           flexGrow: '1',
+          flexShrink: '1', // ADDED
           flexBasis: '80px',
         },
         {
           selector: '#g-item-2',
           background: '#f3722c',
           flexGrow: '2',
+          flexShrink: '1', // ADDED
           flexBasis: '80px',
         },
         {
           selector: '#g-item-3',
           background: '#f8961e',
           flexGrow: '1',
+          flexShrink: '1', // ADDED
           flexBasis: '80px',
         },
         // --- Shrink Test ---
@@ -1647,19 +1711,22 @@ export class SiteDataService {
         {
           selector: '#s-item-1',
           background: '#90be6d',
+          flexGrow: '0', // ADDED
           flexShrink: '1',
           flexBasis: '200px',
         },
         {
           selector: '#s-item-2',
           background: '#43aa8b',
+          flexGrow: '0', // ADDED
           flexShrink: '2',
           flexBasis: '200px',
         },
         {
           selector: '#s-item-3',
           background: '#4d908e',
-          flexShrink: '0', // Should not shrink
+          flexGrow: '0', // ADDED
+          flexShrink: '0',
           flexBasis: '100px',
         },
         // --- Mixed Test ---
@@ -1670,7 +1737,7 @@ export class SiteDataService {
         { selector: '#m-item-1', background: '#577590', flex: '1 1 100px' },
         { selector: '#m-item-2', background: '#277da1', flex: '2 1 100px' },
         { selector: '#m-item-3', background: '#f9c74f', flex: '0 0 250px' },
-        { selector: '#m-item-4', background: '#f9844a', flexBasis: '100px' },
+        { selector: '#m-item-4', background: '#f9844a', flexGrow: '0', flexShrink: '1', flexBasis: '100px' }, // ADDED flexGrow, flexShrink
       ]
     },
 
@@ -2882,6 +2949,7 @@ export class SiteDataService {
           display: 'flex',
           flexWrap: 'wrap',
           alignContent: 'flex-start',
+          alignItems: 'center',
           padding: '10px'
         },
         {
@@ -2915,6 +2983,205 @@ export class SiteDataService {
               { type: 'div', id: 'debug-item-1' },
               { type: 'div', id: 'debug-item-2' },
               { type: 'div', id: 'debug-item-3' }
+            ]
+          }
+        ]
+      }
+    },
+
+    'flex-test': {
+      styles: [
+        {
+          selector: 'root',
+          background: '#2c3e50'
+        },
+        // Main flex container
+        {
+          selector: '#flex-container',
+          top: '20%',
+          left: '20%',
+          width: '60%',
+          height: '20%',
+          background: '#34495e',
+          borderWidth: '2px',
+          borderColor: '#2c3e50',
+          borderStyle: 'solid',
+          borderRadius: '15px',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '10px'
+        },
+        // Flex items with different flex-basis values
+        {
+          selector: '#flex-item-1',
+          background: '#e74c3c',
+          borderWidth: '8px',
+          borderColor: '#c0392b',
+          borderStyle: 'solid',
+          borderRadius: '30px',
+          flexBasis: '22%',
+          height: '90%'
+        },
+        {
+          selector: '#flex-item-2',
+          background: '#f39c12',
+          borderWidth: '8px',
+          borderColor: '#e67e22',
+          borderStyle: 'solid',
+          borderRadius: '30px',
+          flexBasis: '28%',
+          height: '90%'
+        },
+        {
+          selector: '#flex-item-3',
+          background: '#27ae60',
+          borderWidth: '8px',
+          borderColor: '#2ecc71',
+          borderStyle: 'solid',
+          borderRadius: '30px',
+          flexBasis: '25%',
+          height: '90%'
+        },
+        {
+          selector: '#flex-item-4',
+          background: '#3498db',
+          borderWidth: '8px',
+          borderColor: '#2980b9',
+          borderStyle: 'solid',
+          borderRadius: '30px',
+          flexBasis: '20%',
+          height: '90%'
+        },
+        // Additional test containers for different flex properties
+        {
+          selector: '#flex-center-container',
+          top: '50%',
+          left: '10%',
+          width: '35%',
+          height: '15%',
+          background: '#8e44ad',
+          borderWidth: '2px',
+          borderColor: '#9b59b6',
+          borderStyle: 'solid',
+          borderRadius: '40px',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '5px',
+          padding: '8px'
+        },
+        {
+          selector: '#center-item-1',
+          background: '#e91e63',
+          borderWidth: '6px',
+          borderColor: '#c2185b',
+          borderStyle: 'solid',
+          borderRadius: '15px',
+          flexBasis: '32%',
+          height: '85%'
+        },
+        {
+          selector: '#center-item-2',
+          background: '#ff9800',
+          borderWidth: '6px',
+          borderColor: '#f57c00',
+          borderStyle: 'solid',
+          borderRadius: '15px',
+          flexBasis: '36%',
+          height: '85%'
+        },
+        {
+          selector: '#center-item-3',
+          background: '#9c27b0',
+          borderWidth: '6px',
+          borderColor: '#7b1fa2',
+          borderStyle: 'solid',
+          borderRadius: '15px',
+          flexBasis: '28%',
+          height: '85%'
+        },
+        // Column flex container
+        {
+          selector: '#flex-column-container',
+          top: '50%',
+          left: '55%',
+          width: '35%',
+          height: '15%',
+          background: '#16a085',
+          borderWidth: '2px',
+          borderColor: '#1abc9c',
+          borderStyle: 'solid',
+          borderRadius: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-around',
+          alignItems: 'stretch',
+          gap: '5px',
+          padding: '8px'
+        },
+        {
+          selector: '#column-item-1',
+          background: '#f1c40f',
+          borderWidth: '6px',
+          borderColor: '#f39c12',
+          borderStyle: 'solid',
+          borderRadius: '25px',
+          flexBasis: '28%'
+        },
+        {
+          selector: '#column-item-2',
+          background: '#e67e22',
+          borderWidth: '6px',
+          borderColor: '#d35400',
+          borderStyle: 'solid',
+          borderRadius: '25px',
+          flexBasis: '40%'
+        },
+        {
+          selector: '#column-item-3',
+          background: '#95a5a6',
+          borderWidth: '6px',
+          borderColor: '#7f8c8d',
+          borderStyle: 'solid',
+          borderRadius: '25px',
+          flexBasis: '28%'
+        }
+      ],
+      root: {
+        children: [
+          // Main flex container with space-between
+          {
+            type: 'div',
+            id: 'flex-container',
+            children: [
+              { type: 'div', id: 'flex-item-1' },
+              { type: 'div', id: 'flex-item-2' },
+              { type: 'div', id: 'flex-item-3' },
+              { type: 'div', id: 'flex-item-4' }
+            ]
+          },
+          // Center-aligned flex container
+          {
+            type: 'div',
+            id: 'flex-center-container',
+            children: [
+              { type: 'div', id: 'center-item-1' },
+              { type: 'div', id: 'center-item-2' },
+              { type: 'div', id: 'center-item-3' }
+            ]
+          },
+          // Column flex container
+          {
+            type: 'div',
+            id: 'flex-column-container',
+            children: [
+              { type: 'div', id: 'column-item-1' },
+              { type: 'div', id: 'column-item-2' },
+              { type: 'div', id: 'column-item-3' }
             ]
           }
         ]
