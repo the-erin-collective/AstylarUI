@@ -114,6 +114,7 @@ export interface TextInput extends InputElement {
     cursorState: CursorState;
     textLayoutMetrics?: any; // Will store TextLayoutMetrics from text rendering service
     textureWidth?: number; // Store world-space texture width for cursor positioning
+    scrollOffset?: number; // Horizontal scroll offset in CSS pixels
 }
 
 /**

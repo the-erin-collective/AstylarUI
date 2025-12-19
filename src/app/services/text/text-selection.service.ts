@@ -117,7 +117,8 @@ export class TextSelectionService {
     scale: number,
     style: TextStyleProperties,
     textureWidth?: number,
-    widthCorrectionRatio: number = 1.0
+    widthCorrectionRatio: number = 1.0,
+    scrollOffset: number = 0
   ): BABYLON.Mesh {
     console.log('[TextSelectionService] Creating cursor with ratio:', widthCorrectionRatio);
     console.log('[TextSelectionService] Layout metrics:', layoutMetrics);
@@ -179,8 +180,16 @@ export class TextSelectionService {
     // The cursorX is in CSS pixels, so we need to convert it to world units using the scale
     // Account for text mesh rotation (180 degrees) which flips the text horizontally
     // Apply correction ratio to align metrics with actual texture width
+    // scrollX is cursorX - scrollOffset (the visible X within the clipped mesh)
+    let scrollX = cursorX - scrollOffset;
+
+    // Clamp scrollX to ensure cursor stays within the visible bounds of the input field
+    const availableWidth = inputWidth - (padding * 2);
+    const availableWidthCss = availableWidth / scale;
+    scrollX = Math.max(0, Math.min(availableWidthCss, scrollX));
+
     // Subtracting from LeftEdgeX moves towards Local -X (World Right)
-    cursor.position.x = textLeftEdgeX - (cursorX * widthCorrectionRatio * scale / this.CURSOR_WIDTH_SCALE);
+    cursor.position.x = textLeftEdgeX - (scrollX * widthCorrectionRatio * scale / this.CURSOR_WIDTH_SCALE);
     cursor.position.y = 0; // Center vertically in input field
     cursor.position.z = 0.1 * scale; // In front of text
 
@@ -206,7 +215,8 @@ export class TextSelectionService {
     layoutMetrics: TextLayoutMetrics,
     scale: number,
     textureWidth?: number,
-    widthCorrectionRatio: number = 1.0
+    widthCorrectionRatio: number = 1.0,
+    scrollOffset: number = 0
   ): void {
     const cursorX = this.calculateCursorPosition(cursorPosition, layoutMetrics);
 
@@ -222,8 +232,15 @@ export class TextSelectionService {
       const textMeshPosition = (inputWidth / 2) - (textWidth / 2) - padding;
       const textLeftEdgeX = textMeshPosition + (textWidth / 2);
 
+      let scrollX = cursorX - scrollOffset;
+
+      // Clamp scrollX to ensure cursor stays within the visible bounds of the input field
+      const availableWidth = inputWidth - (padding * 2);
+      const availableWidthCss = availableWidth / scale;
+      scrollX = Math.max(0, Math.min(availableWidthCss, scrollX));
+
       // Position cursor at the correct location (Subtracting offset because of 180 rotation)
-      cursor.position.x = textLeftEdgeX - (cursorX * widthCorrectionRatio * scale / this.CURSOR_WIDTH_SCALE);
+      cursor.position.x = textLeftEdgeX - (scrollX * widthCorrectionRatio * scale / this.CURSOR_WIDTH_SCALE);
     } else {
       cursor.position.x = (cursorX * widthCorrectionRatio * scale / this.CURSOR_WIDTH_SCALE);
     }

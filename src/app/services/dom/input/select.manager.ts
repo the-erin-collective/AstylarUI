@@ -74,7 +74,7 @@ export class SelectManager {
 
         // Create display mesh for selected value
         selectElement.displayMesh = this.createDisplayMesh(selectElement, render, style);
-        
+
         // Store camera scale for consistent text sizing across select and dropdown
         selectElement.cameraScale = render.actions.camera.getPixelToWorldScale();
 
@@ -354,6 +354,9 @@ export class SelectManager {
             );
 
             displayPlane.parent = selectElement.mesh;
+            // Rotate the text mesh 180 degrees around the Z axis to fix horizontal flipping
+            displayPlane.rotation.z = Math.PI;
+
             // Ensure display text sits IN FRONT of the Select Mesh (Positive Z, assuming Front is Positive)
             displayPlane.position.z = 0.05;
             displayPlane.isPickable = false;
@@ -598,7 +601,7 @@ export class SelectManager {
 
                 // Use the same camera scale as the select display for consistency
                 const cameraScale = selectElement.cameraScale || 0.001;
-                
+
                 const textureWidth = textureSize.width * cameraScale;
                 const textureHeight = textureSize.height * cameraScale;
 
@@ -617,7 +620,7 @@ export class SelectManager {
                 // Increase z-position to ensure text is in front of option background
                 textMesh.position.z = 0.1;
                 textMesh.renderingGroupId = 3; // Higher rendering group to ensure it's on top
-                
+
                 // Align text to left edge - match text-input positioning logic
                 const padding = 1.5; // Match text-input padding
                 // Use same formula as text-input for consistency
@@ -646,37 +649,37 @@ export class SelectManager {
 
         selectElement.dropdownMesh.position.y = -(selectHeight / 2 + dropdownHeight / 2 + 0.05);
         selectElement.dropdownMesh.position.z = 0.15; // Move forward (Positive Z) to avoid Z-fighting/hiding
-        
+
         // Add border to dropdown for HTML-like appearance
         this.addDropdownBorder(selectElement);
     }
-    
+
     /**
      * Adds a border around the dropdown for HTML-like styling
      */
     private addDropdownBorder(selectElement: SelectElement): void {
         if (!selectElement.dropdownMesh) return;
-        
+
         const scene = selectElement.dropdownMesh.getScene();
         const bounds = selectElement.dropdownMesh.getBoundingInfo().boundingBox.extendSize;
         const width = bounds.x * 2;
         const height = bounds.y * 2;
         const borderWidth = 0.02; // Thin border
-        
+
         // Create border as a slightly larger plane behind the dropdown
         const borderMesh = BABYLON.MeshBuilder.CreatePlane(`dropdownBorder_${selectElement.element.id}`, {
             width: width + borderWidth * 2,
             height: height + borderWidth * 2,
             sideOrientation: BABYLON.Mesh.DOUBLESIDE
         }, scene);
-        
+
         const borderMaterial = new BABYLON.StandardMaterial(`dropdownBorderMaterial_${selectElement.element.id}`, scene);
         borderMaterial.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.7); // Gray border
         borderMaterial.emissiveColor = new BABYLON.Color3(0.7, 0.7, 0.7);
         borderMaterial.disableLighting = true;
         borderMaterial.backFaceCulling = false;
         borderMesh.material = borderMaterial;
-        
+
         borderMesh.parent = selectElement.dropdownMesh;
         borderMesh.position.z = -0.01; // Behind the dropdown
         borderMesh.isPickable = false;

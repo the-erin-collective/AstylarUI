@@ -10,6 +10,7 @@ export interface TextInteractionEntry {
   style?: StyleRule;
   metrics?: StoredTextLayoutMetrics;
   text?: string;
+  scrollOffset?: number;
 }
 
 export type TextInteractionRegistryEvent =
@@ -17,6 +18,7 @@ export type TextInteractionRegistryEvent =
   | { type: 'metrics'; elementId: string; entry: TextInteractionEntry }
   | { type: 'style'; elementId: string; entry: TextInteractionEntry }
   | { type: 'text'; elementId: string; entry: TextInteractionEntry }
+  | { type: 'scroll'; elementId: string; entry: TextInteractionEntry }
   | { type: 'unregister'; elementId: string }
   | { type: 'clear' };
 
@@ -33,12 +35,13 @@ export class TextInteractionRegistryService {
     mesh: Mesh,
     style?: StyleRule,
     metrics?: StoredTextLayoutMetrics,
-    text?: string
+    text?: string,
+    scrollOffset?: number
   ): TextInteractionEntry {
     // Ensure previous entry for this element is removed so the latest mesh wins
     this.unregisterByElementId(elementId);
 
-    const entry: TextInteractionEntry = { elementId, mesh, style, metrics, text };
+    const entry: TextInteractionEntry = { elementId, mesh, style, metrics, text, scrollOffset };
     this.entriesByMeshId.set(mesh.uniqueId, entry);
     this.entriesByElementId.set(elementId, entry);
 
@@ -80,6 +83,15 @@ export class TextInteractionRegistryService {
     }
     entry.text = text;
     this.eventsSubject.next({ type: 'text', elementId, entry });
+  }
+
+  updateScrollOffset(elementId: string, scrollOffset: number): void {
+    const entry = this.entriesByElementId.get(elementId);
+    if (!entry) {
+      return;
+    }
+    entry.scrollOffset = scrollOffset;
+    this.eventsSubject.next({ type: 'scroll', elementId, entry });
   }
 
   unregister(mesh: AbstractMesh): void {

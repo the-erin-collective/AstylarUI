@@ -324,30 +324,63 @@ export class TextInputManager {
             // Only apply this rotation to text input meshes
             textMesh.rotation.z = Math.PI;
 
+            // Store world-space texture width for cursor positioning
+            textInput.textureWidth = textureWidth;
+
             // Align text mesh based on textAlign style
             const textAlign = (textStyle.textAlign || 'left').toLowerCase();
             const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
             const padding = 1.5 * scale; // Standard padding in world units
+            const availableWidth = inputWidth - (padding * 2);
 
-            if (textAlign === 'right') {
-                // Right alignment in a +X=Left system: position near -inputWidth/2 (Right side)
-                // Pos=World Center of text. Right visual edge is at Pos - W_t/2 (in a +X=Left system).
-                // We want visual Right edge at -inputWidth/2 + padding.
-                // Pos - W_t/2 = -inputWidth/2 + padding  =>  Pos = -inputWidth/2 + W_t/2 + padding
-                textMesh.position.x = -(inputWidth / 2) + (textureWidth / 2) + padding;
-            } else if (textAlign === 'center' || textAlign === 'middle') {
-                textMesh.position.x = 0;
+            // Handle clipping if text exceeds available width
+            if (textureWidth > availableWidth) {
+                console.log(`[TextInputManager] Clipping text mesh: ${textureWidth.toFixed(3)} > ${availableWidth.toFixed(3)}`);
+
+                // Re-create mesh with clipped width or just scale it?
+                // Re-creating is safer to ensure bounding info is correct for interactions
+                textMesh.dispose();
+                const clippedTextMesh = this.babylonMeshService.createTextMesh(
+                    `text_${textInput.element.id}`,
+                    texture,
+                    availableWidth,
+                    textureHeight
+                );
+
+                clippedTextMesh.parent = textInput.mesh;
+                clippedTextMesh.position.z = -0.15;
+                clippedTextMesh.isPickable = true;
+                clippedTextMesh.renderingGroupId = 2;
+                clippedTextMesh.rotation.z = Math.PI;
+
+                textInput.textMesh = clippedTextMesh;
+                clippedTextMesh.position.x = (inputWidth / 2) - (availableWidth / 2) - padding;
+
+                // Sync scroll and UVs
+                this.syncScroll(textInput, render);
             } else {
-                // Left alignment (default) in a +X=Left system: position near +inputWidth/2 (Left side)
-                // Pos=World Center of text. Left visual edge is at Pos + W_t/2 (in a +X=Left system).
-                // We want visual Left edge at inputWidth/2 - padding.
-                // Pos + W_t/2 = inputWidth/2 - padding  =>  Pos = inputWidth/2 - W_t/2 - padding
-                textMesh.position.x = (inputWidth / 2) - (textureWidth / 2) - padding;
-            }
+                // No clipping needed
+                textInput.scrollOffset = 0;
+                if (textAlign === 'right') {
+                    textMesh.position.x = -(inputWidth / 2) + (textureWidth / 2) + padding;
+                } else if (textAlign === 'center' || textAlign === 'middle') {
+                    textMesh.position.x = 0;
+                } else {
+                    textMesh.position.x = (inputWidth / 2) - (textureWidth / 2) - padding;
+                }
+                textInput.textMesh = textMesh;
 
-            // Store world-space texture width for cursor positioning
-            textInput.textureWidth = textureWidth;
-            textInput.textMesh = textMesh;
+                // If not clipped, ensure UVs are reset
+                const mat = textMesh.material as BABYLON.StandardMaterial;
+                if (mat && mat.diffuseTexture) {
+                    (mat.diffuseTexture as BABYLON.Texture).uScale = 1.0;
+                    (mat.diffuseTexture as BABYLON.Texture).uOffset = 0.0;
+                    if (mat.emissiveTexture) {
+                        (mat.emissiveTexture as BABYLON.Texture).uScale = 1.0;
+                        (mat.emissiveTexture as BABYLON.Texture).uOffset = 0.0;
+                    }
+                }
+            }
 
             // Register with text interaction registry for drag selection
             const storedMetrics: StoredTextLayoutMetrics = {
@@ -377,15 +410,86 @@ export class TextInputManager {
 
             this.textInteractionRegistry.register(
                 textInput.element.id!,
-                textMesh,
+                textInput.textMesh!,
                 style,
                 storedMetrics,
-                textToRender
+                textToRender,
+                textInput.scrollOffset || 0
             );
 
         } catch (error) {
             console.error('Error creating text input mesh:', error);
         }
+    }
+
+    /**
+     * Synchronizes the scroll offset and UV mapping for the text mesh
+     */
+    private syncScroll(textInput: TextInput, render: BabylonRender): void {
+        if (!textInput.textMesh || !textInput.textLayoutMetrics) return;
+
+        const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
+        const scale = render.actions.camera.getPixelToWorldScale();
+        const padding = 1.5 * scale;
+        const availableWidth = inputWidth - (padding * 2);
+        const vw = availableWidth / scale; // Visible width in CSS pixels
+
+        // Get actual texture width from stored metrics
+        const fullTextureWidth = textInput.textureWidth || 1;
+        const currentMeshWidth = textInput.textMesh.getBoundingInfo().boundingBox.maximum.x - textInput.textMesh.getBoundingInfo().boundingBox.minimum.x;
+
+        // Only scroll if text is wider than available area
+        if (fullTextureWidth <= availableWidth) {
+            textInput.scrollOffset = 0;
+        } else {
+            // Calculate scroll offset to keep cursor in view
+            if (!textInput.scrollOffset) textInput.scrollOffset = 0;
+
+            if (textInput.cursorPosition >= 0) {
+                // Find cursor X position in CSS pixels
+                let cursorX = 0;
+                const characters = textInput.textLayoutMetrics.characters;
+                if (textInput.cursorPosition < characters.length) {
+                    cursorX = characters[textInput.cursorPosition].x;
+                } else {
+                    // Position at end of text
+                    const lastChar = characters[characters.length - 1];
+                    cursorX = lastChar ? lastChar.x + lastChar.width : 0;
+                }
+
+                // Keep cursor in view: [scrollOffset, scrollOffset + vw]
+                const buffer = 10;
+                if (cursorX < textInput.scrollOffset) {
+                    textInput.scrollOffset = Math.max(0, cursorX - buffer);
+                } else if (cursorX > textInput.scrollOffset + vw) {
+                    textInput.scrollOffset = cursorX - vw + buffer;
+                }
+            }
+        }
+
+        // Apply UV offset to show the scrolled portion
+        const mat = textInput.textMesh.material as BABYLON.StandardMaterial;
+        if (mat && mat.diffuseTexture) {
+            const diffTex = mat.diffuseTexture as BABYLON.Texture;
+
+            // Calculate uScale based on current mesh width relative to full texture width
+            // This ensures 1.0 scale when not clipped and correct clipping when it is.
+            diffTex.uScale = currentMeshWidth / fullTextureWidth;
+
+            const totalPixelWidth = textInput.textLayoutMetrics.totalWidth;
+            if (totalPixelWidth > 0) {
+                diffTex.uOffset = (textInput.scrollOffset || 0) / totalPixelWidth;
+            }
+
+            if (mat.emissiveTexture) {
+                const emissTex = mat.emissiveTexture as BABYLON.Texture;
+                emissTex.uScale = diffTex.uScale;
+                emissTex.uOffset = diffTex.uOffset;
+            }
+        }
+
+        // Update interaction registry
+        this.textInteractionRegistry.updateScrollOffset(textInput.element.id!, textInput.scrollOffset || 0);
     }
 
     /**
@@ -676,6 +780,9 @@ export class TextInputManager {
     updateCursorPosition(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
         if (!textInput.textLayoutMetrics) return;
 
+        // Sync scroll and UVs before positioning cursor
+        this.syncScroll(textInput, render);
+
         const pixelScale = render.actions.camera.getPixelToWorldScale();
         // Calculate width correction ratio
         // textureWidth is in world units (already scaled by pixelToWorldScale)
@@ -696,7 +803,8 @@ export class TextInputManager {
                 pixelScale,
                 textStyle,
                 textInput.textureWidth,
-                widthCorrectionRatio
+                widthCorrectionRatio,
+                textInput.scrollOffset || 0
             );
         }
 
@@ -711,7 +819,8 @@ export class TextInputManager {
             textInput.textLayoutMetrics,
             pixelScale,
             textInput.textureWidth,
-            widthCorrectionRatio
+            widthCorrectionRatio,
+            textInput.scrollOffset || 0
         );
     }
 

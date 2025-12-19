@@ -208,15 +208,14 @@ export class PointerInteractionService {
     const cssWidth = cssMetrics?.totalWidth ?? 0;
     const cssHeight = cssMetrics?.totalHeight ?? 0;
 
-    // The text mesh represents the actual rendered text content, not the CSS container.
-    // However, TextSelectionController expects coordinates in Container Space (0..totalWidth).
-    // So we map normalized click coordinates (0-1 across mesh) to the Container Width.
+    // Map normalized coordinates (0-1 across visible mesh) to CSS coordinates
+    // width is availableWidth (world), width/scale is availableWidth (CSS)
+    const scale = metrics.scale ?? 1;
+    const availableWidthCss = width / scale;
+    const scrollOffset = entry.scrollOffset || 0;
 
-    // Calculate the container width (max line width or total width)
-    const maxLineWidth = cssMetrics?.lines.reduce((max, line) => Math.max(max, line.width ?? 0), 0) ?? cssWidth;
-
-    // Map normalized coordinates to CSS container width
-    let x = normalizedX * maxLineWidth;
+    // x in CSS pixels = (normalized percentage of visible area * pixels in visible area) + scroll offset
+    let x = (normalizedX * availableWidthCss) + scrollOffset;
 
     return {
       x,
