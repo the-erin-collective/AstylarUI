@@ -114,6 +114,8 @@ export class ElementService {
     // Create the mesh based on element type
     let mesh: any;
 
+    const devicePixelRatio = window.devicePixelRatio || 1;
+
     // Convert pixel dimensions to world units for mesh creation
     const worldWidth = dimensions.width * scaleFactor;
     const worldHeight = dimensions.height * scaleFactor;
@@ -314,11 +316,15 @@ export class ElementService {
       if (isTopLevel && (dimensions.width < 100 || dimensions.height < 100)) {
         console.warn(`[ELEMENT DIM DEBUG] SUSPICIOUS: Storing small dimensions for top-level element: ${element.id} (parent: ${parent.name}) width: ${dimensions.width}, height: ${dimensions.height}, style: ${JSON.stringify(style)}, stack: ${JSON.stringify((new Error()).stack)}`);
       }
-      dom.context.elementDimensions.set(element.id, {
-        width: dimensions.width, // pixels
-        height: dimensions.height, // pixels
-        padding: pixelPadding // pixels
-      });
+
+      if(!dom.context.elementDimensions.get(element.id)){
+        dom.context.elementDimensions.set(element.id, {
+          width: dimensions.width, // pixels
+          height: dimensions.height, // pixels
+          padding: pixelPadding // pixels
+        });
+      }
+
       console.log(`[ELEMENT DIM DEBUG] Stored elementDimensions for ${element.id}: ${JSON.stringify({ width: dimensions.width, height: dimensions.height, padding: pixelPadding })}`);
     }
 
@@ -419,14 +425,9 @@ export class ElementService {
     const padding = this.parsePadding(render, style, undefined);
     const margin = this.parseMargin(style);
 
-    // Available space after accounting for parent's padding
-    // (This assumes the parent has padding that affects this child's available space)
-    const availableWidth = parentWidth;
-    const availableHeight = parentHeight;
-
     // Default to small child elements if no style is provided
-    let width = availableWidth * 0.2; // 20% of available space by default
-    let height = availableHeight * 0.2;
+    let width = parentWidth; // 20% of available space by default
+    let height = parentHeight;
     let x = 0; // Centered by default
     let y = 0;
 
@@ -446,8 +447,8 @@ export class ElementService {
         } else if (typeof style.width === 'string' && style.width.endsWith('%')) {
           const percent = parseFloat(style.width);
           // Percentage calculations are based on CSS pixels, not affected by DPR
-          width = (percent / 100) * availableWidth;
-          console.log(`[DPR] Percentage width calculation for ${style.selector || 'unknown'}: ${percent}% of ${availableWidth}px = ${width}px`);
+          width = (percent / 100) * parentWidth;
+          console.log(`[DPR] Percentage width calculation for ${style.selector || 'unknown'}: ${percent}% of ${parentWidth}px = ${width}px`);
         } else {
           width = parseFloat(style.width);
         }
@@ -463,8 +464,8 @@ export class ElementService {
         } else if (typeof style.height === 'string' && style.height.endsWith('%')) {
           const percent = parseFloat(style.height);
           // Percentage calculations are based on CSS pixels, not affected by DPR
-          height = (percent / 100) * availableHeight;
-          console.log(`[DPR] Percentage height calculation for ${style.selector || 'unknown'}: ${percent}% of ${availableHeight}px = ${height}px`);
+          height = (percent / 100) * parentHeight;
+          console.log(`[DPR] Percentage height calculation for ${style.selector || 'unknown'}: ${percent}% of ${parentHeight}px = ${height}px`);
         } else {
           height = parseFloat(style.height);
         }
@@ -482,9 +483,9 @@ export class ElementService {
           } else if (typeof style.left === 'string' && style.left.endsWith('%')) {
             const leftPercent = parseFloat(style.left);
             // Percentage calculations are based on CSS pixels, not affected by DPR
-            const leftPixels = (leftPercent / 100) * availableWidth;
+            const leftPixels = (leftPercent / 100) * parentWidth;
             x = (-parentWidth / 2) + leftPixels + (width / 2);
-            console.log(`[DPR] Percentage left calculation for ${style.selector || 'unknown'}: ${leftPercent}% of ${availableWidth}px = ${leftPixels}px`);
+            console.log(`[DPR] Percentage left calculation for ${style.selector || 'unknown'}: ${leftPercent}% of ${parentWidth}px = ${leftPixels}px`);
           } else {
             x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
           }
@@ -501,9 +502,9 @@ export class ElementService {
         } else if (typeof style.top === 'string' && style.top.endsWith('%')) {
           const topPercent = parseFloat(style.top);
           // Percentage calculations are based on CSS pixels, not affected by DPR
-          const topPixels = (topPercent / 100) * availableHeight;
+          const topPixels = (topPercent / 100) * parentHeight;
           y = (parentHeight / 2) - topPixels - (height / 2);
-          console.log(`[DPR] Percentage top calculation for ${style.selector || 'unknown'}: ${topPercent}% of ${availableHeight}px = ${topPixels}px`);
+          console.log(`[DPR] Percentage top calculation for ${style.selector || 'unknown'}: ${topPercent}% of ${parentHeight}px = ${topPixels}px`);
         } else {
           y = (parentHeight / 2) - parseFloat(style.top) - (height / 2);
         }

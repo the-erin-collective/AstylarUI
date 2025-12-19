@@ -9,11 +9,24 @@ import { BabylonRender } from '../interfaces/render.types';
 })
 export class RootService {
   public createRootBodyElement(dom: BabylonDOM, render: BabylonRender, styles: StyleRule[]): Mesh {
+    // Store root-body dimensions in elementDimensions in PIXELS (not world units)
+    const scene = render.scene;
+    const canvas = scene?.getEngine().getRenderingCanvas();
+    if (!canvas) {
+      throw new Error('Canvas not found when setting root-body elementDimensions');
+    }
+
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const cssWidth = canvas.width * devicePixelRatio;
+    const cssHeight = canvas.height * devicePixelRatio;
 
     // Get viewport dimensions from camera service
     const { width: visibleWidth, height: visibleHeight } = render.actions.camera.calculateViewportDimensions();
+    
+    const dprWidth = visibleWidth * devicePixelRatio;
+    const dprHeight = visibleHeight * devicePixelRatio;
 
-    const rootBody = render.actions.mesh.createPlane('root-body', visibleWidth, visibleHeight);
+    const rootBody = render.actions.mesh.createPlane('root-body', dprWidth, dprHeight);
 
     // Position at origin in the XY plane
     render.actions.mesh.positionMesh(rootBody, 0, 0, 0);
@@ -45,15 +58,10 @@ export class RootService {
 
     dom.context.elements.set('root-body', rootBody);
 
-    // Store root-body dimensions in elementDimensions in PIXELS (not world units)
-    const scene = render.scene;
-    const canvas = scene?.getEngine().getRenderingCanvas();
-    if (!canvas) {
-      throw new Error('Canvas not found when setting root-body elementDimensions');
-    }
+
     dom.context.elementDimensions.set('root-body', {
-      width: canvas.width, // pixels
-      height: canvas.height, // pixels
+      width: cssWidth, // pixels
+      height: cssHeight, // pixels
       padding: { top: 0, right: 0, bottom: 0, left: 0 }
     });
     console.log('[ELEMENT DIM DEBUG] Stored elementDimensions for root-body:', { width: canvas.width, height: canvas.height });

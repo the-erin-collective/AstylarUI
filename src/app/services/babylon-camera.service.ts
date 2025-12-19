@@ -10,42 +10,33 @@ export class BabylonCameraService {
   constructor() {}
 
   initialize(scene: Scene, canvas: HTMLCanvasElement): FreeCamera {
-    // Get device pixel ratio to account for high-DPI displays
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    
-    // Base camera distance - this is the distance that works well with DPR=1
-    const baseCameraDistance = 30;
-    
-    // For higher DPR, we need to move the camera CLOSER to maintain the same field of view
-    // This is the opposite of what we tried before
-    const adjustedCameraDistance = baseCameraDistance / devicePixelRatio;
-    
-    console.log(`[DPR] Camera distance adjustment: base=${baseCameraDistance}, adjusted=${adjustedCameraDistance} (DPR: ${devicePixelRatio})`);
-    
-    // Create camera for true 2D viewing - looking straight at XY plane from positive Z
-    // Use the adjusted camera distance to account for DPR
-    this.camera = new FreeCamera('camera', new Vector3(0, 0, adjustedCameraDistance), scene);
+    const fov = this.getFOV(); // 60 degrees, or your preferred value
+
+    // Set camera distance so visible world height == cssHeight
+    const cameraDistance = (canvas.height) / Math.tan(fov / 2 );
+
+    this.camera = new FreeCamera('camera', new Vector3(0, 0, cameraDistance), scene);
+    this.camera.fov = fov;
     this.camera.setTarget(Vector3.Zero());
     this.camera.attachControl(canvas, true);
-    
-    // Disable camera movement to keep it in 2D mode
     this.camera.inputs.clear();
-    
-    // Log DPR information when the camera is initialized
-    console.log(`[DPR] Camera initialized with DPR: ${devicePixelRatio}`);
-    console.log(`[DPR] Canvas size: ${canvas.width}x${canvas.height} device pixels`);
-    console.log(`[DPR] CSS canvas size: ${(canvas.width / devicePixelRatio).toFixed(2)}x${(canvas.height / devicePixelRatio).toFixed(2)} CSS pixels`);
-    
-    // Log detailed DPR information
+
+    // Log for debugging
+    console.log(`[DPR] Camera initialized for DPR-aware FOV: cssHeight=${canvas.height}, fov=${(fov * 180 / Math.PI).toFixed(1)}, cameraDistance=${cameraDistance}`);
+
     setTimeout(() => {
       this.logDprInfo();
-    }, 100); // Slight delay to ensure canvas is properly sized
-    
+    }, 100);
+
     return this.camera;
   }
 
   getCamera(): FreeCamera | undefined {
     return this.camera;
+  }
+
+  getFOV(): number {
+    return Math.PI / 3;
   }
 
   /**
@@ -57,36 +48,29 @@ export class BabylonCameraService {
     if (!this.camera) {
       throw new Error('Camera not initialized');
     }
-
+    const devicePixelRatio = window.devicePixelRatio || 1;
     const cameraDistance = Math.abs(this.camera.position.z); // Use actual camera distance
-    const fov = this.camera.fov || Math.PI / 3; // Default FOV is about 60 degrees
+    const fov = this.getFOV(); // Default FOV is about 60 degrees
     
-    // Calculate height based on FOV: height = 2 * distance * tan(fov/2)
-    const visibleHeight = 2 * cameraDistance * Math.tan(fov / 2);
-    
-    // Calculate width based on canvas aspect ratio
+      // Calculate width based on canvas aspect ratio
     // IMPORTANT: Use CSS pixel dimensions for aspect ratio to account for DPR
     const scene = this.camera.getScene();
     const canvas = scene.getEngine().getRenderingCanvas();
-    const devicePixelRatio = window.devicePixelRatio || 1;
+
+    // Calculate height based on FOV: height = 2 * distance * tan(fov/2)
+    const visibleHeight = 2 * cameraDistance * Math.tan(fov / 2) / devicePixelRatio;
     
+    if(!canvas){
+      throw new Error("no canvas.");
+    }
+
     // Use the actual canvas dimensions for aspect ratio
     // This is important because the canvas is sized in device pixels
-    const canvasWidth = canvas ? canvas.width : 1920;
-    const canvasHeight = canvas ? canvas.height : 1080;
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
     const aspectRatio = canvasWidth / canvasHeight;
     
     const visibleWidth = visibleHeight * aspectRatio;
-    
-    console.log(`[DPR] Viewport dimensions calculation:
-      - Camera distance: ${cameraDistance} world units
-      - FOV: ${(fov * 180 / Math.PI).toFixed(1)} degrees
-      - Canvas size: ${canvasWidth}x${canvasHeight} device pixels
-      - CSS size: ${(canvasWidth / devicePixelRatio).toFixed(1)}x${(canvasHeight / devicePixelRatio).toFixed(1)} CSS pixels
-      - Aspect ratio: ${aspectRatio.toFixed(4)}
-      - Visible dimensions: ${visibleWidth.toFixed(2)}x${visibleHeight.toFixed(2)} world units
-      - Device pixel ratio: ${devicePixelRatio}
-    `);
 
     return { width: visibleWidth, height: visibleHeight };
   }
@@ -121,48 +105,20 @@ export class BabylonCameraService {
     
     // Check if canvas is properly sized
     if (!canvas || canvas.width === 0 || canvas.height === 0) {
-      console.warn('⚠️ Canvas not properly sized yet, using fallback scale');
-      return 0.025; // Reasonable fallback
+      throw new Error("No canvas.");
     }
-    
-    // Get device pixel ratio to account for high-DPI displays
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    
+
     // Get canvas height in device pixels
     const canvasHeight = canvas.height;
-    
-    // Convert to CSS canvas height (logical pixels)
-    const cssCanvasHeight = canvasHeight / devicePixelRatio;
-    
+         
     // Calculate viewport dimensions in world units
     const { height: worldHeight } = this.calculateViewportDimensions();
     
     // Calculate how many world units per CSS pixel
     // For higher DPR, we need to DIVIDE by DPR to ensure consistent sizing
     // This is the key adjustment that ensures elements appear at the same size regardless of DPR
-    const baseScale = worldHeight / cssCanvasHeight;
-    const pixelToWorldScale = baseScale / devicePixelRatio;
-    
-    // Enhanced logging for DPR debugging
-    console.log(`[DPR] pixelToWorldScale calculation:
-      - worldHeight: ${worldHeight.toFixed(4)} world units
-      - canvasHeight: ${canvasHeight}px (device pixels)
-      - cssCanvasHeight: ${cssCanvasHeight.toFixed(2)}px (CSS pixels)
-      - devicePixelRatio: ${devicePixelRatio}
-      - baseScale: ${baseScale.toFixed(6)} world units per CSS pixel
-      - adjustedScale: ${pixelToWorldScale.toFixed(6)} world units per CSS pixel (adjusted for DPR)
-    `);
-
-    // Log additional viewport information for debugging
-    console.log(`[DPR] Viewport information:
-      - window.innerWidth: ${window.innerWidth}px (CSS pixels)
-      - window.innerHeight: ${window.innerHeight}px (CSS pixels)
-      - window.devicePixelRatio: ${devicePixelRatio}
-      - canvas.width: ${canvas.width}px (device pixels)
-      - canvas.height: ${canvas.height}px (device pixels)
-      - CSS canvas width: ${(canvas.width / devicePixelRatio).toFixed(2)}px
-      - CSS canvas height: ${(canvas.height / devicePixelRatio).toFixed(2)}px
-    `);
+    const baseScale = worldHeight / canvasHeight;
+    const pixelToWorldScale = baseScale;
 
     return pixelToWorldScale;
   }

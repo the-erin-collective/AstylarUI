@@ -683,7 +683,8 @@ export class SiteDataService {
           justifyContent: 'flex-start',
           alignItems: 'flex-start',
           alignContent: 'center',
-          padding: '10px'
+          padding: '10px',
+          gap: '15px'
         },
 
         // Items for center test
@@ -764,7 +765,7 @@ export class SiteDataService {
           selector: '#flex-shrink-test',
           top: '35%',
           left: '55%',
-          width: '30%', // Reduced width to trigger flex-shrink
+          width: '500px', // Larger width to ensure container is processed
           height: '15%',
           background: '#4a148c',
           borderWidth: '2px',
@@ -783,7 +784,7 @@ export class SiteDataService {
           selector: '#fs-1',
           background: '#f44336',
           borderRadius: '4px',
-          flexBasis: '300px', // Increased to ensure shrinking is triggered
+          flexBasis: '250px', // More reasonable size for clearer math
           flexShrink: '1',
           margin: '2px'
         },
@@ -791,16 +792,16 @@ export class SiteDataService {
           selector: '#fs-2',
           background: '#ff9800',
           borderRadius: '4px',
-          flexBasis: '300px', // Increased to ensure shrinking is triggered
-          flexShrink: '2',
+          flexBasis: '250px', // More reasonable size for clearer math
+          flexShrink: '3', // Much higher shrink factor for clear difference
           margin: '2px'
         },
         {
           selector: '#fs-3',
           background: '#2196f3',
           borderRadius: '4px',
-          flexBasis: '300px', // Increased to ensure shrinking is triggered
-          flexShrink: '0',
+          flexBasis: '250px', // More reasonable size for clearer math
+          flexShrink: '0', // Should not shrink at all
           margin: '2px'
         },
 
@@ -936,12 +937,12 @@ export class SiteDataService {
           padding: '8px'
         },
 
-        // Complex items with multiple properties
+        // Complex items with multiple properties - simplified for debugging
         {
           selector: '#complex-1',
           background: '#d32f2f',
           borderRadius: '4px',
-          flexBasis: '40%', // Increased to ensure wrapping
+          flexBasis: '20%', // Small basis to leave lots of room for growth
           flexGrow: '1',
           height: '30px',
           order: '2',
@@ -952,8 +953,8 @@ export class SiteDataService {
           selector: '#complex-2',
           background: '#1976d2',
           borderRadius: '4px',
-          flexBasis: '45%', // Increased to ensure wrapping
-          flexGrow: '2',
+          flexBasis: '20%', // Small basis to leave lots of room for growth
+          flexGrow: '3', // Much larger grow factor for clear difference
           height: '40px',
           order: '1',
           alignSelf: 'flex-start',
@@ -963,22 +964,11 @@ export class SiteDataService {
           selector: '#complex-3',
           background: '#388e3c',
           borderRadius: '4px',
-          flexBasis: '40%', // Increased to ensure wrapping
-          flexShrink: '2',
+          flexBasis: '20%', // Small basis to leave lots of room for growth
+          flexGrow: '0', // No growth
           height: '35px',
-          order: '4',
-          alignSelf: 'flex-end',
-          margin: '2px'
-        },
-        {
-          selector: '#complex-4',
-          background: '#f57c00',
-          borderRadius: '4px',
-          flexBasis: '45%', // Increased to ensure wrapping
-          flexGrow: '1',
-          height: '25px',
           order: '3',
-          alignSelf: 'stretch',
+          alignSelf: 'flex-end',
           margin: '2px'
         }
       ],
@@ -1061,8 +1051,7 @@ export class SiteDataService {
             children: [
               { type: 'div', id: 'complex-1' },
               { type: 'div', id: 'complex-2' },
-              { type: 'div', id: 'complex-3' },
-              { type: 'div', id: 'complex-4' }
+              { type: 'div', id: 'complex-3' }
             ]
           }
         ]
@@ -2210,7 +2199,7 @@ export class SiteDataService {
           background: '#4d908e',
           flexGrow: '0', // ADDED
           flexShrink: '0',
-          flexBasis: '100px',
+          flexBasis: '200px',
         },
         // --- Mixed Test ---
         {

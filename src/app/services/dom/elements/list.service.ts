@@ -101,12 +101,7 @@ export class ListService {
       }
     }
 
-    // Fallback: estimate based on world dimensions and use a reasonable default
-    const worldHeight = Math.abs(parentMesh.getBoundingInfo().maximum.y - parentMesh.getBoundingInfo().minimum.y);
-      const estimatedPixelHeight = worldHeight / (render.actions.camera.getPixelToWorldScale() || 0.03);
-    const fallbackHeight = Math.max(estimatedPixelHeight * 0.8, 200); // Use 200px as reasonable fallback
-    console.log(`⚠️ Using fallback height calculation: ${fallbackHeight}px (world: ${worldHeight}, scale: ${render.actions.camera.getPixelToWorldScale()})`);
-    return fallbackHeight;
+   return 0;
   }
 
   
@@ -141,10 +136,11 @@ export class ListService {
   private addListIndicator(render: BabylonRender, listItemMesh: Mesh, listType: 'ul' | 'ol', index: number, style: StyleRule): void {
 
     console.log(`🔘 Adding ${listType} indicator for item ${index + 1}`);
-
+    const scaleFactor = render.actions.camera.getPixelToWorldScale();
     // Create indicator based on list type
     let indicatorMesh: any;
-    const indicatorSize = 0.6; // Larger indicator size for better visibility
+    const indicatorSizeInPx = 6;
+    const indicatorSize = indicatorSizeInPx * scaleFactor; // Larger indicator size for better visibility
 
     if (listType === 'ul') {
       console.log(`🔵 Creating BULLET (circle) for ul item ${index + 1}`);

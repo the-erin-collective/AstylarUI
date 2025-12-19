@@ -66,15 +66,11 @@ export class FlexLayoutService {
   ): FlexLine[] {
     // align-content only applies to multi-line containers
     if (lines.length <= 1 || container.flexWrap === 'nowrap') {
-      console.log(`[FLEX-ALIGN] Skipping align-content: ${lines.length} lines, flexWrap=${container.flexWrap}`);
       return lines;
     }
 
     const totalLinesSize = lines.reduce((sum, line) => sum + line.crossSize, 0);
     const remainingSpace = Math.max(0, availableCrossSpace - totalLinesSize);
-    
-    console.log(`[FLEX-ALIGN] Applying align-content: ${container.alignContent}`);
-    console.log(`[FLEX-ALIGN] Lines: ${lines.length}, totalLinesSize=${totalLinesSize}px, availableCrossSpace=${availableCrossSpace}px, remainingSpace=${remainingSpace}px`);
     
     let result: FlexLine[];
     
@@ -111,14 +107,7 @@ export class FlexLayoutService {
         result = lines;
     }
     
-    console.log(`[FLEX-ALIGN] Result:`, 
-      result.map((line, i) => ({
-        index: i,
-        crossOffset: line.crossOffset,
-        crossSize: line.crossSize,
-        itemCount: line.items.length
-      }))
-    );
+
     
     return result;
   }
@@ -160,16 +149,12 @@ export class FlexLayoutService {
     const startOffset = remainingSpace / 2;
     let currentOffset = startOffset;
     
-    console.log(`[FLEX-ALIGN] Center: ${lines.length} lines, remainingSpace=${remainingSpace}px, totalLinesSize=${totalLinesSize}px, startOffset=${startOffset}px`);
-    
     return lines.map((line, index) => {
       const result = {
         ...line,
         crossOffset: currentOffset,
         crossSize: line.crossSize
       };
-      
-      console.log(`[FLEX-ALIGN] Center line ${index}: crossOffset=${currentOffset}px, crossSize=${line.crossSize}px`);
       
       currentOffset += line.crossSize;
       return result;
@@ -273,21 +258,14 @@ export class FlexLayoutService {
   ): FlexItem[] {
     const isRow = container.flexDirection === 'row' || container.flexDirection === 'row-reverse';
     
-    console.log(`[FLEX-SIZE] Calculating flex item sizes: availableMainSpace=${availableMainSpace}px, isRow=${isRow}`);
-    
+
     // Step 1: Calculate flex-basis for each item (in pixels)
     const itemsWithBasis = items.map(item => ({
       ...item,
       calculatedFlexBasis: this.calculateFlexBasis(item, container, isRow)
     }));
     
-    console.log(`[FLEX-SIZE] Items with calculated flex-basis:`, itemsWithBasis.map(item => ({
-      id: item.element.id,
-      flexBasis: item.flexBasis,
-      calculatedFlexBasis: item.calculatedFlexBasis,
-      flexGrow: item.flexGrow,
-      flexShrink: item.flexShrink
-    })));
+
 
     // Step 2: Calculate total used space and remaining space (all in pixels)
     const totalBasisSize = itemsWithBasis.reduce((sum, item) => {
@@ -299,31 +277,22 @@ export class FlexLayoutService {
 
     const remainingSpace = availableMainSpace - totalBasisSize;
     
-    console.log(`[FLEX-SIZE] Total basis size: ${totalBasisSize}px, availableMainSpace: ${availableMainSpace}px, remainingSpace: ${remainingSpace}px`);
+
 
     // Step 3: Apply flex-grow or flex-shrink based on available space
     let result: FlexItem[];
     
     if (remainingSpace > 0) {
-      console.log(`[FLEX-SIZE] Applying flex-grow (remainingSpace > 0)`);
       result = this.applyFlexGrow(itemsWithBasis, remainingSpace, isRow);
     } else if (remainingSpace < 0) {
-      console.log(`[FLEX-SIZE] Applying flex-shrink (remainingSpace < 0)`);
       result = this.applyFlexShrink(itemsWithBasis, Math.abs(remainingSpace), isRow);
     } else {
       // No remaining space, use flex-basis sizes (in pixels)
-      console.log(`[FLEX-SIZE] No remaining space, using flex-basis sizes`);
       result = itemsWithBasis.map(item => ({
         ...item,
         [isRow ? 'width' : 'height']: item.calculatedFlexBasis
       }));
     }
-    
-    console.log(`[FLEX-SIZE] Final item sizes:`, result.map(item => ({
-      id: item.element.id,
-      width: item.width,
-      height: item.height
-    })));
     
     return result;
   }
@@ -354,7 +323,7 @@ export class FlexLayoutService {
         const containerSize = isRow ? container.width : container.height;
         // Percentage calculations are based on CSS pixels, not affected by DPR
         const result = containerSize * (percentage / 100);
-        console.log(`[DPR] Flex-basis percentage calculation for ${item.element.id}: ${percentage}% of ${containerSize}px = ${result}px`);
+
         return result;
       }
       
@@ -401,69 +370,68 @@ export class FlexLayoutService {
 
   /**
    * Apply flex-shrink to reduce item sizes when space is insufficient
+   * Uses intuitive ratio-based shrinking where flex-shrink values determine relative final sizes
+   * Higher flex-shrink = proportionally smaller final size
    * All calculations in screen units (pixels)
    */
   private applyFlexShrink(items: Array<FlexItem & { calculatedFlexBasis: number }>, deficit: number, isRow: boolean): FlexItem[] {
-    console.log(`[FLEX-SHRINK] Applying flex-shrink: deficit=${deficit}px, isRow=${isRow}`);
-    console.log(`[FLEX-SHRINK] Items before shrinking:`, items.map(item => ({
-      id: item.element.id,
-      flexShrink: item.flexShrink,
-      flexBasis: item.calculatedFlexBasis,
-      width: item.width,
-      height: item.height
-    })));
+    // Separate shrinking and non-shrinking items
+    const nonShrinkingItems = items.filter(item => Number(item.flexShrink) === 0);
+    const shrinkingItems = items.filter(item => Number(item.flexShrink) > 0);
     
-    // Calculate weighted flex-shrink factors
-    const totalWeightedShrink = items.reduce((sum, item) => {
-      // Skip items with flex-shrink: 0
-      if (item.flexShrink === 0) {
-        return sum;
-      }
-      const flexBasis = item.calculatedFlexBasis;
-      return sum + (item.flexShrink * flexBasis);
-    }, 0);
+    // Calculate space taken by non-shrinking items
+    const nonShrinkingSpace = nonShrinkingItems.reduce((sum, item) => sum + item.calculatedFlexBasis, 0);
     
-    console.log(`[FLEX-SHRINK] Total weighted shrink: ${totalWeightedShrink}`);
-
-    if (totalWeightedShrink === 0) {
-      // No flex-shrink, items keep their flex-basis size (in pixels)
-      console.log(`[FLEX-SHRINK] No shrinking applied (totalWeightedShrink = 0)`);
+    // Available space after removing deficit
+    const totalBasisSpace = items.reduce((sum, item) => sum + item.calculatedFlexBasis, 0);
+    const availableSpace = totalBasisSpace - deficit;
+    const spaceForShrinkingItems = availableSpace - nonShrinkingSpace;
+    
+    if (shrinkingItems.length === 0 || spaceForShrinkingItems <= 0) {
+      // No shrinking items or no space - keep original sizes or set to 0
       return items.map(item => ({
         ...item,
-        [isRow ? 'width' : 'height']: item.calculatedFlexBasis
+        [isRow ? 'width' : 'height']: Number(item.flexShrink) === 0 ? item.calculatedFlexBasis : 0
       }));
     }
-
-    const result = items.map(item => {
-      // Items with flex-shrink: 0 don't shrink at all
-      if (item.flexShrink === 0) {
-        console.log(`[FLEX-SHRINK] Item ${item.element.id} has flex-shrink: 0, not shrinking`);
+    
+    // Simple ratio-based algorithm: distribute space based on inverse flex-shrink ratios
+    // flex-shrink: 1 gets 1 unit, flex-shrink: 3 gets 1/3 unit
+    // This makes flex-shrink: 3 exactly 3 times smaller than flex-shrink: 1
+    
+    return items.map(item => {
+      const flexShrinkValue = Number(item.flexShrink);
+      
+      if (flexShrinkValue === 0) {
+        // Non-shrinking items keep their original size
         return {
           ...item,
           [isRow ? 'width' : 'height']: item.calculatedFlexBasis
         };
       }
       
-      const weightedShrink = item.flexShrink * item.calculatedFlexBasis;
-      const shrinkRatio = weightedShrink / totalWeightedShrink;
-      const reductionSize = deficit * shrinkRatio;
-      const newSize = Math.max(0, item.calculatedFlexBasis - reductionSize);
+      // Find the minimum flex-shrink value among shrinking items to use as base unit
+      const minFlexShrink = Math.min(...shrinkingItems.map(item => Number(item.flexShrink)));
       
-      console.log(`[FLEX-SHRINK] Item ${item.element.id}: flexShrink=${item.flexShrink}, weightedShrink=${weightedShrink}, shrinkRatio=${shrinkRatio}, reductionSize=${reductionSize}px, newSize=${newSize}px`);
+      // Calculate relative size: item with min flex-shrink gets the most space
+      // Other items get proportionally less based on their flex-shrink ratio
+      const relativeSize = minFlexShrink / flexShrinkValue;
+      
+      // Calculate total relative units to normalize distribution
+      const totalRelativeUnits = shrinkingItems.reduce((sum, item) => {
+        const itemFlexShrink = Number(item.flexShrink);
+        return sum + (minFlexShrink / itemFlexShrink);
+      }, 0);
+      
+      // Distribute available space proportionally
+      const sizeRatio = relativeSize / totalRelativeUnits;
+      const newSize = spaceForShrinkingItems * sizeRatio;
       
       return {
         ...item,
-        [isRow ? 'width' : 'height']: newSize
+        [isRow ? 'width' : 'height']: Math.max(0, newSize)
       };
     });
-    
-    console.log(`[FLEX-SHRINK] Items after shrinking:`, result.map(item => ({
-      id: item.element.id,
-      width: item.width,
-      height: item.height
-    })));
-    
-    return result;
   }
 
   /**
