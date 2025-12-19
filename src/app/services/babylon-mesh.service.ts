@@ -10,7 +10,7 @@ export class BabylonMeshService {
   private scene?: Scene;
   private cameraService?: BabylonCameraService;
 
-  constructor() {}
+  constructor() { }
 
   initialize(scene: Scene, cameraService?: BabylonCameraService): void {
     this.scene = scene;
@@ -22,7 +22,7 @@ export class BabylonMeshService {
       throw new Error('Mesh service not initialized');
     }
 
-    return MeshBuilder.CreatePlane(name, { 
+    return MeshBuilder.CreatePlane(name, {
       width: width,
       height: height
     }, this.scene);
@@ -36,7 +36,7 @@ export class BabylonMeshService {
     // Clamp border radius to prevent visual artifacts
     const maxRadius = Math.min(width, height) / 2;
     const radius = Math.min(borderRadius, maxRadius);
-    
+
     // If no border radius, create a regular plane
     if (radius <= 0) {
       return this.createPlane(name, width, height);
@@ -46,9 +46,9 @@ export class BabylonMeshService {
     const vertexData = this.createRoundedRectangleVertexData(width, height, radius);
     const mesh = new Mesh(name, this.scene);
     vertexData.applyToMesh(mesh);
-    
+
     console.log(`🎨 Created rounded rectangle: ${name} (${width.toFixed(3)} x ${height.toFixed(3)}) radius=${radius.toFixed(3)}`);
-    
+
     return mesh;
   }
 
@@ -61,9 +61,9 @@ export class BabylonMeshService {
     const vertexData = this.createPolygonVertexData(polygonType, width, height, borderRadius);
     const mesh = new Mesh(name, this.scene);
     vertexData.applyToMesh(mesh);
-    
+
     console.log(`🎨 Created ${polygonType}: ${name} (${width.toFixed(3)} x ${height.toFixed(3)}) radius=${borderRadius.toFixed(3)}`);
-    
+
     return mesh;
   }
 
@@ -72,11 +72,11 @@ export class BabylonMeshService {
     const halfWidth = width / 2;
     const halfHeight = height / 2;
     const segments = 8;
-    
+
     // Top edge
     points.push(new Vector3(-halfWidth + radius, halfHeight, 0));
     points.push(new Vector3(halfWidth - radius, halfHeight, 0));
-    
+
     // Top-right corner
     for (let i = 1; i <= segments; i++) {
       const angle = -Math.PI / 2 + (i * Math.PI / 2) / segments;
@@ -84,11 +84,11 @@ export class BabylonMeshService {
       const y = (halfHeight - radius) + radius * Math.sin(angle);
       points.push(new Vector3(x, y, 0));
     }
-    
+
     // Right edge
     points.push(new Vector3(halfWidth, halfHeight - radius, 0));
     points.push(new Vector3(halfWidth, -halfHeight + radius, 0));
-    
+
     // Bottom-right corner
     for (let i = 1; i <= segments; i++) {
       const angle = 0 + (i * Math.PI / 2) / segments;
@@ -96,11 +96,11 @@ export class BabylonMeshService {
       const y = (-halfHeight + radius) + radius * Math.sin(angle);
       points.push(new Vector3(x, y, 0));
     }
-    
+
     // Bottom edge
     points.push(new Vector3(halfWidth - radius, -halfHeight, 0));
     points.push(new Vector3(-halfWidth + radius, -halfHeight, 0));
-    
+
     // Bottom-left corner
     for (let i = 1; i <= segments; i++) {
       const angle = Math.PI / 2 + (i * Math.PI / 2) / segments;
@@ -108,11 +108,11 @@ export class BabylonMeshService {
       const y = (-halfHeight + radius) + radius * Math.sin(angle);
       points.push(new Vector3(x, y, 0));
     }
-    
+
     // Left edge
     points.push(new Vector3(-halfWidth, -halfHeight + radius, 0));
     points.push(new Vector3(-halfWidth, halfHeight - radius, 0));
-    
+
     // Top-left corner
     for (let i = 1; i <= segments; i++) {
       const angle = Math.PI + (i * Math.PI / 2) / segments;
@@ -120,7 +120,7 @@ export class BabylonMeshService {
       const y = (halfHeight - radius) + radius * Math.sin(angle);
       points.push(new Vector3(x, y, 0));
     }
-    
+
     return points;
   }
 
@@ -129,11 +129,11 @@ export class BabylonMeshService {
     const indices: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
-    
+
     // Calculate rectangle bounds
     const halfWidth = width / 2;
     const halfHeight = height / 2;
-    
+
     // Define rectangle corners for round-polygon library
     const rectangleCorners = [
       { x: -halfWidth, y: halfHeight },   // Top-left
@@ -141,21 +141,21 @@ export class BabylonMeshService {
       { x: halfWidth, y: -halfHeight },   // Bottom-right
       { x: -halfWidth, y: -halfHeight }   // Bottom-left
     ];
-    
+
     console.log(`🔍 Using round-polygon library for ${width.toFixed(1)}x${height.toFixed(1)} rectangle (radius=${radius.toFixed(1)}):`);
-    
+
     // Generate rounded polygon using the library
     const roundedPolygon = roundPolygon(rectangleCorners, radius);
     console.log(`   Generated ${roundedPolygon.length} rounded corner points`);
-    
+
     // Convert arcs to segments for triangulation with higher resolution
     // Use smaller segment length for smoother curves (0.5 units per segment instead of 2)
     const segmentLength = Math.max(0.3, radius / 10); // Dynamic based on radius, minimum 0.3
     const segments = getSegments(roundedPolygon, "LENGTH", segmentLength);
     console.log(`   Generated ${segments.length} segments for smooth curves (segment length: ${segmentLength.toFixed(2)})`);
-    
+
     let vertexIndex = 0;
-    
+
     // Helper function to add a vertex
     const addVertex = (x: number, y: number) => {
       positions.push(x, y, 0);
@@ -163,40 +163,40 @@ export class BabylonMeshService {
       uvs.push((x + halfWidth) / width, (y + halfHeight) / height);
       return vertexIndex++;
     };
-    
+
     // Add all segment points as vertices
     const vertices: number[] = [];
     for (const segment of segments) {
       vertices.push(addVertex(segment.x, segment.y));
     }
-    
+
     console.log(`   Created ${vertices.length} vertices from segments`);
-    
+
     // Use simple fan triangulation (should work well with evenly distributed points)
     this.earClipTriangulation(vertices, indices);
-    
+
     const vertexData = new VertexData();
     vertexData.positions = positions;
     vertexData.indices = indices;
     vertexData.normals = normals;
     vertexData.uvs = uvs;
-    
+
     console.log(`🎨 Generated rounded rectangle: ${vertices.length} vertices, ${indices.length / 3} triangles (round-polygon library)`);
-    
+
     return vertexData;
   }
 
   public createPolygonVertexData(polygonType: string, width: number, height: number, borderRadius: number): VertexData {
     console.log(`🔍 createPolygonVertexData: ${polygonType}, ${width.toFixed(1)}×${height.toFixed(1)}, radius=${borderRadius.toFixed(3)}`);
-    
+
     const positions: number[] = [];
     const indices: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
-    
+
     // Get the basic polygon points based on type (with default angles)
     const polygonPoints = this.generatePolygonPoints(polygonType, width, height);
-    
+
     if (borderRadius > 0) {
       console.log(`✅ Using rounded polygon path for ${polygonType} with radius ${borderRadius.toFixed(3)}`);
       // Use round-polygon library for rounded corners
@@ -208,30 +208,30 @@ export class BabylonMeshService {
     }
   }
 
-  private generatePolygonPoints(polygonType: string, width: number, height: number): Array<{x: number, y: number}> {
-    const points: Array<{x: number, y: number}> = [];
-    
+  private generatePolygonPoints(polygonType: string, width: number, height: number): Array<{ x: number, y: number }> {
+    const points: Array<{ x: number, y: number }> = [];
+
     // Handle rectangle specially using actual width/height dimensions
     if (polygonType === 'rectangle') {
       const halfWidth = width / 2;
       const halfHeight = height / 2;
-      
+
       // Create rectangle corners (clockwise from top-left)
       points.push({ x: -halfWidth, y: halfHeight });   // Top-left
       points.push({ x: halfWidth, y: halfHeight });    // Top-right
       points.push({ x: halfWidth, y: -halfHeight });   // Bottom-right
       points.push({ x: -halfWidth, y: -halfHeight });  // Bottom-left
-      
+
       console.log(`🔸 Generated rectangle with ${points.length} vertices (${width.toFixed(1)}x${height.toFixed(1)})`);
       return points;
     }
-    
+
     // Use the smaller dimension to determine the polygon radius (so it fits in the bounding box)
     const radius = Math.min(width, height) / 2;
-    
+
     let sides: number;
     let startAngle: number;
-    
+
     switch (polygonType) {
       case 'circle':
         sides = 12; // Use 12 sides for smoother circle approximation
@@ -272,26 +272,26 @@ export class BabylonMeshService {
       const y = radius * Math.sin(polygonAngle);
       points.push({ x, y });
     }
-    
+
     console.log(`🔸 Generated ${sides}-sided ${polygonType} with ${points.length} vertices (startAngle=${(startAngle * 180 / Math.PI).toFixed(1)}°)`);
     return points;
   }
 
-  private createRoundedPolygonVertexData(polygonPoints: Array<{x: number, y: number}>, borderRadius: number, width: number, height: number): VertexData {
+  private createRoundedPolygonVertexData(polygonPoints: Array<{ x: number, y: number }>, borderRadius: number, width: number, height: number): VertexData {
     const positions: number[] = [];
     const indices: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
-    
+
     console.log(`🔍 Using round-polygon library for ${polygonPoints.length}-sided polygon (radius=${borderRadius.toFixed(1)}):`);
     console.log(`   Input polygon points:`, polygonPoints);
     console.log(`   Shape dimensions: ${width.toFixed(1)} × ${height.toFixed(1)}`);
-    
+
     // Generate rounded polygon using the library
     const roundedPolygon = roundPolygon(polygonPoints, borderRadius);
     console.log(`   Generated ${roundedPolygon.length} rounded corner points`);
     console.log(`   First few rounded points:`, roundedPolygon.slice(0, 5));
-    
+
     if (roundedPolygon.length === 0) {
       console.error(`❌ round-polygon library returned empty result! Input:`, {
         polygonPoints,
@@ -302,12 +302,12 @@ export class BabylonMeshService {
       // Fallback to sharp polygon
       return this.createSharpPolygonVertexData(polygonPoints, width, height);
     }
-    
+
     // Convert arcs to segments for triangulation with high resolution
     const segmentLength = Math.max(0.3, borderRadius / 10);
     const segments = getSegments(roundedPolygon, "LENGTH", segmentLength);
     console.log(`   Generated ${segments.length} segments for smooth curves (segment length: ${segmentLength.toFixed(2)})`);
-    
+
     if (segments.length === 0) {
       console.error(`❌ getSegments returned empty result!`);
       // Fallback to sharp polygon
@@ -316,7 +316,7 @@ export class BabylonMeshService {
     const halfWidth = width / 2;
     const halfHeight = height / 2;
     let vertexIndex = 0;
-    
+
     // Helper function to add a vertex
     const addVertex = (x: number, y: number) => {
       positions.push(x, y, 0);
@@ -324,39 +324,39 @@ export class BabylonMeshService {
       uvs.push((x + halfWidth) / width, (y + halfHeight) / height);
       return vertexIndex++;
     };
-    
+
     // Add all segment points as vertices
     const vertices: number[] = [];
     for (const segment of segments) {
       vertices.push(addVertex(segment.x, segment.y));
     }
-    
+
     console.log(`   Created ${vertices.length} vertices from segments`);
-    
+
     // Use fan triangulation for the polygon
     this.earClipTriangulation(vertices, indices);
-    
+
     const vertexData = new VertexData();
     vertexData.positions = positions;
     vertexData.indices = indices;
     vertexData.normals = normals;
     vertexData.uvs = uvs;
-    
+
     console.log(`🎨 Generated rounded ${polygonPoints.length}-sided polygon: ${vertices.length} vertices, ${indices.length / 3} triangles`);
-    
+
     return vertexData;
   }
 
-  private createSharpPolygonVertexData(polygonPoints: Array<{x: number, y: number}>, width: number, height: number): VertexData {
+  private createSharpPolygonVertexData(polygonPoints: Array<{ x: number, y: number }>, width: number, height: number): VertexData {
     const positions: number[] = [];
     const indices: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
-    
+
     const halfWidth = width / 2;
     const halfHeight = height / 2;
     let vertexIndex = 0;
-    
+
     // Helper function to add a vertex
     const addVertex = (x: number, y: number) => {
       positions.push(x, y, 0);
@@ -364,45 +364,45 @@ export class BabylonMeshService {
       uvs.push((x + halfWidth) / width, (y + halfHeight) / height);
       return vertexIndex++;
     };
-    
+
     // Add all polygon points as vertices
     const vertices: number[] = [];
     for (const point of polygonPoints) {
       vertices.push(addVertex(point.x, point.y));
     }
-    
+
     console.log(`   Created ${vertices.length} vertices for sharp polygon`);
-    
+
     // Use fan triangulation for the polygon
     this.earClipTriangulation(vertices, indices);
-    
+
     const vertexData = new VertexData();
     vertexData.positions = positions;
     vertexData.indices = indices;
     vertexData.normals = normals;
     vertexData.uvs = uvs;
-    
+
     console.log(`🎨 Generated sharp ${polygonPoints.length}-sided polygon: ${vertices.length} vertices, ${indices.length / 3} triangles`);
-    
+
     return vertexData;
   }
 
   private createPolygonFrameVertexData(polygonType: string, width: number, height: number, borderWidth: number, borderRadius: number): VertexData {
     console.log(`🖼️ createPolygonFrameVertexData: ${polygonType}, ${width.toFixed(1)}×${height.toFixed(1)}, borderWidth=${borderWidth.toFixed(3)}, borderRadius=${borderRadius.toFixed(3)}`);
-    
+
     const positions: number[] = [];
     const indices: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
-    
+
     // Generate outer polygon points (actual size) with default angles
     const outerPolygonPoints = this.generatePolygonPoints(polygonType, width, height);
-    
+
     // Generate inner polygon points (reduced by border width)
     // For rectangles, reduce both width and height by 2*borderWidth (border on both sides)
     // For circles, reduce radius by borderWidth
     let innerWidth, innerHeight;
-    
+
     if (polygonType === 'circle') {
       // For circles, reduce radius by border width
       const outerRadius = Math.min(width, height) / 2;
@@ -415,9 +415,9 @@ export class BabylonMeshService {
       innerWidth = Math.max(0.2, width - 2 * borderWidth);
       innerHeight = Math.max(0.2, height - 2 * borderWidth);
     }
-    
+
     const innerPolygonPoints = this.generatePolygonPoints(polygonType, innerWidth, innerHeight);
-    
+
     console.log(`🔧 Creating polygon border frame:`, {
       polygonType,
       outerDimensions: `${width.toFixed(2)}×${height.toFixed(2)}`,
@@ -426,7 +426,7 @@ export class BabylonMeshService {
       outerPoints: outerPolygonPoints.length,
       innerPoints: innerPolygonPoints.length
     });
-    
+
     if (borderRadius > 0) {
       console.log(`✅ Creating ROUNDED polygon border with radius ${borderRadius.toFixed(3)}`);
       // Create rounded polygon border
@@ -442,33 +442,33 @@ export class BabylonMeshService {
     }
   }
 
-  private createRoundedPolygonFrameVertexData(outerPoints: Array<{x: number, y: number}>, innerPoints: Array<{x: number, y: number}>, borderRadius: number, width: number, height: number, borderWidth: number): VertexData {
+  private createRoundedPolygonFrameVertexData(outerPoints: Array<{ x: number, y: number }>, innerPoints: Array<{ x: number, y: number }>, borderRadius: number, width: number, height: number, borderWidth: number): VertexData {
     const positions: number[] = [];
     const indices: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
-    
+
     console.log(`🔍 Using round-polygon library for polygon border (radius=${borderRadius.toFixed(1)}):`);
-    
+
     // Generate rounded outer polygon
     const roundedOuter = roundPolygon(outerPoints, borderRadius);
     const segmentLength = Math.max(0.3, borderRadius / 10);
     const outerSegments = getSegments(roundedOuter, "LENGTH", segmentLength);
-    
+
     // Generate rounded inner polygon with proportionally smaller radius
     // Reduce inner radius proportionally to the border width
     const borderWidthRatio = borderWidth / (Math.min(width, height) / 2);
     const innerBorderRadius = Math.max(0, borderRadius * (1 - borderWidthRatio * 0.5));
     const roundedInner = roundPolygon(innerPoints, innerBorderRadius);
     const innerSegments = getSegments(roundedInner, "LENGTH", segmentLength);
-    
+
     console.log(`   Border radius: outer=${borderRadius.toFixed(3)}, inner=${innerBorderRadius.toFixed(3)} (ratio=${borderWidthRatio.toFixed(3)})`);
     console.log(`   Generated ${outerSegments.length} outer segments, ${innerSegments.length} inner segments`);
-    
+
     const halfWidth = width / 2;
     const halfHeight = height / 2;
     let vertexIndex = 0;
-    
+
     // Helper function to add a vertex
     const addVertex = (x: number, y: number) => {
       positions.push(x, y, 0);
@@ -476,43 +476,43 @@ export class BabylonMeshService {
       uvs.push((x + halfWidth) / width, (y + halfHeight) / height);
       return vertexIndex++;
     };
-    
+
     // Add outer vertices
     const outerVertices: number[] = [];
     for (const segment of outerSegments) {
       outerVertices.push(addVertex(segment.x, segment.y));
     }
-    
+
     // Add inner vertices
     const innerVertices: number[] = [];
     for (const segment of innerSegments) {
       innerVertices.push(addVertex(segment.x, segment.y));
     }
-    
+
     // Create triangular strips between outer and inner perimeters
     this.createBorderStrips(outerVertices, innerVertices, indices);
-    
+
     const vertexData = new VertexData();
     vertexData.positions = positions;
     vertexData.indices = indices;
     vertexData.normals = normals;
     vertexData.uvs = uvs;
-    
+
     console.log(`🎨 Generated rounded polygon border: ${outerVertices.length + innerVertices.length} vertices, ${indices.length / 3} triangles`);
-    
+
     return vertexData;
   }
 
-  private createSharpPolygonFrameVertexData(outerPoints: Array<{x: number, y: number}>, innerPoints: Array<{x: number, y: number}>, width: number, height: number): VertexData {
+  private createSharpPolygonFrameVertexData(outerPoints: Array<{ x: number, y: number }>, innerPoints: Array<{ x: number, y: number }>, width: number, height: number): VertexData {
     const positions: number[] = [];
     const indices: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
-    
+
     const halfWidth = width / 2;
     const halfHeight = height / 2;
     let vertexIndex = 0;
-    
+
     // Helper function to add a vertex
     const addVertex = (x: number, y: number) => {
       positions.push(x, y, 0);
@@ -520,42 +520,42 @@ export class BabylonMeshService {
       uvs.push((x + halfWidth) / width, (y + halfHeight) / height);
       return vertexIndex++;
     };
-    
+
     // Add outer vertices
     const outerVertices: number[] = [];
     for (const point of outerPoints) {
       outerVertices.push(addVertex(point.x, point.y));
     }
-    
+
     // Add inner vertices
     const innerVertices: number[] = [];
     for (const point of innerPoints) {
       innerVertices.push(addVertex(point.x, point.y));
     }
-    
+
     // Create triangular strips between outer and inner perimeters
     this.createBorderStrips(outerVertices, innerVertices, indices);
-    
+
     const vertexData = new VertexData();
     vertexData.positions = positions;
     vertexData.indices = indices;
     vertexData.normals = normals;
     vertexData.uvs = uvs;
-    
+
     console.log(`🎨 Generated sharp polygon border: ${outerVertices.length + innerVertices.length} vertices, ${indices.length / 3} triangles`);
-    
+
     return vertexData;
   }
 
   private createBorderStrips(outerVertices: number[], innerVertices: number[], indices: number[]): void {
     const outerCount = outerVertices.length;
     const innerCount = innerVertices.length;
-    
+
     if (outerCount === innerCount) {
       // Same number of vertices - create simple strips
       for (let i = 0; i < outerCount; i++) {
         const nextI = (i + 1) % outerCount;
-        
+
         // Create two triangles for each segment of the border frame
         indices.push(outerVertices[i], innerVertices[i], outerVertices[nextI]);
         indices.push(innerVertices[i], innerVertices[nextI], outerVertices[nextI]);
@@ -563,14 +563,14 @@ export class BabylonMeshService {
     } else {
       // Different vertex counts - use ratio-based mapping
       console.log(`⚠️ Vertex count mismatch: outer=${outerCount}, inner=${innerCount} - using ratio mapping`);
-      
+
       for (let i = 0; i < outerCount; i++) {
         const nextI = (i + 1) % outerCount;
-        
+
         // Map to inner vertices using ratio
         const innerI = Math.floor((i * innerCount) / outerCount) % innerCount;
         const nextInnerI = Math.floor((nextI * innerCount) / outerCount) % innerCount;
-        
+
         // Create triangles
         indices.push(outerVertices[i], innerVertices[innerI], outerVertices[nextI]);
         if (innerI !== nextInnerI) {
@@ -584,10 +584,10 @@ export class BabylonMeshService {
     // Simple ear clipping for convex polygon (rounded rectangle)
     // For convex polygons, we can triangulate by connecting non-adjacent vertices
     // This guarantees no overlapping triangles
-    
+
     const n = vertices.length;
     if (n < 3) return;
-    
+
     // For convex polygons, we can use a simple fan triangulation from vertex 0
     // but ensure we don't create overlapping triangles by using proper indexing
     for (let i = 1; i < n - 1; i++) {
@@ -619,10 +619,10 @@ export class BabylonMeshService {
       const vertexData = this.createPolygonFrameVertexData(
         polygonType, width, height, borderWidth, borderRadius
       );
-      
+
       const borderMesh = new Mesh(`${name}_polygon_border_frame`, this.scene);
       vertexData.applyToMesh(borderMesh);
-      
+
       console.log(`✅ Created polygon border frame for ${name} (${polygonType})`);
       return [borderMesh];
     } catch (error) {
@@ -652,39 +652,39 @@ export class BabylonMeshService {
 
     // Create 4 border rectangles using unified dimensions
     const borders: Mesh[] = [];
-    
+
     // Top border - uses horizontal dimensions
     const topBorder = MeshBuilder.CreatePlane(`${name}-top`, {
       width: borderDimensions.horizontal.width,
       height: borderDimensions.horizontal.height
     }, this.scene);
     borders.push(topBorder);
-    
+
     // Bottom border - uses horizontal dimensions  
     const bottomBorder = MeshBuilder.CreatePlane(`${name}-bottom`, {
       width: borderDimensions.horizontal.width,
       height: borderDimensions.horizontal.height
     }, this.scene);
     borders.push(bottomBorder);
-    
+
     // Left border - uses vertical dimensions
     const leftBorder = MeshBuilder.CreatePlane(`${name}-left`, {
       width: borderDimensions.vertical.width,
       height: borderDimensions.vertical.height
     }, this.scene);
     borders.push(leftBorder);
-    
+
     // Right border - uses vertical dimensions
     const rightBorder = MeshBuilder.CreatePlane(`${name}-right`, {
       width: borderDimensions.vertical.width,
       height: borderDimensions.vertical.height
     }, this.scene);
     borders.push(rightBorder);
-    
+
     console.log('🎯 Unified border mesh creation:', {
       elementSize: `${elementWidth.toFixed(6)} x ${elementHeight.toFixed(6)}`,
       originalBorderWidth: borderWidth.toFixed(6),
-      snappedBorderWidth: this.cameraService ? 
+      snappedBorderWidth: this.cameraService ?
         this.cameraService.snapBorderWidthToPixel(borderWidth).toFixed(6) : 'N/A',
       dimensions: {
         horizontal: {
@@ -698,7 +698,7 @@ export class BabylonMeshService {
       },
       meshNames: [`${name}-top`, `${name}-bottom`, `${name}-left`, `${name}-right`]
     });
-    
+
     return borders;
   }
 
@@ -711,19 +711,19 @@ export class BabylonMeshService {
       // Create rounded border frame using custom vertex data
       const vertexData = this.createRoundedFrameVertexData(
         elementWidth, elementHeight, borderRadius,
-        elementWidth - 2 * borderWidth, elementHeight - 2 * borderWidth, 
+        elementWidth - 2 * borderWidth, elementHeight - 2 * borderWidth,
         Math.max(0, borderRadius - borderWidth)
       );
-      
+
       const borderMesh = new Mesh(`${name}_border_frame`, this.scene);
       vertexData.applyToMesh(borderMesh);
-      
+
       // Apply border material
       const material = new StandardMaterial(`${name}_border_material`, this.scene);
       material.diffuseColor = Color3.White();
       material.emissiveColor = Color3.White().scale(0.1);
       borderMesh.material = material;
-      
+
       console.log(`✅ Created rounded border frame for ${name}`);
       return [borderMesh];
     } catch (error) {
@@ -737,10 +737,10 @@ export class BabylonMeshService {
     const indices: number[] = [];
     const normals: number[] = [];
     const uvs: number[] = [];
-    
+
     let vertexIndex = 0;
     const segments = 8;
-    
+
     // Helper function to add a vertex
     const addVertex = (x: number, y: number) => {
       positions.push(x, y, 0);
@@ -748,28 +748,28 @@ export class BabylonMeshService {
       uvs.push(0.5 + x / outerWidth, 0.5 + y / outerHeight); // Simple UV mapping
       return vertexIndex++;
     };
-    
+
     // Generate outer perimeter vertices
     const outerVertices = this.generateRoundedPerimeter(outerWidth, outerHeight, outerRadius, segments, addVertex);
-    
+
     // Generate inner perimeter vertices  
     const innerVertices = this.generateRoundedPerimeter(innerWidth, innerHeight, innerRadius, segments, addVertex);
-    
+
     // Create triangular strips between outer and inner perimeters
     for (let i = 0; i < outerVertices.length; i++) {
       const nextI = (i + 1) % outerVertices.length;
-      
+
       // Create two triangles for each segment of the frame
       indices.push(outerVertices[i], innerVertices[i], outerVertices[nextI]);
       indices.push(innerVertices[i], innerVertices[nextI], outerVertices[nextI]);
     }
-    
+
     const vertexData = new VertexData();
     vertexData.positions = positions;
     vertexData.indices = indices;
     vertexData.normals = normals;
     vertexData.uvs = uvs;
-    
+
     return vertexData;
   }
 
@@ -777,15 +777,15 @@ export class BabylonMeshService {
     const vertices: number[] = [];
     const halfWidth = width / 2;
     const halfHeight = height / 2;
-    
+
     // Clamp radius
     const maxRadius = Math.min(halfWidth, halfHeight);
     const clampedRadius = Math.min(radius, maxRadius);
-    
+
     // Top edge
     vertices.push(addVertex(-halfWidth + clampedRadius, halfHeight));
     vertices.push(addVertex(halfWidth - clampedRadius, halfHeight));
-    
+
     // Top-right corner
     for (let i = 0; i <= segments; i++) {
       const angle = -Math.PI / 2 + (i * Math.PI / 2) / segments;
@@ -793,11 +793,11 @@ export class BabylonMeshService {
       const y = (halfHeight - clampedRadius) + clampedRadius * Math.sin(angle);
       vertices.push(addVertex(x, y));
     }
-    
+
     // Right edge
     vertices.push(addVertex(halfWidth, halfHeight - clampedRadius));
     vertices.push(addVertex(halfWidth, -halfHeight + clampedRadius));
-    
+
     // Bottom-right corner
     for (let i = 0; i <= segments; i++) {
       const angle = 0 + (i * Math.PI / 2) / segments;
@@ -805,11 +805,11 @@ export class BabylonMeshService {
       const y = (-halfHeight + clampedRadius) + clampedRadius * Math.sin(angle);
       vertices.push(addVertex(x, y));
     }
-    
+
     // Bottom edge
     vertices.push(addVertex(halfWidth - clampedRadius, -halfHeight));
     vertices.push(addVertex(-halfWidth + clampedRadius, -halfHeight));
-    
+
     // Bottom-left corner
     for (let i = 0; i <= segments; i++) {
       const angle = Math.PI / 2 + (i * Math.PI / 2) / segments;
@@ -817,11 +817,11 @@ export class BabylonMeshService {
       const y = (-halfHeight + clampedRadius) + clampedRadius * Math.sin(angle);
       vertices.push(addVertex(x, y));
     }
-    
+
     // Left edge
     vertices.push(addVertex(-halfWidth, -halfHeight + clampedRadius));
     vertices.push(addVertex(-halfWidth, halfHeight - clampedRadius));
-    
+
     // Top-left corner
     for (let i = 0; i <= segments; i++) {
       const angle = Math.PI + (i * Math.PI / 2) / segments;
@@ -829,13 +829,13 @@ export class BabylonMeshService {
       const y = (halfHeight - clampedRadius) + clampedRadius * Math.sin(angle);
       vertices.push(addVertex(x, y));
     }
-    
+
     return vertices;
   }
 
   positionBorderFrames(borders: Mesh[], centerX: number, centerY: number, centerZ: number, elementWidth: number, elementHeight: number, borderWidth: number): void {
     if (!borders || borders.length === 0) return;
-    
+
     // Handle rounded borders (single mesh)
     if (borders.length === 1) {
       const borderMesh = borders[0];
@@ -843,52 +843,52 @@ export class BabylonMeshService {
       console.log(`🎯 Positioned rounded border at (${centerX.toFixed(3)}, ${centerY.toFixed(3)}, ${(centerZ + 0.001).toFixed(3)})`);
       return;
     }
-    
+
     // Handle rectangular borders (4 meshes)
     if (borders.length !== 4) {
       console.warn(`Unexpected border count: ${borders.length}, expected 1 or 4`);
       return;
     }
-    
+
     const [topBorder, bottomBorder, leftBorder, rightBorder] = borders;
-    
+
     // Use unified border layout calculation for complete consistency
     if (!this.cameraService) {
       console.warn('Camera service not available - using fallback positioning');
       return;
     }
-    
+
     const layout = this.cameraService.calculateUnifiedBorderLayout(
       centerX, centerY, centerZ,
-      elementWidth, elementHeight, 
+      elementWidth, elementHeight,
       borderWidth
     );
-    
+
     // Apply calculated positions directly - no additional calculations needed
     topBorder.position.set(
       layout.borderPositions.top.x,
       layout.borderPositions.top.y,
       layout.borderPositions.top.z
     );
-    
+
     bottomBorder.position.set(
       layout.borderPositions.bottom.x,
       layout.borderPositions.bottom.y,
       layout.borderPositions.bottom.z
     );
-    
+
     leftBorder.position.set(
       layout.borderPositions.left.x,
       layout.borderPositions.left.y,
       layout.borderPositions.left.z
     );
-    
+
     rightBorder.position.set(
       layout.borderPositions.right.x,
       layout.borderPositions.right.y,
       layout.borderPositions.right.z
     );
-    
+
     console.log('🎯 Unified border positioning applied:', {
       elementCenter: `(${centerX.toFixed(3)}, ${centerY.toFixed(3)}, ${centerZ.toFixed(3)})`,
       elementSize: `${elementWidth.toFixed(3)} x ${elementHeight.toFixed(3)}`,
@@ -926,22 +926,22 @@ export class BabylonMeshService {
 
     const material = new StandardMaterial(name, this.scene);
     material.diffuseColor = diffuseColor;
-    
+
     // Completely eliminate emissive color to prevent edge bleeding
     material.emissiveColor = new Color3(0, 0, 0);
-    
+
     material.backFaceCulling = false;
-    
+
     // Clean settings for sharp edges
     material.specularColor = new Color3(0, 0, 0); // No specular reflection
-    
+
     material.roughness = 0;
 
     //material.fillMode = Material.TriangleFillMode;
 
     // Apply opacity/transparency - always set alpha
     material.alpha = opacity;
-    
+
     // Enhanced transparency settings for better rendering
     if (opacity < 1.0) {
       material.transparencyMode = Material.MATERIAL_ALPHABLEND;
@@ -962,30 +962,30 @@ export class BabylonMeshService {
     }
 
     const material = new StandardMaterial(name, this.scene);
-    
+
     // Create a texture for the gradient
     const textureSize = 256; // Size of the texture
-    const texture = new DynamicTexture(`${name}-gradient-texture`, {width: textureSize, height: textureSize}, this.scene);
-    
+    const texture = new DynamicTexture(`${name}-gradient-texture`, { width: textureSize, height: textureSize }, this.scene);
+
     // Get the texture context to draw the gradient
     const context = texture.getContext();
-    
+
     if (gradientData.type === 'linear') {
       this.drawLinearGradient(context, textureSize, gradientData.gradient);
     } else if (gradientData.type === 'radial') {
       this.drawRadialGradient(context, textureSize, gradientData.gradient);
     }
-    
+
     // Update the texture
     texture.update();
-    
+
     // Apply the texture to the material
     material.diffuseTexture = texture;
     material.emissiveColor = new Color3(0, 0, 0);
     material.specularColor = new Color3(0, 0, 0);
     material.backFaceCulling = false;
     material.roughness = 0;
-    
+
     // Apply opacity
     material.alpha = opacity;
     if (opacity < 1.0) {
@@ -994,9 +994,9 @@ export class BabylonMeshService {
     } else {
       material.transparencyMode = Material.MATERIAL_OPAQUE;
     }
-    
+
     console.log(`🎨 Created gradient material: ${name} (${gradientData.type}) opacity=${opacity}`);
-    
+
     return material;
   }
 
@@ -1004,7 +1004,7 @@ export class BabylonMeshService {
     // Parse direction
     let angle = 0; // Default: top to bottom
     const direction = gradientData.direction.toLowerCase();
-    
+
     if (direction.includes('deg')) {
       angle = parseFloat(direction.replace('deg', '')) * Math.PI / 180;
     } else if (direction === 'to right') {
@@ -1016,31 +1016,31 @@ export class BabylonMeshService {
     } else if (direction === 'to top') {
       angle = Math.PI;
     }
-    
+
     // Calculate gradient start and end points
     const centerX = size / 2;
     const centerY = size / 2;
     const radius = size / 2;
-    
+
     const x1 = centerX - radius * Math.sin(angle);
     const y1 = centerY - radius * Math.cos(angle);
     const x2 = centerX + radius * Math.sin(angle);
     const y2 = centerY + radius * Math.cos(angle);
-    
+
     // Create gradient
     const gradient = context.createLinearGradient(x1, y1, x2, y2);
-    
+
     // Add color stops
     const colors = gradientData.colors;
     for (let i = 0; i < colors.length; i++) {
       const stop = i / (colors.length - 1);
       gradient.addColorStop(stop, colors[i]);
     }
-    
+
     // Fill the canvas
     context.fillStyle = gradient;
     context.fillRect(0, 0, size, size);
-    
+
     console.log(`🎨 Drew linear gradient: ${direction}, colors: [${colors.join(', ')}]`);
   }
 
@@ -1048,21 +1048,21 @@ export class BabylonMeshService {
     const centerX = size / 2;
     const centerY = size / 2;
     const radius = size / 2;
-    
+
     // Create radial gradient
     const gradient = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-    
+
     // Add color stops
     const colors = gradientData.colors;
     for (let i = 0; i < colors.length; i++) {
       const stop = i / (colors.length - 1);
       gradient.addColorStop(stop, colors[i]);
     }
-    
+
     // Fill the canvas
     context.fillStyle = gradient;
     context.fillRect(0, 0, size, size);
-    
+
     console.log(`🎨 Drew radial gradient: ${gradientData.shape}, colors: [${colors.join(', ')}]`);
   }
 
@@ -1073,57 +1073,57 @@ export class BabylonMeshService {
 
     // Create a parent mesh to hold all shadow layers
     const shadowContainer = new Mesh(`${name}-container`, this.scene);
-    
+
     // Parse color to get base RGB values
     const baseColor = Color3.FromHexString(color);
-    
+
     if (blur <= 0) {
       // No blur - create single sharp shadow
       const shadowMesh = this.createSingleShadow(`${name}-sharp`, width, height, polygonType, borderRadius);
       const shadowMaterial = this.createMaterial(`${name}-shadow-material`, baseColor, undefined, 0.4);
       shadowMesh.material = shadowMaterial;
       shadowMesh.parent = shadowContainer;
-      
+
       console.log(`🌒 Created sharp shadow: ${name} (${width}x${height}) offset(${offsetX}, ${offsetY}) color=${color}`);
     } else {
       // Create blurred shadow with multiple layers for smooth gradients
       const blurLayers = Math.min(Math.max(Math.ceil(blur / 6), 6), 16); // 6-16 layers for good performance and smoothness
       const baseOpacity = 0.7; // Strong base opacity to ensure visibility
-      
+
       for (let i = 0; i < blurLayers; i++) {
         const layerIndex = i + 1;
         const normalizedIndex = layerIndex / blurLayers; // 0 to 1
-        
+
         // Smooth expansion curve - starts small, gradually increases
         const expansionFactor = 1 + (blur * 0.06 * Math.pow(normalizedIndex, 1.2));
-        
+
         const layerWidth = width * expansionFactor;
         const layerHeight = height * expansionFactor;
-        
+
         // Simple but effective opacity falloff - ensures all layers are visible
         const falloffFactor = Math.pow(1 - normalizedIndex, 2); // Quadratic falloff
         const layerOpacity = (baseOpacity / blurLayers) * (1 + falloffFactor * 2); // Inner layers stronger
-        
+
         console.log(`Layer ${layerIndex}: expansion=${expansionFactor.toFixed(3)}, opacity=${layerOpacity.toFixed(3)}`);
-        
+
         const layerMesh = this.createSingleShadow(`${name}-blur-${layerIndex}`, layerWidth, layerHeight, polygonType, borderRadius);
         const layerMaterial = this.createMaterial(`${name}-blur-material-${layerIndex}`, baseColor, undefined, layerOpacity);
         layerMesh.material = layerMaterial;
         layerMesh.parent = shadowContainer;
-        
+
         // Stagger layers in Z to prevent z-fighting
         layerMesh.position.z = -0.0005 * layerIndex;
       }
-      
+
       console.log(`🌒 Created reliable blurred shadow: ${name} (${width}x${height}) blur=${blur}px (${blurLayers} layers) offset(${offsetX}, ${offsetY}) color=${color}`);
     }
-    
+
     return shadowContainer;
   }
 
   private createSingleShadow(name: string, width: number, height: number, polygonType: string, borderRadius: number = 0): Mesh {
     let shadowMesh: Mesh;
-    
+
     // Create shadow mesh based on the same shape as the element
     if (polygonType === 'rectangle') {
       if (borderRadius > 0) {
@@ -1134,7 +1134,7 @@ export class BabylonMeshService {
     } else {
       shadowMesh = this.createPolygon(name, polygonType, width, height, borderRadius);
     }
-    
+
     return shadowMesh;
   }
 
@@ -1148,12 +1148,276 @@ export class BabylonMeshService {
     child.parent = parent;
   }
 
-  updatePolygon(mesh: Mesh, polygonType: string, width: number, height: number, borderRadius: number): void {
-    const vertexData = this.createPolygonVertexData(polygonType, width, height, borderRadius);
-    vertexData.applyToMesh(mesh);
+  updatePolygon(mesh: Mesh, polygonType: string, width: number, height: number, borderRadius: number, borderWidth: number = 0): void {
+    console.log(`🔄 Updating polygon mesh: ${mesh.name}, type=${polygonType}, size=${width.toFixed(2)}x${height.toFixed(2)}, radius=${borderRadius.toFixed(2)}, borderWidth=${borderWidth.toFixed(4)}`);
+
+    try {
+      // Create new vertex data with the updated border radius
+      const vertexData = this.createPolygonVertexData(polygonType, width, height, borderRadius);
+
+      // Apply to the mesh with updateable flag set to true
+      vertexData.applyToMesh(mesh, true);
+
+      // Refresh the bounding info to ensure proper interactions
+      mesh.refreshBoundingInfo();
+
+      // Check if there's a border mesh that needs updating too
+      if (this.scene && borderWidth > 0) {
+        const borderMeshName = `${mesh.name}_border_frame`;
+        const borderMesh = this.scene.getMeshByName(borderMeshName);
+
+        if (borderMesh) {
+          console.log(`🔄 Found associated border mesh: ${borderMeshName}, updating with new border radius`);
+
+          // Create new border vertex data
+          const borderVertexData = this.createPolygonFrameVertexData(
+            polygonType, width, height, borderWidth, borderRadius
+          );
+
+          // Apply to the border mesh
+          borderVertexData.applyToMesh(borderMesh as Mesh, true);
+          (borderMesh as Mesh).refreshBoundingInfo();
+
+          console.log(`✅ Border mesh updated successfully with new border radius`);
+        }
+      }
+
+      console.log(`✅ Polygon mesh updated successfully`);
+    } catch (error) {
+      console.error(`❌ Error updating polygon mesh:`, error);
+    }
+  }
+
+  // Helper method to generate polygon vertex data without creating a mesh
+  generatePolygonVertexData(polygonType: string, width: number, height: number, borderRadius: number): VertexData {
+    return this.createPolygonVertexData(polygonType, width, height, borderRadius);
+  }
+
+  /**
+   * Updates both a mesh and its associated border meshes with a new border radius
+   * @param mesh The mesh to update (can be a mesh object or a mesh name)
+   * @param polygonType The polygon type (rectangle, triangle, etc.)
+   * @param width The width of the mesh
+   * @param height The height of the mesh
+   * @param borderRadius The new border radius to apply
+   * @param borderWidth The border width (if any)
+   * @param scene The BabylonJS scene
+   */
+  updateMeshWithBorderRadius(
+    mesh: Mesh | string,
+    polygonType: string,
+    width: number,
+    height: number,
+    borderRadius: number,
+    borderWidth: number = 0,
+    scene?: Scene
+  ): void {
+    const targetScene = scene || this.scene;
+    if (!targetScene) {
+      throw new Error('Scene not initialized');
+    }
+
+    // Get the main mesh - either directly or by name
+    let mainMesh: Mesh | null = null;
+    let meshName: string = '';
+
+    if (typeof mesh === 'string') {
+      meshName = mesh;
+      mainMesh = targetScene.getMeshByName(meshName) as Mesh;
+      if (!mainMesh) {
+        console.warn(`⚠️ Cannot find mesh to update: ${meshName}`);
+        return;
+      }
+    } else {
+      mainMesh = mesh;
+      meshName = mainMesh.name;
+    }
+
+    console.log(`🔄 Updating mesh and borders with new border radius: ${meshName}, radius=${borderRadius.toFixed(2)}`);
+
+    try {
+      // Update the main mesh geometry
+      const vertexData = this.createPolygonVertexData(polygonType, width, height, borderRadius);
+      vertexData.applyToMesh(mainMesh, true);
+      mainMesh.refreshBoundingInfo();
+
+      // If there's a border width, update border meshes too
+      if (borderWidth > 0) {
+        // Look for border meshes with pattern: meshName-border-0, meshName-border-1, etc.
+        // or meshName_border_frame
+        const borderMeshName = `${meshName}_border_frame`;
+        const borderMesh = targetScene.getMeshByName(borderMeshName);
+
+        if (borderMesh) {
+          // Single border frame mesh - recreate it with new border radius
+          console.log(`🔄 Updating border frame mesh: ${borderMeshName}`);
+
+          // Create new border vertex data
+          const borderVertexData = this.createPolygonFrameVertexData(
+            polygonType, width, height, borderWidth, borderRadius
+          );
+
+          // Apply to existing mesh
+          borderVertexData.applyToMesh(borderMesh as Mesh, true);
+          (borderMesh as Mesh).refreshBoundingInfo();
+        } else {
+          // Check for individual border meshes (older style)
+          for (let i = 0; i < 4; i++) {
+            const oldBorderMeshName = `${meshName}-border-${i}`;
+            const oldBorderMesh = targetScene.getMeshByName(oldBorderMeshName);
+            if (oldBorderMesh) {
+              console.log(`⚠️ Found old-style border mesh: ${oldBorderMeshName} - these cannot be updated with border radius`);
+            }
+          }
+        }
+      }
+
+      console.log(`✅ Successfully updated mesh geometry with border radius: ${borderRadius.toFixed(2)}`);
+    } catch (error) {
+      console.error(`❌ Error updating mesh with border radius:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates a mesh's geometry with a new border radius
+   * This method is specifically designed to fix hover state border radius issues
+   */
+  updateMeshBorderRadius(mesh: Mesh, width: number, height: number, borderRadius: number): void {
+    if (!this.scene) {
+      throw new Error('Scene not initialized');
+    }
+
+    console.log(`🔄 updateMeshBorderRadius called for mesh: ${mesh.name}, width=${width}, height=${height}, radius=${borderRadius.toFixed(2)}`);
+
+    try {
+      // For rectangles, we need to recreate the mesh with the new border radius
+      // First, dispose of any existing vertex data
+      if (mesh.geometry) {
+        const positions = [];
+        const indices = [];
+        const normals = [];
+        const uvs = [];
+        
+        // Create new vertex data with the updated border radius
+        const vertexData = new VertexData();
+        
+        // Calculate rectangle bounds
+        const halfWidth = width / 2;
+        const halfHeight = height / 2;
+        
+        if (borderRadius <= 0) {
+          // No border radius - create a simple rectangle
+          positions.push(-halfWidth, halfHeight, 0);  // Top-left
+          positions.push(halfWidth, halfHeight, 0);   // Top-right
+          positions.push(halfWidth, -halfHeight, 0);  // Bottom-right
+          positions.push(-halfWidth, -halfHeight, 0); // Bottom-left
+          
+          indices.push(0, 1, 2); // First triangle
+          indices.push(0, 2, 3); // Second triangle
+          
+          normals.push(0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1);
+          
+          uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
+        } else {
+          // With border radius - create a rounded rectangle
+          // Define rectangle corners
+          const rectangleCorners = [
+            { x: -halfWidth, y: halfHeight },   // Top-left
+            { x: halfWidth, y: halfHeight },    // Top-right
+            { x: halfWidth, y: -halfHeight },   // Bottom-right
+            { x: -halfWidth, y: -halfHeight }   // Bottom-left
+          ];
+          
+          // Generate rounded polygon
+          const roundedPolygon = roundPolygon(rectangleCorners, borderRadius);
+          
+          // Convert to segments for smooth curves
+          const segmentLength = Math.max(0.3, borderRadius / 10);
+          const segments = getSegments(roundedPolygon, "LENGTH", segmentLength);
+          
+          let vertexIndex = 0;
+          const vertices = [];
+          
+          // Add all segment points as vertices
+          for (const segment of segments) {
+            positions.push(segment.x, segment.y, 0);
+            normals.push(0, 0, 1);
+            uvs.push((segment.x + halfWidth) / width, (segment.y + halfHeight) / height);
+            vertices.push(vertexIndex++);
+          }
+          
+          // Create triangles using fan triangulation
+          for (let i = 1; i < vertices.length - 1; i++) {
+            indices.push(vertices[0], vertices[i], vertices[i + 1]);
+          }
+        }
+        
+        // Apply the new vertex data to the mesh
+        vertexData.positions = positions;
+        vertexData.indices = indices;
+        vertexData.normals = normals;
+        vertexData.uvs = uvs;
+        
+        // Apply to the mesh with updateable flag set to true
+        vertexData.applyToMesh(mesh, true);
+        
+        // Refresh the bounding info to ensure proper interactions
+        mesh.refreshBoundingInfo();
+        
+        console.log(`✅ Successfully updated mesh geometry with border radius=${borderRadius.toFixed(2)}`);
+      } else {
+        console.error(`❌ Mesh has no geometry to update`);
+      }
+    } catch (error) {
+      console.error(`❌ DEBUGGING: Error updating border radius:`, error);
+      console.error(error); // Log the full error object
+    }
   }
 
   cleanup(): void {
     this.scene = undefined;
   }
-}
+
+  /**
+   * Creates a new mesh with the specified border radius and copies properties from the original mesh
+   * This is a more reliable approach for handling hover state border radius changes
+   */
+  createMeshWithBorderRadius(originalMesh: Mesh, width: number, height: number, borderRadius: number): Mesh {
+    if (!this.scene) {
+      throw new Error('Mesh service not initialized');
+    }
+    
+    console.log(`🔄 Creating new mesh with border radius: width=${width}, height=${height}, radius=${borderRadius.toFixed(2)}`);
+    
+    try {
+      // Create a new mesh with the desired border radius
+      const newMesh = this.createRoundedRectangle(
+        `${originalMesh.name}_with_radius`, 
+        width, 
+        height, 
+        borderRadius
+      );
+      
+      // Copy position, rotation, scaling from the original mesh
+      newMesh.position.copyFrom(originalMesh.position);
+      newMesh.rotation.copyFrom(originalMesh.rotation);
+      newMesh.scaling.copyFrom(originalMesh.scaling);
+      
+      // Copy parent and material
+      newMesh.parent = originalMesh.parent;
+      newMesh.material = originalMesh.material;
+      
+      // Copy action manager to preserve event handlers
+      if (originalMesh.actionManager) {
+        newMesh.actionManager = originalMesh.actionManager;
+      }
+      
+      console.log(`✅ Successfully created new mesh with border radius=${borderRadius.toFixed(2)}`);
+      
+      return newMesh;
+    } catch (error) {
+      console.error(`❌ Error creating mesh with border radius:`, error);
+      throw error;
+    }
+  }}

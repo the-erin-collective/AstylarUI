@@ -23,6 +23,7 @@ export interface BabylonDOMContext {
     elementStyles: Map<string, { normal: StyleRule, hover?: StyleRule }>;
     elementTypes: Map<string, string>;
     elementDimensions: Map<string, { width: number, height: number, padding: { top: number; right: number; bottom: number; left: number } }>;
+    originalBorderRadius?: Map<string, number>;
 }
 
 export interface BabylonDOM {

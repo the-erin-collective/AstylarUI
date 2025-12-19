@@ -58,6 +58,7 @@ export interface StyleRule {
   flexDirection?: string;
   justifyContent?: string;
   alignItems?: string;
+  alignContent?: string;
   flexWrap?: string;
   gap?: string;
   rowGap?: string;
@@ -66,4 +67,6 @@ export interface StyleRule {
   flexShrink?: string;
   flexBasis?: string;
   flex?: string;
+  alignSelf?: string;
+  order?: string;
 }

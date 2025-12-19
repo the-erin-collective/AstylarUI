@@ -1363,18 +1363,107 @@ export class ElementService {
       const hoverRadius = this.parseBorderRadius(hoverStyle?.borderRadius);
 
       if (hoverStyle?.borderRadius !== undefined && hoverRadius !== normalRadius) {
-        const polygonType = this.parsePolygonType(mergedStyle?.polygonType);
         const dimensions = dom.context.elementDimensions.get(elementId);
         if (dimensions) {
-          // Generate new vertex data using the same function as initial creation
-          const vertexData = render.actions.mesh.generatePolygonVertexData(
-            polygonType,
-            dimensions.width,
-            dimensions.height,
-            hoverRadius
-          );
-          // Apply the new vertex data to the existing mesh
-          vertexData.applyToMesh(mainMesh, true);
+          console.log(`🔄 Updating mesh border radius for hover state: ${elementId}, changing from ${normalRadius} to ${hoverRadius}`);
+          
+          try {
+            // Store the original border radius for restoration
+            dom.context.originalBorderRadius = dom.context.originalBorderRadius || new Map();
+            dom.context.originalBorderRadius.set(elementId, normalRadius);
+            
+            // Get the polygon type
+            const polygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+            
+            // Calculate the border radius in world units
+            const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
+            const worldBorderRadius = hoverRadius * pixelToWorldScale;
+            
+            // Create a new vertex data with the updated border radius
+            const vertexData = render.actions.mesh.generatePolygonVertexData(
+              polygonType,
+              dimensions.width,
+              dimensions.height,
+              worldBorderRadius
+            );
+            
+            // Apply the new vertex data to the mesh
+            vertexData.applyToMesh(mainMesh, true);
+            
+            // Update border meshes with the new border radius
+            // First, check if there are any border meshes
+            let hasBorders = false;
+            for (let i = 0; i < 4; i++) {
+              if (dom.context.elements.get(`${elementId}-border-${i}`)) {
+                hasBorders = true;
+                break;
+              }
+            }
+            
+            if (hasBorders) {
+              // Get border properties from normal style
+              const borderWidth = this.parseBorderWidth(render, normalStyle.borderWidth);
+              const borderColor = render.actions.style.parseBackgroundColor(normalStyle.borderColor);
+              
+              // Update each border mesh
+              for (let i = 0; i < 4; i++) {
+                const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
+                if (borderMesh) {
+                  // Remove old border mesh
+                  borderMesh.dispose();
+                  dom.context.elements.delete(`${elementId}-border-${i}`);
+                }
+              }
+              
+              // Create new border meshes with updated border radius
+              const borderMeshes = render.actions.mesh.createPolygonBorder(
+                `${elementId}-border`,
+                polygonType,
+                dimensions.width,
+                dimensions.height,
+                borderWidth,
+                worldBorderRadius
+              );
+              
+              // Position and style the new border meshes
+              const borderZPosition = mainMesh.position.z + 0.001;
+              render.actions.mesh.positionBorderFrames(
+                borderMeshes,
+                mainMesh.position.x,
+                mainMesh.position.y,
+                borderZPosition,
+                dimensions.width,
+                dimensions.height,
+                borderWidth
+              );
+              
+              // Apply border material
+              const borderOpacity = render.actions.style.parseOpacity(normalStyle.opacity);
+              const borderMaterial = render.actions.mesh.createMaterial(
+                `${elementId}-border-material`,
+                borderColor,
+                undefined,
+                borderOpacity
+              );
+              
+              // Apply material and parent to all border meshes
+              borderMeshes.forEach((borderMesh, index) => {
+                borderMesh.material = borderMaterial;
+                
+                // Apply same parenting as main element
+                if (mainMesh.parent && mainMesh.parent instanceof Mesh) {
+                  render.actions.mesh.parentMesh(borderMesh, mainMesh.parent);
+                }
+                
+                // Store border references
+                dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
+              });
+            }
+            
+            console.log(`✅ Updated mesh and border radius for hover state: ${elementId}`);
+          } catch (error) {
+            console.error(`❌ Error updating border radius for hover state: ${elementId}`, error);
+          }
         }
       }
 
@@ -1403,12 +1492,6 @@ export class ElementService {
     }));
 
     mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
-      if (needsRecreation) {
-        needsRecreation = false;
-        dom.actions.requestElementRecreation(dom, render, elementId, 'normal');
-        return;
-      }
-
       // Always get the latest mesh reference
       const mainMesh = dom.context.elements.get(elementId);
       if (!mainMesh) return;
@@ -1418,11 +1501,128 @@ export class ElementService {
       const typeDefaults = render.actions.style.getElementTypeDefaults(element.type);
       const normalStyle = (elementStyles?.normal || {}) as StyleRule;
       const hoverStyle = (elementStyles?.hover || {}) as StyleRule;
+      
+      // Check if we need to recreate the element for border radius changes
+      const normalRadius = this.parseBorderRadius(normalStyle?.borderRadius);
+      const hoverRadius = this.parseBorderRadius(hoverStyle?.borderRadius);
+
+      if (hoverStyle?.borderRadius !== undefined && hoverRadius !== normalRadius) {
+        const dimensions = dom.context.elementDimensions.get(elementId);
+        if (dimensions) {
+          console.log(`🔄 Updating mesh border radius for normal state: ${elementId}, changing from ${hoverRadius} to ${normalRadius}`);
+          
+          try {
+            // Create merged style for normal state
+            const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle };
+            mergedStyle.selector = `#${elementId}`;
+            
+            // Get the polygon type
+            const polygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+            
+            // Calculate the border radius in world units
+            const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
+            const worldBorderRadius = normalRadius * pixelToWorldScale;
+            
+            // Create a new vertex data with the updated border radius
+            const vertexData = render.actions.mesh.generatePolygonVertexData(
+              polygonType,
+              dimensions.width,
+              dimensions.height,
+              worldBorderRadius
+            );
+            
+            // Apply the new vertex data to the mesh
+            vertexData.applyToMesh(mainMesh, true);
+            
+            // Update border meshes with the original border radius
+            // First, check if there are any border meshes
+            let hasBorders = false;
+            for (let i = 0; i < 4; i++) {
+              if (dom.context.elements.get(`${elementId}-border-${i}`)) {
+                hasBorders = true;
+                break;
+              }
+            }
+            
+            if (hasBorders) {
+              // Get border properties from normal style
+              const borderWidth = this.parseBorderWidth(render, normalStyle.borderWidth);
+              const borderColor = render.actions.style.parseBackgroundColor(normalStyle.borderColor);
+              
+              // Update each border mesh
+              for (let i = 0; i < 4; i++) {
+                const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
+                if (borderMesh) {
+                  // Remove old border mesh
+                  borderMesh.dispose();
+                  dom.context.elements.delete(`${elementId}-border-${i}`);
+                }
+              }
+              
+              // Create new border meshes with original border radius
+              const borderMeshes = render.actions.mesh.createPolygonBorder(
+                `${elementId}-border`,
+                polygonType,
+                dimensions.width,
+                dimensions.height,
+                borderWidth,
+                worldBorderRadius
+              );
+              
+              // Position and style the new border meshes
+              const borderZPosition = mainMesh.position.z + 0.001;
+              render.actions.mesh.positionBorderFrames(
+                borderMeshes,
+                mainMesh.position.x,
+                mainMesh.position.y,
+                borderZPosition,
+                dimensions.width,
+                dimensions.height,
+                borderWidth
+              );
+              
+              // Apply border material
+              const borderOpacity = render.actions.style.parseOpacity(normalStyle.opacity);
+              const borderMaterial = render.actions.mesh.createMaterial(
+                `${elementId}-border-material`,
+                borderColor,
+                undefined,
+                borderOpacity
+              );
+              
+              // Apply material and parent to all border meshes
+              borderMeshes.forEach((borderMesh, index) => {
+                borderMesh.material = borderMaterial;
+                
+                // Apply same parenting as main element
+                if (mainMesh.parent && mainMesh.parent instanceof Mesh) {
+                  render.actions.mesh.parentMesh(borderMesh, mainMesh.parent);
+                }
+                
+                // Store border references
+                dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
+              });
+            }
+            
+            // Clean up the stored original border radius
+            if (dom.context.originalBorderRadius) {
+              dom.context.originalBorderRadius.delete(elementId);
+            }
+            
+            console.log(`✅ Updated mesh and border radius for normal state: ${elementId}`);
+          } catch (error) {
+            console.error(`❌ Error updating border radius for normal state: ${elementId}`, error);
+          }
+        }
+      }
+      
+      // If we didn't need to recreate the element, just update the material
       const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle };
       mergedStyle.selector = `#${elementId}`;
-
+      
       dom.context.hoverStates.set(elementId, false);
       this.applyElementMaterial(dom, render, mainMesh, element, false, mergedStyle);
+
       const transform = this.parseTransform(mergedStyle?.transform);
       if (transform) {
         this.applyTransforms(mainMesh, transform);

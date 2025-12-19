@@ -14,6 +14,8 @@ export interface MeshActions {
     positionBorderFrames: (borders: Mesh[], centerX: number, centerY: number, centerZ: number, elementWidth: number, elementHeight: number, borderWidth: number) => void;
     generatePolygonVertexData: (polygonType: string, width: number, height: number, borderRadius: number) => any;
     updatePolygon: (mesh: Mesh, polygonType: string, width: number, height: number, borderRadius: number) => void;
+    updateMeshBorderRadius: (mesh: Mesh, width: number, height: number, borderRadius: number) => void;
+    createMeshWithBorderRadius: (originalMesh: Mesh, width: number, height: number, borderRadius: number) => Mesh;
 }
 
 export interface StyleActions {
@@ -22,6 +24,13 @@ export interface StyleActions {
     parseBackgroundColor: (background?: string) => Color3;
     parseOpacity: (opacityValue: string | undefined) => number;
     getElementTypeDefaults: (elementType: string) => Partial<StyleRule>;
+    parseAlignContent: (value: string | undefined) => string;
+    parseFlexGrow: (value: string | undefined) => number;
+    parseFlexShrink: (value: string | undefined) => number;
+    parseFlexBasis: (value: string | undefined) => string;
+    parseFlexShorthand: (value: string | undefined) => { flexGrow: number; flexShrink: number; flexBasis: string };
+    parseAlignSelf: (value: string | undefined) => string;
+    parseOrder: (value: string | undefined) => number;
 }
 
 export interface CameraActions {

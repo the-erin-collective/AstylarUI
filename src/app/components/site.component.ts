@@ -1,7 +1,7 @@
 import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Engine, Scene, FreeCamera, HemisphericLight, DirectionalLight, Vector3, Color4, MeshBuilder, StandardMaterial, Color3, Texture, PassPostProcess, RenderTargetTexture, PostProcess, Effect, Mesh } from '@babylonjs/core';
+import { Engine, Scene, HemisphericLight, Vector3, Color4, StandardMaterial, Color3, Mesh } from '@babylonjs/core';
 import { BabylonDOMService } from '../services/dom/babylon-dom.service';
 import { BabylonCameraService } from '../services/babylon-camera.service';
 import { BabylonMeshService } from '../services/babylon-mesh.service';
@@ -185,24 +185,24 @@ export class SiteComponent {
 
   // ViewChild for canvas element
   private babylonCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('babylonCanvas');
-  
+
   // Babylon.js properties
   private engine?: Engine;
   private babylonScene?: Scene;
-  
+
   // Signal for site ID from route parameters
   protected siteId = signal<string>('');
-  
+
   // Signal to track if scene is loaded
   protected sceneLoaded = signal<boolean>(false);
-  
+
   constructor() {
     // Subscribe to route parameter changes
     this.route.paramMap.subscribe(params => {
       const id = params.get('site-id');
       this.siteId.set(id || 'unknown');
     });
-    
+
     // Initialize Babylon.js after render, but only in browser
     afterNextRender(() => {
       if (isPlatformBrowser(this.platformId)) {
@@ -210,84 +210,93 @@ export class SiteComponent {
       }
     });
   }
-  
+
   private initializeBabylon(): void {
     const canvas = this.babylonCanvas().nativeElement;
-    
+
     // Create Babylon.js engine with optimized settings
     this.engine = new Engine(canvas, true, {
       preserveDrawingBuffer: true,
       stencil: true,
       antialias: false
     });
-    
+
     // Create scene
     this.babylonScene = new Scene(this.engine);
     this.babylonScene.clearColor = new Color4(0.05, 0.05, 0.1, 1.0);
-    
+
     // Create camera using camera service
     const camera = this.babylonCameraService.initialize(this.babylonScene, canvas);
-    
+
     // Create improved lighting setup for better edge definition
     const hemisphericLight = new HemisphericLight('hemispheric', new Vector3(0, 1, 0), this.babylonScene);
     hemisphericLight.intensity = 1.0;
     hemisphericLight.diffuse = new Color3(1.0, 1.0, 1.0);
-    
+
     // Initialize mesh service with camera service for pixel-perfect positioning
     this.babylonMeshService.initialize(this.babylonScene, this.babylonCameraService);
-    
+
     // Initialize the DOM service with services and proper viewport dimensions
     const viewportWidth = canvas.clientWidth || 1920;
     const viewportHeight = canvas.clientHeight || 1080;
 
     const render: BabylonRender = {
-        actions: {
-          mesh: {
-            createPolygon: this.babylonMeshService?.createPolygon.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
-            createPlane: this.babylonMeshService?.createPlane.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
-            createMaterial: this.babylonMeshService?.createMaterial.bind(this.babylonMeshService) || (() => new StandardMaterial('default', this.babylonScene)),
-            createGradientMaterial: this.babylonMeshService?.createGradientMaterial.bind(this.babylonMeshService) || (() => new StandardMaterial('default', this.babylonScene)),
-            createShadow: this.babylonMeshService?.createShadow.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
-            createPolygonBorder: this.babylonMeshService?.createPolygonBorder.bind(this.babylonMeshService) || (() => []),
-            positionMesh: this.babylonMeshService?.positionMesh.bind(this.babylonMeshService) || (() => { }),
-            parentMesh: this.babylonMeshService?.parentMesh.bind(this.babylonMeshService) || (() => { }),
-            positionBorderFrames: this.babylonMeshService?.positionBorderFrames.bind(this.babylonMeshService) || (() => { }),
-            updatePolygon: this.babylonMeshService?.updatePolygon.bind(this.babylonMeshService) || (() => { }),
-            generatePolygonVertexData: this.babylonMeshService?.createPolygonVertexData.bind(this.babylonMeshService) || (() => { }),
-          },
-          style: {
-            findStyleBySelector: this.styleService.findStyleBySelector.bind(this.styleService),
-            findStyleForElement: this.styleService.findStyleForElement.bind(this.styleService),
-            parseBackgroundColor: this.styleService.parseBackgroundColor.bind(this.styleService),
-            parseOpacity: this.styleService.parseOpacity.bind(this.styleService),
-            getElementTypeDefaults: this.styleService.getElementTypeDefaults.bind(this.styleService),
-          },
-          camera: {
-            calculateViewportDimensions: this.babylonCameraService?.calculateViewportDimensions.bind(this.babylonCameraService) || (() => ({ width: 0, height: 0 })),
-            getPixelToWorldScale: this.babylonCameraService?.getPixelToWorldScale.bind(this.babylonCameraService) || (() => 0.03),
-          },
-          texture: {
-            getTexture: this.textureService.getTexture.bind(this.textureService),
-          },
+      actions: {
+        mesh: {
+          createPolygon: this.babylonMeshService?.createPolygon.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
+          createPlane: this.babylonMeshService?.createPlane.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
+          createMaterial: this.babylonMeshService?.createMaterial.bind(this.babylonMeshService) || (() => new StandardMaterial('default', this.babylonScene)),
+          createGradientMaterial: this.babylonMeshService?.createGradientMaterial.bind(this.babylonMeshService) || (() => new StandardMaterial('default', this.babylonScene)),
+          createShadow: this.babylonMeshService?.createShadow.bind(this.babylonMeshService) || (() => new Mesh('default', this.babylonScene)),
+          createPolygonBorder: this.babylonMeshService?.createPolygonBorder.bind(this.babylonMeshService) || (() => []),
+          positionMesh: this.babylonMeshService?.positionMesh.bind(this.babylonMeshService) || (() => { }),
+          parentMesh: this.babylonMeshService?.parentMesh.bind(this.babylonMeshService) || (() => { }),
+          positionBorderFrames: this.babylonMeshService?.positionBorderFrames.bind(this.babylonMeshService) || (() => { }),
+          updatePolygon: this.babylonMeshService?.updatePolygon.bind(this.babylonMeshService) || (() => { }),
+          generatePolygonVertexData: this.babylonMeshService?.createPolygonVertexData.bind(this.babylonMeshService) || (() => { }),
+          updateMeshBorderRadius: this.babylonMeshService?.updateMeshBorderRadius.bind(this.babylonMeshService) || (() => { }),
+          createMeshWithBorderRadius: this.babylonMeshService?.createMeshWithBorderRadius.bind(this.babylonMeshService) || ((originalMesh: Mesh) => originalMesh),
         },
-        scene: this.babylonScene!
-      };
+        style: {
+          findStyleBySelector: this.styleService.findStyleBySelector.bind(this.styleService),
+          findStyleForElement: this.styleService.findStyleForElement.bind(this.styleService),
+          parseBackgroundColor: this.styleService.parseBackgroundColor.bind(this.styleService),
+          parseOpacity: this.styleService.parseOpacity.bind(this.styleService),
+          getElementTypeDefaults: this.styleService.getElementTypeDefaults.bind(this.styleService),
+          parseAlignContent: this.styleService.parseAlignContent.bind(this.styleService),
+          parseFlexGrow: this.styleService.parseFlexGrow.bind(this.styleService),
+          parseFlexShrink: this.styleService.parseFlexShrink.bind(this.styleService),
+          parseFlexBasis: this.styleService.parseFlexBasis.bind(this.styleService),
+          parseFlexShorthand: this.styleService.parseFlexShorthand.bind(this.styleService),
+          parseAlignSelf: this.styleService.parseAlignSelf.bind(this.styleService),
+          parseOrder: this.styleService.parseOrder.bind(this.styleService),
+        },
+        camera: {
+          calculateViewportDimensions: this.babylonCameraService?.calculateViewportDimensions.bind(this.babylonCameraService) || (() => ({ width: 0, height: 0 })),
+          getPixelToWorldScale: this.babylonCameraService?.getPixelToWorldScale.bind(this.babylonCameraService) || (() => 0.03),
+        },
+        texture: {
+          getTexture: this.textureService.getTexture.bind(this.textureService),
+        },
+      },
+      scene: this.babylonScene!
+    };
 
     this.babylonDOMService.initialize(render, canvas.clientWidth || 1920, canvas.clientHeight || 1080);
-    
+
     // Start render loop
     this.engine.runRenderLoop(() => {
       this.babylonScene?.render();
     });
-    
+
     // Set scene loaded signal
     this.sceneLoaded.set(true);
 
     this.babylonScene.onReadyObservable.addOnce(() => {
-        this.engine?.resize(true);
+      this.engine?.resize(true);
 
-        // Create site content after initialization
-        this.createSiteSpecificContent();
+      // Create site content after initialization
+      this.createSiteSpecificContent();
     });
 
     // Handle window resize
@@ -295,7 +304,7 @@ export class SiteComponent {
       this.engine?.resize();
     });
   }
-  
+
   private createSiteSpecificContent(): void {
     if (!this.babylonScene) return;
 
@@ -316,7 +325,7 @@ export class SiteComponent {
       this.createDefaultLayout();
     }
   }
-  
+
   private createDefaultLayout(): void {
     // Create a simple fallback layout for unknown sites
     const defaultData = {
@@ -338,16 +347,16 @@ export class SiteComponent {
         ]
       }
     };
-    
+
     this.babylonDOMService.createSiteFromData(defaultData);
   }
-  
+
   ngOnDestroy(): void {
     // Clean up services
     this.babylonDOMService.cleanup();
     this.babylonCameraService.cleanup();
     this.babylonMeshService.cleanup();
-    
+
     // Clean up Babylon.js resources
     this.babylonScene?.dispose();
     this.engine?.dispose();

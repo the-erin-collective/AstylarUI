@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SiteData } from '../types/site-data';
+import { flexboxTests } from '../tests/flexbox';
 
 @Injectable({
   providedIn: 'root'
@@ -7,6 +8,12 @@ import { SiteData } from '../types/site-data';
 export class SiteDataService {
 
   private siteData: { [key: string]: SiteData } = {
+    // Flexbox test scenes
+    'flexbox-align-content': flexboxTests.alignContent,
+    'flexbox-flex-item-sizing': flexboxTests.flexItemSizing,
+    'flexbox-align-self': flexboxTests.alignSelf,
+    'flexbox-order': flexboxTests.order,
+
     dashboard: {
       styles: [
         {
@@ -1490,7 +1497,7 @@ export class SiteDataService {
       }
     },
 
-    
+
     flexgrowshrink:
     {
       root: {
