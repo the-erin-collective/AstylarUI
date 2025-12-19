@@ -48,6 +48,9 @@ export interface BabylonDOMContext {
     textTextures: Map<string, BABYLON.Texture>;
     textContent: Map<string, string>;
     textMetrics: Map<string, StoredTextLayoutMetrics>;
+    // Input element context
+    inputElements: Map<string, any>; // Using 'any' to avoid circular import, will be InputElement type
+    focusedInputId: string | null;
 }
 
 export interface BabylonDOM {

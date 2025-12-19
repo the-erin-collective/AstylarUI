@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import * as BABYLON from '@babylonjs/core';
+import { BabylonRender } from '../interfaces/render.types';
 import { DOMElement } from '../../../types/dom-element';
 import { SelectElement, SelectOption, InputType, ValidationState } from '../../../types/input-types';
 import { StyleRule } from '../../../types/style-rule';
@@ -20,11 +21,16 @@ export class SelectManager {
      */
     createSelectElement(
         element: DOMElement,
-        scene: BABYLON.Scene,
-        style: StyleRule
+        render: BabylonRender,
+        style: StyleRule,
+        worldDimensions: { width: number; height: number }
     ): SelectElement {
+        if (!render.scene) {
+            throw new Error('Scene is required to create select element');
+        }
+
         // Create select field mesh
-        const selectMesh = this.createSelectMesh(element, scene, style);
+        const selectMesh = this.createSelectMesh(element, render, style, worldDimensions);
 
         // Initialize validation state
         const validationState: ValidationState = {
@@ -56,7 +62,7 @@ export class SelectManager {
         };
 
         // Create display mesh for selected value
-        selectElement.displayMesh = this.createDisplayMesh(selectElement, scene, style);
+        selectElement.displayMesh = this.createDisplayMesh(selectElement, render.scene, style);
 
         return selectElement;
     }
@@ -93,76 +99,25 @@ export class SelectManager {
             selectElement.dropdownMesh = undefined;
         }
 
-        // Dispose option meshes
-        selectElement.optionMeshes.forEach(mesh => mesh.dispose());
-        selectElement.optionMeshes = [];
     }
 
     /**
-     * Selects an option by index
+     * Creates the main select field mesh
      */
-    selectOption(selectElement: SelectElement, index: number): void {
-        if (selectElement.disabled) return;
-        if (index < 0 || index >= selectElement.options.length) return;
-
-        const option = selectElement.options[index];
-        if (option.disabled) return;
-
-        selectElement.selectedIndex = index;
-        selectElement.value = option.value;
-
-        // Update display
-        this.updateDisplay(selectElement);
-
-        // Close dropdown
-        this.closeDropdown(selectElement);
-
-        // Mark as touched and dirty
-        selectElement.validationState.touched = true;
-        selectElement.validationState.dirty = true;
-    }
-
-    /**
-     * Navigates through options with keyboard
-     */
-    navigateOptions(selectElement: SelectElement, direction: 'up' | 'down'): void {
-        if (selectElement.disabled) return;
-
-        let newIndex = selectElement.selectedIndex;
-
-        if (direction === 'up') {
-            newIndex = Math.max(0, newIndex - 1);
-        } else {
-            newIndex = Math.min(selectElement.options.length - 1, newIndex + 1);
-        }
-
-        // Skip disabled options
-        while (newIndex >= 0 && newIndex < selectElement.options.length &&
-            selectElement.options[newIndex].disabled) {
-            newIndex += (direction === 'up' ? -1 : 1);
-        }
-
-        if (newIndex >= 0 && newIndex < selectElement.options.length) {
-            this.selectOption(selectElement, newIndex);
-        }
-    }
-
-    /**
-     * Creates the select field mesh
-     */
-    private createSelectMesh(element: DOMElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        const width = this.parseSize(style.width) || 2;
-        const height = this.SELECT_HEIGHT;
+    private createSelectMesh(element: DOMElement, render: BabylonRender, style: StyleRule, worldDimensions: { width: number; height: number }): BABYLON.Mesh {
+        const width = worldDimensions.width;
+        const height = worldDimensions.height;
+        const depth = 0.1 * render.actions.camera.getPixelToWorldScale() * 100;
 
         const selectMesh = BABYLON.MeshBuilder.CreateBox(`select_${element.id}`, {
             width,
             height,
-            depth: 0.1
-        }, scene);
+            depth
+        }, render.scene);
 
         // Create material
-        const material = new BABYLON.StandardMaterial(`selectMaterial_${element.id}`, scene);
-        material.diffuseColor = BABYLON.Color3.White();
+        const material = new BABYLON.StandardMaterial(`selectMaterial_${element.id}`, render.scene);
+        material.diffuseColor = new BABYLON.Color3(1.0, 1.0, 1.0);
         material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
         selectMesh.material = material;
 
@@ -172,19 +127,21 @@ export class SelectManager {
     }
 
     /**
-     * Creates the display mesh showing selected value
+     * Creates the display mesh for showing selected value
      */
     private createDisplayMesh(selectElement: SelectElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
+        // Create a simple plane for the display text
+        // In production, this would use TextRenderingService
         const displayPlane = BABYLON.MeshBuilder.CreatePlane(`selectDisplay_${selectElement.element.id}`, {
             width: 1.8,
             height: 0.3
         }, scene);
 
         displayPlane.parent = selectElement.mesh;
-        displayPlane.position.z = 0.06;
+        displayPlane.position.z = 0.06; // In front of select box
         displayPlane.isPickable = false;
 
-        // Create material with selected option text
+        // Create material
         const material = new BABYLON.StandardMaterial(`displayMaterial_${selectElement.element.id}`, scene);
         material.diffuseColor = BABYLON.Color3.Black();
         displayPlane.material = material;
@@ -193,27 +150,26 @@ export class SelectManager {
     }
 
     /**
-     * Creates the dropdown menu mesh
+     * Creates the dropdown background mesh
      */
     private createDropdownMesh(selectElement: SelectElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        const width = this.parseSize(style.width) || 2;
-        const optionCount = selectElement.options.length;
-        const height = Math.min(optionCount * this.OPTION_HEIGHT, this.DROPDOWN_MAX_HEIGHT);
+        const width = this.parseSize(style.width) || 2.0;
+        const optionsCount = selectElement.options.length;
+        const height = Math.min(optionsCount * this.OPTION_HEIGHT, this.DROPDOWN_MAX_HEIGHT);
 
         const dropdownMesh = BABYLON.MeshBuilder.CreateBox(`dropdown_${selectElement.element.id}`, {
-            width,
-            height,
-            depth: 0.15
+            width: width,
+            height: height,
+            depth: 0.05
         }, scene);
 
         // Create material
         const material = new BABYLON.StandardMaterial(`dropdownMaterial_${selectElement.element.id}`, scene);
-        material.diffuseColor = BABYLON.Color3.White();
-        material.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+        material.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95);
         dropdownMesh.material = material;
 
         dropdownMesh.parent = selectElement.mesh;
-        dropdownMesh.isPickable = true;
+        dropdownMesh.isPickable = false;
 
         return dropdownMesh;
     }
@@ -222,34 +178,30 @@ export class SelectManager {
      * Creates meshes for each option
      */
     private createOptionMeshes(selectElement: SelectElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh[] {
+        const width = this.parseSize(style.width) || 2.0;
         const optionMeshes: BABYLON.Mesh[] = [];
-        const width = this.parseSize(style.width) || 2;
+
+        if (!selectElement.dropdownMesh) return [];
 
         selectElement.options.forEach((option, index) => {
             const optionMesh = BABYLON.MeshBuilder.CreatePlane(`option_${selectElement.element.id}_${index}`, {
-                width: width - 0.1,
+                width: width - 0.2,
                 height: this.OPTION_HEIGHT - 0.05
             }, scene);
 
+            // Position relative to dropdown
             if (selectElement.dropdownMesh) {
                 optionMesh.parent = selectElement.dropdownMesh;
             }
-
-            // Position option in dropdown
-            const startY = (selectElement.options.length - 1) * this.OPTION_HEIGHT / 2;
-            optionMesh.position.y = startY - (index * this.OPTION_HEIGHT);
-            optionMesh.position.z = 0.08;
+            optionMesh.position.y = (selectElement.options.length * this.OPTION_HEIGHT / 2) - (index * this.OPTION_HEIGHT) - (this.OPTION_HEIGHT / 2);
+            optionMesh.position.z = -0.06; // In front of dropdown background
 
             // Create material
             const material = new BABYLON.StandardMaterial(`optionMaterial_${selectElement.element.id}_${index}`, scene);
-
-            if (index === selectElement.selectedIndex) {
-                material.diffuseColor = new BABYLON.Color3(0.7, 0.8, 1.0); // Highlight selected
-            } else if (option.disabled) {
-                material.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.7); // Gray for disabled
-            } else {
-                material.diffuseColor = BABYLON.Color3.White();
-            }
+            material.diffuseColor = index === selectElement.selectedIndex
+                ? new BABYLON.Color3(0.9, 0.9, 1.0) // Highlight selected
+                : BABYLON.Color3.White();
+            material.emissiveColor = BABYLON.Color3.Black();
 
             optionMesh.material = material;
             optionMesh.isPickable = !option.disabled;

@@ -1,157 +1,123 @@
 import { Injectable } from '@angular/core';
 import * as BABYLON from '@babylonjs/core';
+import { BabylonRender } from '../interfaces/render.types';
 import { DOMElement } from '../../../types/dom-element';
-import { CheckboxInput, RadioInput, InputType, ValidationState } from '../../../types/input-types';
 import { StyleRule } from '../../../types/style-rule';
+import { CheckboxInput, RadioInput, InputType, ValidationState } from '../../../types/input-types';
 
-/**
- * Service responsible for managing checkbox and radio button elements
- */
 @Injectable({
     providedIn: 'root'
 })
 export class CheckboxManager {
+    private readonly CHECKBOX_SIZE = 0.5;
+    private readonly CHECK_MARK_SIZE = 0.3;
     private radioGroups: Map<string, RadioInput[]> = new Map();
-    private readonly CHECKBOX_SIZE = 0.3;
-    private readonly CHECK_MARK_SIZE = 0.2;
+
+    constructor() { }
 
     /**
-     * Creates a checkbox element
+     * Creates a checkbox input
      */
-    createCheckbox(
-        element: DOMElement,
-        scene: BABYLON.Scene,
-        style: StyleRule
-    ): CheckboxInput {
-        // Create checkbox mesh
-        const checkboxMesh = this.createCheckboxMesh(element, scene, style);
+    createCheckbox(element: DOMElement, render: BabylonRender, style: StyleRule, worldDimensions: { width: number; height: number }): CheckboxInput {
+        if (!render.scene) {
+            throw new Error('Scene is required to create checkbox');
+        }
 
-        // Initialize validation state
-        const validationState: ValidationState = {
-            valid: true,
-            errors: [],
-            touched: false,
-            dirty: false
-        };
+        const mesh = this.createCheckboxMesh(element, render, style, worldDimensions);
 
-        // Create checkbox object
         const checkbox: CheckboxInput = {
-            element,
             type: InputType.Checkbox,
-            value: element.checked || false,
-            checked: element.checked || false,
-            label: element.textContent,
+            element: element,
+            mesh: mesh,
+            value: element.value || false,
             focused: false,
-            disabled: element.disabled || false,
+            disabled: false,
             required: element.required || false,
             validationRules: [],
-            validationState,
-            mesh: checkboxMesh
+            validationState: {
+                valid: true,
+                errors: [],
+                touched: false,
+                dirty: false
+            },
+            checked: false,
+            checkIndicatorMesh: undefined, // Will be created
+            labelMesh: undefined // Will be created
         };
 
-        // Create check indicator
-        checkbox.checkIndicatorMesh = this.createCheckIndicator(checkbox, scene);
-        this.updateCheckIndicator(checkbox);
-
-        // Create label if provided
-        if (checkbox.label) {
-            checkbox.labelMesh = this.createLabelMesh(checkbox, scene, style);
-        }
+        checkbox.checkIndicatorMesh = this.createCheckIndicator(checkbox, render.scene);
+        checkbox.labelMesh = this.createLabelMesh(checkbox, render.scene, style);
 
         return checkbox;
     }
 
     /**
-     * Creates a radio button element
+     * Creates a radio button input
      */
-    createRadioButton(
-        element: DOMElement,
-        scene: BABYLON.Scene,
-        style: StyleRule
-    ): RadioInput {
-        // Create radio button mesh
-        const radioMesh = this.createRadioMesh(element, scene, style);
-
-        // Initialize validation state
-        const validationState: ValidationState = {
-            valid: true,
-            errors: [],
-            touched: false,
-            dirty: false
-        };
-
-        // Create radio button object
-        const radio: RadioInput = {
-            element,
-            type: InputType.Radio,
-            value: element.value || element.textContent || '',
-            checked: element.checked || false,
-            groupName: element.name || 'default',
-            label: element.textContent,
-            focused: false,
-            disabled: element.disabled || false,
-            required: element.required || false,
-            validationRules: [],
-            validationState,
-            mesh: radioMesh
-        };
-
-        // Create selection indicator
-        radio.selectionIndicatorMesh = this.createSelectionIndicator(radio, scene);
-        this.updateSelectionIndicator(radio);
-
-        // Create label if provided
-        if (radio.label) {
-            radio.labelMesh = this.createLabelMesh(radio, scene, style);
+    createRadioButton(element: DOMElement, render: BabylonRender, style: StyleRule, worldDimensions: { width: number; height: number }): RadioInput {
+        if (!render.scene) {
+            throw new Error('Scene is required to create radio button');
         }
 
-        // Register in radio group
+        const mesh = this.createRadioMesh(element, render, style, worldDimensions);
+
+        const radio: RadioInput = {
+            type: InputType.Radio,
+            element: element,
+            mesh: mesh,
+            value: element.value || false,
+            focused: false,
+            disabled: false,
+            required: element.required || false,
+            validationRules: [],
+            validationState: {
+                valid: true,
+                errors: [],
+                touched: false,
+                dirty: false
+            },
+            checked: false,
+            groupName: element.name || 'default',
+            selectionIndicatorMesh: undefined, // Will be created
+            labelMesh: undefined // Will be created
+        };
+
+        radio.selectionIndicatorMesh = this.createSelectionIndicator(radio, render.scene);
+        radio.labelMesh = this.createLabelMesh(radio, render.scene, style);
+
         this.registerRadioButton(radio);
 
         return radio;
     }
 
     /**
-     * Toggles checkbox checked state
+     * Toggles checkbox state
      */
     toggleCheckbox(checkbox: CheckboxInput): void {
         if (checkbox.disabled) return;
 
         checkbox.checked = !checkbox.checked;
-        checkbox.value = checkbox.checked;
         this.updateCheckIndicator(checkbox);
-
-        // Mark as touched and dirty
-        checkbox.validationState.touched = true;
-        checkbox.validationState.dirty = true;
     }
 
     /**
-     * Selects a radio button and deselects others in the group
+     * Selects a radio button
      */
     selectRadioButton(radio: RadioInput): void {
-        if (radio.disabled) return;
+        if (radio.disabled || radio.checked) return;
 
-        // Deselect all other radio buttons in the group
+        // Uncheck all others in group
         const group = this.radioGroups.get(radio.groupName);
         if (group) {
             group.forEach(r => {
-                if (r !== radio && r.checked) {
-                    r.checked = false;
-                    r.value = false;
-                    this.updateSelectionIndicator(r);
-                }
+                r.checked = false;
+                this.updateSelectionIndicator(r);
             });
         }
 
-        // Select this radio button
+        // Check this one
         radio.checked = true;
-        radio.value = radio.element.value || radio.label || true;
         this.updateSelectionIndicator(radio);
-
-        // Mark as touched and dirty
-        radio.validationState.touched = true;
-        radio.validationState.dirty = true;
     }
 
     /**
@@ -186,17 +152,18 @@ export class CheckboxManager {
     /**
      * Creates the checkbox mesh (square box)
      */
-    private createCheckboxMesh(element: DOMElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        const size = this.CHECKBOX_SIZE;
+    private createCheckboxMesh(element: DOMElement, render: BabylonRender, style: StyleRule, worldDimensions: { width: number; height: number }): BABYLON.Mesh {
+        const scale = render.actions.camera.getPixelToWorldScale();
+        const size = worldDimensions.width > 0 ? worldDimensions.width : this.CHECKBOX_SIZE * scale * 100;
 
         const checkboxMesh = BABYLON.MeshBuilder.CreateBox(`checkbox_${element.id}`, {
             width: size,
             height: size,
-            depth: 0.05
-        }, scene);
+            depth: 0.05 * scale * 100
+        }, render.scene);
 
         // Create material
-        const material = new BABYLON.StandardMaterial(`checkboxMaterial_${element.id}`, scene);
+        const material = new BABYLON.StandardMaterial(`checkboxMaterial_${element.id}`, render.scene);
         material.diffuseColor = BABYLON.Color3.White();
         material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
         checkboxMesh.material = material;
@@ -209,18 +176,19 @@ export class CheckboxManager {
     /**
      * Creates the radio button mesh (circular)
      */
-    private createRadioMesh(element: DOMElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        const radius = this.CHECKBOX_SIZE / 2;
+    private createRadioMesh(element: DOMElement, render: BabylonRender, style: StyleRule, worldDimensions: { width: number; height: number }): BABYLON.Mesh {
+        const scale = render.actions.camera.getPixelToWorldScale();
+        const radius = (worldDimensions.width > 0 ? worldDimensions.width : this.CHECKBOX_SIZE * scale * 100) / 2;
 
         const radioMesh = BABYLON.MeshBuilder.CreateCylinder(`radio_${element.id}`, {
             diameter: radius * 2,
-            height: 0.05
-        }, scene);
+            height: 0.05 * scale * 100
+        }, render.scene);
 
         radioMesh.rotation.x = Math.PI / 2; // Rotate to face forward
 
         // Create material
-        const material = new BABYLON.StandardMaterial(`radioMaterial_${element.id}`, scene);
+        const material = new BABYLON.StandardMaterial(`radioMaterial_${element.id}`, render.scene);
         material.diffuseColor = BABYLON.Color3.White();
         material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
         radioMesh.material = material;

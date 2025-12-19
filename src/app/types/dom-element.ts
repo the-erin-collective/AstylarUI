@@ -4,7 +4,7 @@ export type DOMElementType =
   | 'ul' | 'ol' | 'li'
   | 'table' | 'thead' | 'tbody' | 'tfoot' | 'tr' | 'td' | 'th' | 'caption' | 'col' | 'colgroup'
   | 'a' | 'area' // anchor types
-  | 'img' | 'span' | 'input' | 'button' | 'form'
+  | 'img' | 'span' | 'input' | 'button' | 'form' | 'select' | 'textarea' | 'label' | 'option'
   | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p'; // text elements
 
 export interface DOMElement {

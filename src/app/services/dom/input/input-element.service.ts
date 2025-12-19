@@ -1,16 +1,8 @@
 import { Injectable } from '@angular/core';
-import * as BABYLON from '@babylonjs/core';
+import { BabylonRender } from '../interfaces/render.types';
 import { DOMElement } from '../../../types/dom-element';
-import {
-    InputElement,
-    InputType,
-    TextInput,
-    Button,
-    CheckboxInput,
-    RadioInput,
-    SelectElement,
-    ValidationRule
-} from '../../../types/input-types';
+import { InputElement, InputType, CheckboxInput, RadioInput, SelectElement, ValidationRule, Button, TextInput } from '../../../types/input-types';
+import * as BABYLON from '@babylonjs/core';
 import { StyleRule } from '../../../types/style-rule';
 import { TextInputManager } from './text-input.manager';
 import { ButtonManager } from './button.manager';
@@ -48,8 +40,9 @@ export class InputElementService {
      */
     createInputElement(
         element: DOMElement,
-        scene: BABYLON.Scene,
-        style: StyleRule
+        render: BabylonRender,
+        style: StyleRule,
+        worldDimensions: { width: number; height: number }
     ): InputElement | null {
         const inputType = this.determineInputType(element);
 
@@ -65,24 +58,24 @@ export class InputElementService {
             case InputType.Email:
             case InputType.Number:
             case InputType.Textarea:
-                inputElement = this.textInputManager.createTextInput(element, scene, null as any, style);
+                inputElement = this.textInputManager.createTextInput(element, render, null as any, style, worldDimensions);
                 break;
 
             case InputType.Button:
             case InputType.Submit:
-                inputElement = this.buttonManager.createButton(element, scene, style);
+                inputElement = this.buttonManager.createButton(element, render, style, worldDimensions);
                 break;
 
             case InputType.Checkbox:
-                inputElement = this.checkboxManager.createCheckbox(element, scene, style);
+                inputElement = this.checkboxManager.createCheckbox(element, render, style, worldDimensions);
                 break;
 
             case InputType.Radio:
-                inputElement = this.checkboxManager.createRadioButton(element, scene, style);
+                inputElement = this.checkboxManager.createRadioButton(element, render, style, worldDimensions);
                 break;
 
             case InputType.Select:
-                inputElement = this.selectManager.createSelectElement(element, scene, style);
+                inputElement = this.selectManager.createSelectElement(element, render, style, worldDimensions);
                 break;
 
             default:
@@ -173,7 +166,8 @@ export class InputElementService {
                 const selectElement = inputElement as SelectElement;
                 const optionIndex = selectElement.options.findIndex(opt => opt.value === value);
                 if (optionIndex >= 0) {
-                    this.selectManager.selectOption(selectElement, optionIndex);
+                    selectElement.selectedIndex = optionIndex;
+                    selectElement.value = selectElement.options[optionIndex].value;
                 }
                 break;
         }
@@ -315,6 +309,27 @@ export class InputElementService {
                 this.selectManager.disposeSelectElement(inputElement as SelectElement);
                 break;
         }
+    }
+
+    /**
+     * Attaches input events (click, etc.) to the input element
+     */
+    attachInputEvents(inputElement: InputElement, scene: BABYLON.Scene): void {
+        if (!inputElement.mesh.actionManager) {
+            inputElement.mesh.actionManager = new BABYLON.ActionManager(scene);
+        }
+
+        // Handle click to focus
+        inputElement.mesh.actionManager.registerAction(
+            new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => {
+                    if (!inputElement.disabled) {
+                        this.focusInputElement(inputElement);
+                    }
+                }
+            )
+        );
     }
 
     /**

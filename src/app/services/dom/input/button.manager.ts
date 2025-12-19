@@ -3,6 +3,8 @@ import * as BABYLON from '@babylonjs/core';
 import { DOMElement } from '../../../types/dom-element';
 import { Button, ButtonState, InputType, ValidationState, ButtonInteraction } from '../../../types/input-types';
 import { StyleRule } from '../../../types/style-rule';
+import { BabylonRender } from '../interfaces/render.types';
+import { TextRenderingService } from '../../text/text-rendering.service';
 
 /**
  * Service responsible for managing button elements
@@ -14,16 +16,23 @@ export class ButtonManager {
     private readonly PRESS_OFFSET = 0.05; // Visual press down effect
     private readonly STATE_TRANSITION_MS = 100;
 
+    constructor(private textRenderingService: TextRenderingService) { }
+
     /**
      * Creates a button element
      */
     createButton(
         element: DOMElement,
-        scene: BABYLON.Scene,
-        style: StyleRule
+        render: BabylonRender,
+        style: StyleRule,
+        worldDimensions: { width: number; height: number }
     ): Button {
+        if (!render.scene) {
+            throw new Error('Scene is required to create button');
+        }
+
         // Create button mesh
-        const buttonMesh = this.createButtonMesh(element, scene, style);
+        const buttonMesh = this.createButtonMesh(element, render, style, worldDimensions);
 
         // Initialize validation state
         const validationState: ValidationState = {
@@ -54,7 +63,7 @@ export class ButtonManager {
 
         // Create label mesh
         if (button.label) {
-            button.labelMesh = this.createLabelMesh(button, scene, style);
+            button.labelMesh = this.createLabelMesh(button, render.scene, style);
         }
 
         // Apply initial state styling
@@ -205,24 +214,26 @@ export class ButtonManager {
     /**
      * Creates the button mesh
      */
-    private createButtonMesh(element: DOMElement, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        const width = this.parseSize(style.width) || 1.5;
-        const height = this.parseSize(style.height) || 0.5;
-        const depth = 0.1;
+    private createButtonMesh(
+        element: DOMElement,
+        render: BabylonRender,
+        style: StyleRule,
+        worldDimensions: { width: number; height: number }
+    ): BABYLON.Mesh {
+        const width = worldDimensions.width;
+        const height = worldDimensions.height;
+        const depth = 0.1 * render.actions.camera.getPixelToWorldScale() * 100;
 
         const buttonMesh = BABYLON.MeshBuilder.CreateBox(`button_${element.id}`, {
             width,
             height,
             depth
-        }, scene);
+        }, render.scene);
 
-        // Create material
-        const material = new BABYLON.StandardMaterial(`buttonMaterial_${element.id}`, scene);
+        const material = new BABYLON.StandardMaterial(`buttonMaterial_${element.id}`, render.scene);
         material.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
         material.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
         buttonMesh.material = material;
-
-        // Make button pickable for interactions
         buttonMesh.isPickable = true;
 
         return buttonMesh;
@@ -232,24 +243,57 @@ export class ButtonManager {
      * Creates the button label mesh
      */
     private createLabelMesh(button: Button, scene: BABYLON.Scene, style: StyleRule): BABYLON.Mesh {
-        // Create a simple plane for the label
-        // In production, this would use TextRenderingService
-        const labelPlane = BABYLON.MeshBuilder.CreatePlane(`buttonLabel_${button.element.id}`, {
-            width: 1.2,
-            height: 0.3
-        }, scene);
+        const textContent = button.element.textContent || 'Button';
 
-        labelPlane.parent = button.mesh;
-        labelPlane.position.z = 0.06; // In front of button
-        labelPlane.isPickable = false;
+        const textStyle = { ...style };
+        if (!textStyle.fontSize) textStyle.fontSize = '16px';
+        if (!textStyle.fontFamily) textStyle.fontFamily = 'Arial';
+        if (!textStyle.color) textStyle.color = '#000000';
 
-        // Create label material
-        const material = new BABYLON.StandardMaterial(`labelMaterial_${button.element.id}`, scene);
-        material.diffuseColor = BABYLON.Color3.Black();
-        material.emissiveColor = BABYLON.Color3.Black();
-        labelPlane.material = material;
+        try {
+            const texture = this.textRenderingService.renderTextToTexture(
+                button.element,
+                textContent,
+                textStyle
+            );
 
-        return labelPlane;
+            const buttonWidth = button.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
+            const buttonHeight = button.mesh.getBoundingInfo().boundingBox.extendSize.y * 2;
+
+            const labelPlane = BABYLON.MeshBuilder.CreatePlane(`buttonLabel_${button.element.id}`, {
+                width: buttonWidth,
+                height: buttonHeight
+            }, scene);
+
+            labelPlane.parent = button.mesh;
+            labelPlane.position.z = -0.06;
+            labelPlane.isPickable = false;
+
+            const material = new BABYLON.StandardMaterial(`labelMaterial_${button.element.id}`, scene);
+            material.diffuseTexture = texture;
+            material.diffuseTexture.hasAlpha = true;
+            material.useAlphaFromDiffuseTexture = true;
+            material.emissiveColor = BABYLON.Color3.White();
+            material.disableLighting = true;
+
+            labelPlane.material = material;
+            return labelPlane;
+        } catch (error) {
+            console.error('Error creating button label:', error);
+            const labelPlane = BABYLON.MeshBuilder.CreatePlane(`buttonLabel_${button.element.id}`, {
+                width: 1.2,
+                height: 0.3
+            }, scene);
+
+            labelPlane.parent = button.mesh;
+            labelPlane.position.z = -0.06;
+
+            const material = new BABYLON.StandardMaterial(`labelMaterial_${button.element.id}`, scene);
+            material.diffuseColor = BABYLON.Color3.Black();
+            labelPlane.material = material;
+
+            return labelPlane;
+        }
     }
 
     /**
@@ -257,7 +301,6 @@ export class ButtonManager {
      */
     private determineButtonType(element: DOMElement): 'button' | 'submit' | 'reset' {
         const type = element.inputType?.toLowerCase();
-
         if (type === 'submit') return 'submit';
         if (type === 'reset') return 'reset';
         return 'button';

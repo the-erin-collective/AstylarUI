@@ -254,6 +254,7 @@ export class SiteComponent {
           generatePolygonVertexData: this.babylonMeshService?.createPolygonVertexData.bind(this.babylonMeshService) || (() => { }),
           updateMeshBorderRadius: this.babylonMeshService?.updateMeshBorderRadius.bind(this.babylonMeshService) || (() => { }),
           createMeshWithBorderRadius: this.babylonMeshService?.createMeshWithBorderRadius.bind(this.babylonMeshService) || ((originalMesh: Mesh) => originalMesh),
+          createBorderMesh: this.babylonMeshService?.createBorderMesh.bind(this.babylonMeshService) || (() => []),
         },
         style: {
           findStyleBySelector: this.styleService.findStyleBySelector.bind(this.styleService),

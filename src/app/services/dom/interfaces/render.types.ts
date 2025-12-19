@@ -11,11 +11,12 @@ export interface MeshActions {
     createPolygonBorder: (...args: any[]) => Mesh[];
     positionMesh: (mesh: Mesh, x: number, y: number, z: number) => void;
     parentMesh: (child: Mesh, parent: Mesh) => void;
-    positionBorderFrames: (borders: Mesh[], centerX: number, centerY: number, centerZ: number, elementWidth: number, elementHeight: number, borderWidth: number) => void;
     generatePolygonVertexData: (polygonType: string, width: number, height: number, borderRadius: number) => any;
     updatePolygon: (mesh: Mesh, polygonType: string, width: number, height: number, borderRadius: number) => void;
     updateMeshBorderRadius: (mesh: Mesh, width: number, height: number, borderRadius: number) => void;
     createMeshWithBorderRadius: (originalMesh: Mesh, width: number, height: number, borderRadius: number) => Mesh;
+    createBorderMesh: (name: string, elementWidth: number, elementHeight: number, borderWidth: number, borderRadius?: number) => Mesh[];
+    positionBorderFrames: (borders: Mesh[], centerX: number, centerY: number, centerZ: number, elementWidth: number, elementHeight: number, borderWidth: number) => void;
 }
 
 export interface StyleActions {

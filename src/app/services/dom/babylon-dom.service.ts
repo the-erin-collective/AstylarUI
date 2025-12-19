@@ -36,13 +36,16 @@ export class BabylonDOMService {
   private textTextures: Map<string, BABYLON.Texture> = new Map();
   private textContent: Map<string, string> = new Map();
   private textMetrics: Map<string, StoredTextLayoutMetrics> = new Map();
+  // Input element context
+  private inputElements: Map<string, any> = new Map(); // Will store InputElement instances
+  private focusedInputId: string | null = null;
 
-  constructor( 
-    private flexService: FlexService, 
-    private rootService: RootService, 
-    private listService: ListService, 
-    private elementService: ElementService, 
-    private styleService: StyleService, 
+  constructor(
+    private flexService: FlexService,
+    private rootService: RootService,
+    private listService: ListService,
+    private elementService: ElementService,
+    private styleService: StyleService,
     private tableService: TableService,
     private positioningIntegration: PositioningIntegrationService,
     private textRenderingService: TextRenderingService,
@@ -82,7 +85,10 @@ export class BabylonDOMService {
         textMeshes: this.textMeshes,
         textTextures: this.textTextures,
         textContent: this.textContent,
-        textMetrics: this.textMetrics
+        textMetrics: this.textMetrics,
+        // Input element context
+        inputElements: this.inputElements,
+        focusedInputId: this.focusedInputId
       }
     };
   }
@@ -91,12 +97,12 @@ export class BabylonDOMService {
     this.render = render;
     this.scene = render.scene;
     this.elements.clear();
-    
+
     // Initialize text rendering service with scene
     if (render.scene) {
       this.textRenderingService.initialize(render.scene);
     }
-    
+
     // Update viewport service with actual dimensions
     this.positioningIntegration.updateViewport({
       width: viewportWidth,
@@ -130,7 +136,7 @@ export class BabylonDOMService {
       console.log('👨‍👩‍👧‍👦 Processing root children:', siteData.root.children);
       console.log('👨‍👩‍👧‍👦 Root children count:', siteData.root.children.length);
       console.log('👨‍👩‍👧‍👦 Root children details:', siteData.root.children.map(c => `${c.type}#${c.id}`));
-      this.elementService.processChildren(this.dom, this.render!, siteData.root.children, rootBodyMesh, siteData.styles, { type: 'div' as const });
+      this.elementService.processChildren(this.dom, this.render!, siteData.root.children, rootBodyMesh, siteData.styles, { id: 'root-body', type: 'div' as const });
     } else {
       console.log('⚠️ No root children found in siteData');
     }
@@ -147,7 +153,7 @@ export class BabylonDOMService {
     this.hoverStates.clear();
     this.elementStyles.clear();
     this.elementTypes.clear();
-    
+
     // Clear text rendering context
     this.textMeshes.forEach(mesh => {
       mesh.dispose();
@@ -161,6 +167,10 @@ export class BabylonDOMService {
     this.textMetrics.clear();
     this.textInteractionRegistry.clear();
     this.textHighlightFactory.clearAllHighlights();
+
+    // Clear input element context
+    this.inputElements.clear();
+    this.focusedInputId = null;
   }
 
   /**
@@ -215,7 +225,7 @@ export class BabylonDOMService {
 
       // Get merged style for text properties (including inheritance)
       const textStyle = this.getInheritedTextStyle(element, styles);
-      
+
       const storedDims = dom.context.elementDimensions.get(element.id);
 
       // Fallback to parent mesh bounding box if we don't have stored dimensions yet
@@ -264,7 +274,7 @@ export class BabylonDOMService {
         textStyle,
         availableWidthPx
       );
-      
+
       // Measure text dimensions (CSS px)
       const textStyleProperties = this.textRenderingService['parseElementTextStyle'](element, textStyle);
       const measuredDimensions = this.textRenderingService.calculateTextDimensions(
@@ -296,10 +306,10 @@ export class BabylonDOMService {
 
       // Create text mesh using BabylonMeshService (texture size)
       const textMesh = this.createTextMesh(element.id, textTexture, textureDimensions, render);
-      
+
       // Position text mesh relative to parent element using layout dimensions
       this.positionTextMesh(textMesh, mesh, layoutDimensions, textStyle, paddingPx, resolvedDims, render);
-      
+
       // Store text rendering context
       dom.context.textMeshes.set(element.id, textMesh);
       dom.context.textTextures.set(element.id, textTexture);
@@ -334,7 +344,7 @@ export class BabylonDOMService {
       // Get existing text mesh and texture
       const existingTextMesh = dom.context.textMeshes.get(elementId);
       const existingTexture = dom.context.textTextures.get(elementId);
-      
+
       if (!existingTextMesh || !existingTexture) {
         console.warn(`⚠️ No existing text mesh/texture found for ${elementId}, cannot update`);
         return;
@@ -362,20 +372,20 @@ export class BabylonDOMService {
       // Get style for text properties
       const elementStyles = dom.context.elementStyles.get(elementId);
       const textStyle = elementStyles?.normal;
-      
+
       // Calculate maximum width for text wrapping
       const elementDims = dom.context.elementDimensions.get(elementId);
       const maxWidth = elementDims ? elementDims.width - (elementDims.padding.left + elementDims.padding.right) : undefined;
 
       // Render new text to texture
       const newTextTexture = this.textRenderingService.renderTextToTexture(mockElement, newContent, textStyle, maxWidth);
-      
+
       // Update text mesh material with new texture
       if (existingTextMesh.material) {
         const material = existingTextMesh.material as BABYLON.StandardMaterial;
         material.diffuseTexture = newTextTexture;
       }
-      
+
       // Update stored context
       dom.context.textTextures.set(elementId, newTextTexture);
       dom.context.textContent.set(elementId, newContent);

@@ -130,6 +130,75 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         background: '#ffb300', // Orange for area
         borderRadius: '4px',
     },
+
+    // INPUT ELEMENTS
+    input: {
+        display: 'inline-block',
+        background: 'rgba(0, 0, 0, 0.2)',     // Semi-transparent dark background
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: '#666666',                // Medium gray border
+        borderRadius: '4px',
+        padding: '8px',
+        cursor: 'text',
+        fontSize: '14px',
+        color: '#ffffff',                      // White text
+    },
+
+    // BUTTON ELEMENTS
+    button: {
+        display: 'inline-block',
+        background: '#2c3e50',                 // Default button fill (dark blue-gray)
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: '#34495e',
+        borderRadius: '4px',
+        padding: '8px 16px',
+        cursor: 'pointer',
+        fontSize: '14px',
+        color: '#ffffff',
+        fontWeight: 'bold',
+    },
+
+    // CHECKBOX ELEMENTS
+    checkbox: {
+        display: 'inline-block',
+        background: '#ffffff',
+        borderWidth: '2px',
+        borderStyle: 'solid',
+        borderColor: '#666666',
+        borderRadius: '4px',
+        width: '20px',
+        height: '20px',
+        cursor: 'pointer',
+    },
+
+    // RADIO BUTTON ELEMENTS
+    radio: {
+        display: 'inline-block',
+        background: '#ffffff',
+        borderWidth: '2px',
+        borderStyle: 'solid',
+        borderColor: '#666666',
+        borderRadius: '50%',                   // Circular
+        width: '20px',
+        height: '20px',
+        cursor: 'pointer',
+    },
+
+    // SELECT DROPDOWN ELEMENTS
+    select: {
+        display: 'inline-block',
+        background: 'rgba(0, 0, 0, 0.2)',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: '#666666',
+        borderRadius: '4px',
+        padding: '8px',
+        cursor: 'pointer',
+        fontSize: '14px',
+        color: '#ffffff',
+    },
 };
 
 @Injectable({

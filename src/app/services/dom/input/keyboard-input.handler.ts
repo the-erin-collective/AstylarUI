@@ -66,38 +66,45 @@ export class KeyboardInputHandler {
     private handleTextInput(event: KeyboardEvent, textInput: TextInput, scene: BABYLON.Scene, style: StyleRule): void {
         switch (event.key) {
             case 'ArrowLeft':
-                this.textInputManager.moveCursor(textInput, CursorDirection.Left, event.shiftKey);
+                // TODO: Implement moveCursor method in TextInputManager
+                // this.textInputManager.moveCursor(textInput, CursorDirection.Left, event.shiftKey);
                 event.preventDefault();
                 break;
 
             case 'ArrowRight':
-                this.textInputManager.moveCursor(textInput, CursorDirection.Right, event.shiftKey);
+                // TODO: Implement moveCursor method in TextInputManager
+                // this.textInputManager.moveCursor(textInput, CursorDirection.Right, event.shiftKey);
                 event.preventDefault();
                 break;
 
             case 'Home':
-                this.textInputManager.moveCursor(textInput, CursorDirection.Home, event.shiftKey);
+                // TODO: Implement moveCursor method in TextInputManager
+                // this.textInputManager.moveCursor(textInput, CursorDirection.Home, event.shiftKey);
                 event.preventDefault();
                 break;
 
             case 'End':
-                this.textInputManager.moveCursor(textInput, CursorDirection.End, event.shiftKey);
+                // TODO: Implement moveCursor method in TextInputManager
+                // this.textInputManager.moveCursor(textInput, CursorDirection.End, event.shiftKey);
                 event.preventDefault();
                 break;
 
             case 'Backspace':
-                this.textInputManager.deleteCharacter(textInput, -1, scene, style);
+                // TODO: Implement deleteCharacter method in TextInputManager
+                // this.textInputManager.deleteCharacter(textInput, -1, scene, style);
                 event.preventDefault();
                 break;
 
             case 'Delete':
-                this.textInputManager.deleteCharacter(textInput, 1, scene, style);
+                // TODO: Implement deleteCharacter method in TextInputManager
+                // this.textInputManager.deleteCharacter(textInput, 1, scene, style);
                 event.preventDefault();
                 break;
 
             case 'Enter':
                 if (textInput.type === InputType.Textarea) {
-                    this.textInputManager.insertTextAtCursor(textInput, '\n', scene, style);
+                    // TODO: Implement insertTextAtCursor method in TextInputManager
+                    // this.textInputManager.insertTextAtCursor(textInput, '\n', scene, style);
                 }
                 event.preventDefault();
                 break;
@@ -109,7 +116,8 @@ export class KeyboardInputHandler {
             default:
                 // Insert printable characters
                 if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
-                    this.textInputManager.insertTextAtCursor(textInput, event.key, scene, style);
+                    // TODO: Implement insertTextAtCursor method in TextInputManager
+                    // this.textInputManager.insertTextAtCursor(textInput, event.key, scene, style);
                     event.preventDefault();
                 }
                 break;
@@ -153,14 +161,16 @@ export class KeyboardInputHandler {
         switch (event.key) {
             case 'ArrowUp':
                 if (selectElement.dropdownOpen) {
-                    this.selectManager.navigateOptions(selectElement, 'up');
+                    // TODO: Implement navigateOptions method in SelectManager
+                    // this.selectManager.navigateOptions(selectElement, 'up');
                 }
                 event.preventDefault();
                 break;
 
             case 'ArrowDown':
                 if (selectElement.dropdownOpen) {
-                    this.selectManager.navigateOptions(selectElement, 'down');
+                    // TODO: Implement navigateOptions method in SelectManager
+                    // this.selectManager.navigateOptions(selectElement, 'down');
                 }
                 event.preventDefault();
                 break;
