@@ -7,3 +7,6 @@ export * from './transform-data';
 
 // Text rendering types
 export * from './text-rendering';
+
+// Input element types
+export * from './input-types';

@@ -5123,7 +5123,7 @@ export class SiteDataService {
           borderStyle: 'solid',
           padding: '20px'
         },
-        
+
         // Title text
         {
           selector: '#title',
@@ -5211,6 +5211,362 @@ export class SiteDataService {
                 type: 'div',
                 id: 'styled-text',
                 textContent: 'This text demonstrates various styling options including bold weight, underline decoration, and right alignment.'
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    // INPUT ELEMENTS TEST SITE
+    'input-elements': {
+      meta: {
+        description: 'Comprehensive input elements test site showcasing text inputs, buttons, checkboxes, radio buttons, and select dropdowns with validation and keyboard navigation'
+      },
+      styles: [
+        {
+          selector: 'root',
+          background: '#1a1a2e',
+          padding: '10%'
+        },
+
+        // Container for all inputs
+        {
+          selector: '#input-container',
+          // Removed manual positioning/sizing to let root padding control the layout
+          // top: '5%', left: '5%', width: '90%', height: '90%'
+          background: 'rgba(22, 33, 62, 0.8)',
+          borderRadius: '12px',
+          padding: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '15px'
+        },
+
+        // === TEXT INPUTS SECTION ===
+        {
+          selector: '#text-input-1',
+          background: '#ffffff',
+          borderRadius: '6px',
+          borderWidth: '2px',
+          borderColor: '#3498db',
+          borderStyle: 'solid',
+          padding: '10px',
+          height: '40px',
+          fontSize: '16px',
+          color: '#2c3e50'
+        },
+
+        {
+          selector: '#text-input-2',
+          background: '#ffffff',
+          borderRadius: '6px',
+          borderWidth: '2px',
+          borderColor: '#27ae60',
+          borderStyle: 'solid',
+          padding: '10px',
+          height: '40px',
+          fontSize: '16px',
+          color: '#2c3e50'
+        },
+
+        {
+          selector: '#email-input',
+          background: '#ffffff',
+          borderRadius: '6px',
+          borderWidth: '2px',
+          borderColor: '#9b59b6',
+          borderStyle: 'solid',
+          padding: '10px',
+          height: '40px',
+          fontSize: '16px',
+          color: '#2c3e50'
+        },
+
+        // === BUTTONS SECTION ===
+        {
+          selector: '#button-1',
+          background: '#3498db',
+          borderRadius: '8px',
+          padding: '12px 24px',
+          height: '45px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: '#ffffff',
+          cursor: 'pointer'
+        },
+
+        {
+          selector: '#button-1:hover',
+          background: '#2980b9',
+          transform: 'scale(1.05)'
+        },
+
+        {
+          selector: '#button-2',
+          background: '#27ae60',
+          borderRadius: '8px',
+          padding: '12px 24px',
+          height: '45px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: '#ffffff',
+          cursor: 'pointer'
+        },
+
+        {
+          selector: '#button-2:hover',
+          background: '#229954',
+          transform: 'scale(1.05)'
+        },
+
+        {
+          selector: '#submit-button',
+          background: '#e74c3c',
+          borderRadius: '8px',
+          padding: '12px 24px',
+          height: '45px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          color: '#ffffff',
+          cursor: 'pointer'
+        },
+
+        {
+          selector: '#submit-button:hover',
+          background: '#c0392b',
+          transform: 'scale(1.05)'
+        },
+
+        // === CHECKBOXES SECTION ===
+        {
+          selector: '#checkbox-1',
+          background: '#ffffff',
+          borderRadius: '4px',
+          borderWidth: '2px',
+          borderColor: '#3498db',
+          borderStyle: 'solid',
+          width: '24px',
+          height: '24px'
+        },
+
+        {
+          selector: '#checkbox-2',
+          background: '#ffffff',
+          borderRadius: '4px',
+          borderWidth: '2px',
+          borderColor: '#27ae60',
+          borderStyle: 'solid',
+          width: '24px',
+          height: '24px'
+        },
+
+        {
+          selector: '#checkbox-3',
+          background: '#ffffff',
+          borderRadius: '4px',
+          borderWidth: '2px',
+          borderColor: '#f39c12',
+          borderStyle: 'solid',
+          width: '24px',
+          height: '24px'
+        },
+
+        // === RADIO BUTTONS SECTION ===
+        {
+          selector: '#radio-1',
+          background: '#ffffff',
+          borderRadius: '50%',
+          borderWidth: '2px',
+          borderColor: '#9b59b6',
+          borderStyle: 'solid',
+          width: '24px',
+          height: '24px'
+        },
+
+        {
+          selector: '#radio-2',
+          background: '#ffffff',
+          borderRadius: '50%',
+          borderWidth: '2px',
+          borderColor: '#9b59b6',
+          borderStyle: 'solid',
+          width: '24px',
+          height: '24px'
+        },
+
+        {
+          selector: '#radio-3',
+          background: '#ffffff',
+          borderRadius: '50%',
+          borderWidth: '2px',
+          borderColor: '#9b59b6',
+          borderStyle: 'solid',
+          width: '24px',
+          height: '24px'
+        },
+
+        // === SELECT DROPDOWN ===
+        {
+          selector: '#select-dropdown',
+          background: '#ffffff',
+          borderRadius: '6px',
+          borderWidth: '2px',
+          borderColor: '#e67e22',
+          borderStyle: 'solid',
+          padding: '10px',
+          height: '40px',
+          fontSize: '16px',
+          color: '#2c3e50',
+          cursor: 'pointer'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'input-container',
+            children: [
+              // Text Input 1
+              {
+                type: 'input',
+                id: 'text-input-1',
+                inputType: 'text',
+                placeholder: 'Enter your name...',
+                maxLength: 50,
+                required: true,
+                validationRules: [
+                  {
+                    type: 'required',
+                    message: 'Name is required'
+                  },
+                  {
+                    type: 'minLength',
+                    value: 3,
+                    message: 'Name must be at least 3 characters'
+                  }
+                ]
+              },
+
+              // Text Input 2
+              {
+                type: 'input',
+                id: 'text-input-2',
+                inputType: 'text',
+                placeholder: 'Enter a message...',
+                maxLength: 100
+              },
+
+              // Email Input
+              {
+                type: 'input',
+                id: 'email-input',
+                inputType: 'email',
+                placeholder: 'Enter your email...',
+                required: true,
+                validationRules: [
+                  {
+                    type: 'required',
+                    message: 'Email is required'
+                  },
+                  {
+                    type: 'email',
+                    message: 'Please enter a valid email address'
+                  }
+                ]
+              },
+
+              // Button 1
+              {
+                type: 'button',
+                id: 'button-1',
+                inputType: 'button',
+                value: 'Click Me',
+                onclick: 'console.log("Button 1 clicked!")'
+              },
+
+              // Button 2
+              {
+                type: 'button',
+                id: 'button-2',
+                inputType: 'button',
+                value: 'Action Button',
+                onclick: 'console.log("Action button clicked!")'
+              },
+
+              // Submit Button
+              {
+                type: 'button',
+                id: 'submit-button',
+                inputType: 'submit',
+                value: 'Submit Form'
+              },
+
+              // Checkbox 1
+              {
+                type: 'input',
+                id: 'checkbox-1',
+                inputType: 'checkbox',
+                value: 'option1',
+                name: 'preferences'
+              },
+
+              // Checkbox 2
+              {
+                type: 'input',
+                id: 'checkbox-2',
+                inputType: 'checkbox',
+                value: 'option2',
+                name: 'preferences'
+              },
+
+              // Checkbox 3
+              {
+                type: 'input',
+                id: 'checkbox-3',
+                inputType: 'checkbox',
+                value: 'option3',
+                name: 'preferences'
+              },
+
+              // Radio Button 1
+              {
+                type: 'input',
+                id: 'radio-1',
+                inputType: 'radio',
+                value: 'choice1',
+                name: 'radioGroup'
+              },
+
+              // Radio Button 2
+              {
+                type: 'input',
+                id: 'radio-2',
+                inputType: 'radio',
+                value: 'choice2',
+                name: 'radioGroup'
+              },
+
+              // Radio Button 3
+              {
+                type: 'input',
+                id: 'radio-3',
+                inputType: 'radio',
+                value: 'choice3',
+                name: 'radioGroup'
+              },
+
+              // Select Dropdown
+              {
+                type: 'input',
+                id: 'select-dropdown',
+                inputType: 'select',
+                options: [
+                  { value: 'option1', label: 'Option 1' },
+                  { value: 'option2', label: 'Option 2' },
+                  { value: 'option3', label: 'Option 3' },
+                  { value: 'option4', label: 'Option 4', disabled: true }
+                ]
               }
             ]
           }

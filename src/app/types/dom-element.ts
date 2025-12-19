@@ -20,6 +20,7 @@ export interface DOMElement {
   target?: string;
   value?: string;
   placeholder?: string;
+  maxLength?: number;
   checked?: boolean;
   disabled?: boolean;
   required?: boolean;
@@ -63,4 +64,10 @@ export interface DOMElement {
     span?: number; // For col and colgroup elements
     width?: string; // For col elements
   };
+  // Input-specific
+  inputType?: string; // Type of input element (text, button, checkbox, etc.)
+  inputElement?: any; // Reference to InputElement state object
+  onclick?: string; // Click handler for buttons
+  options?: Array<{ value: any; label: string; disabled?: boolean }>; // Options for select elements
+  validationRules?: Array<{ type: string; value?: any; message: string }>; // Validation rules
 }

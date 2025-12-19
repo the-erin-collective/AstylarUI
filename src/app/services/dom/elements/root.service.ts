@@ -22,7 +22,7 @@ export class RootService {
 
     // Get viewport dimensions from camera service
     const { width: visibleWidth, height: visibleHeight } = render.actions.camera.calculateViewportDimensions();
-    
+
     const dprWidth = visibleWidth * devicePixelRatio;
     const dprHeight = visibleHeight * devicePixelRatio;
 
@@ -42,7 +42,6 @@ export class RootService {
       const backgroundColor = render.actions.style.parseBackgroundColor(rootStyle.background);
       const opacity = render.actions.style.parseOpacity(rootStyle.opacity);
       material = render.actions.mesh.createMaterial('root-body-material', backgroundColor, undefined, opacity);
-      console.log('Applied root background color:', rootStyle.background, '-> parsed:', backgroundColor, 'opacity:', opacity);
     } else {
       material = render.actions.mesh.createMaterial('root-body-material', new Color3(0.8, 0.1, 0.1));
       console.log('No root background style found, using test red color');
@@ -58,14 +57,71 @@ export class RootService {
 
     dom.context.elements.set('root-body', rootBody);
 
+    // Parse padding from root style
+    const rootPadding = this.parsePadding(rootStyle?.padding, cssWidth, cssHeight);
 
     dom.context.elementDimensions.set('root-body', {
       width: cssWidth, // pixels
       height: cssHeight, // pixels
-      padding: { top: 0, right: 0, bottom: 0, left: 0 }
+      padding: rootPadding // pixels
     });
-    console.log('[ELEMENT DIM DEBUG] Stored elementDimensions for root-body:', { width: canvas.width, height: canvas.height });
 
     return rootBody;
+  }
+
+  /**
+   * Parse padding value from root style
+   * Supports both pixel values and percentages
+   * @param padding The padding style value (e.g., "10px", "10%", "10px 20px")
+   * @param viewportWidth The viewport width in pixels (for percentage calculations)
+   * @param viewportHeight The viewport height in pixels (for percentage calculations)
+   */
+  private parsePadding(
+    padding: string | undefined,
+    viewportWidth: number,
+    viewportHeight: number
+  ): { top: number; right: number; bottom: number; left: number } {
+    if (!padding) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+
+    // Split into parts
+    const parts = padding.split(/\s+/);
+
+    // Helper to parse a single value (handles both px and %)
+    const parseValue = (value: string, referenceSize: number): number => {
+      if (value.endsWith('%')) {
+        const percent = parseFloat(value);
+        return (percent / 100) * referenceSize;
+      } else if (value.endsWith('px')) {
+        return parseFloat(value);
+      } else {
+        return parseFloat(value) || 0;
+      }
+    };
+
+    if (parts.length === 1) {
+      // padding: 10px (all sides) - use width for horizontal, height for vertical
+      // For symmetric padding, we need to be consistent. CSS uses width reference for all sides
+      // when percentage is used, but for simplicity, we'll use width for left/right, height for top/bottom
+      const topBottom = parseValue(parts[0], viewportHeight);
+      const leftRight = parseValue(parts[0], viewportWidth);
+      return { top: topBottom, right: leftRight, bottom: topBottom, left: leftRight };
+    } else if (parts.length === 2) {
+      // padding: 10px 20px (vertical horizontal)
+      const vertical = parseValue(parts[0], viewportHeight);
+      const horizontal = parseValue(parts[1], viewportWidth);
+      return { top: vertical, right: horizontal, bottom: vertical, left: horizontal };
+    } else if (parts.length === 4) {
+      // padding: 10px 20px 30px 40px (top right bottom left)
+      return {
+        top: parseValue(parts[0], viewportHeight),
+        right: parseValue(parts[1], viewportWidth),
+        bottom: parseValue(parts[2], viewportHeight),
+        left: parseValue(parts[3], viewportWidth)
+      };
+    }
+
+    return { top: 0, right: 0, bottom: 0, left: 0 };
   }
 } 
