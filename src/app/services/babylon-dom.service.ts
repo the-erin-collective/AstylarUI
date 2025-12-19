@@ -3,108 +3,10 @@ import { Scene, Color3, Vector3, Mesh, ActionManager, ExecuteCodeAction, Texture
 import { BabylonCameraService } from './babylon-camera.service';
 import { BabylonMeshService } from './babylon-mesh.service';
 import { TextureService } from './texture.service';
-
-export interface DOMElement {
-  type: 'div' | 'section' | 'article' | 'header' | 'footer' | 'nav' | 'main' | 'ul' | 'ol' | 'li' | 'img' | 'a';
-  id?: string;
-  children?: DOMElement[];
-}
-
-export interface DOMRoot {
-  root: {
-    children: DOMElement[];
-  };
-}
-
-export interface StyleRule {
-  selector: string;
-  top?: string;
-  left?: string;
-  width?: string;
-  height?: string;
-  background?: string;
-  // Support both hyphenated and camelCase for border properties
-  'border-width'?: string;
-  borderWidth?: string;
-  'border-color'?: string;
-  borderColor?: string;
-  'border-style'?: string;
-  borderStyle?: string;
-  // Padding and margin support  
-  padding?: string;
-  margin?: string;
-  paddingTop?: string;
-  paddingRight?: string;
-  paddingBottom?: string;
-  paddingLeft?: string;
-  marginTop?: string;
-  marginRight?: string;
-  marginBottom?: string;
-  marginLeft?: string;
-  // Transparency support
-  opacity?: string;
-  // Z-index/layering support
-  zIndex?: string;
-  'z-index'?: string;
-  // Border radius support
-  borderRadius?: string;
-  'border-radius'?: string;
-  // Polygon type support (custom extension beyond CSS)
-  polygonType?: string;
-  // Box shadow support
-  boxShadow?: string;
-  'box-shadow'?: string;
-  // Transform support
-  transform?: string;
-  // List support
-  listStyleType?: string;
-  'list-style-type'?: string;
-  listItemSpacing?: string; // Custom property for spacing between list items
-  // Image support
-  src?: string; // Image source URL
-  objectFit?: string; // How image fits within container ('cover', 'contain', etc.)
-  // Anchor/Link support
-  href?: string; // URL to navigate to (absolute or relative)
-  target?: string; // Where to open the link ('_blank', '_self', etc.)
-  onclick?: string; // JavaScript-like function call or action name
-  // Flexbox layout support
-  display?: string; // 'flex', 'block', 'inline', etc.
-  flexDirection?: string; // 'row', 'column', 'row-reverse', 'column-reverse'
-  'flex-direction'?: string;
-  justifyContent?: string; // 'flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly'
-  'justify-content'?: string;
-  alignItems?: string; // 'flex-start', 'flex-end', 'center', 'stretch', 'baseline'
-  'align-items'?: string;
-  flexWrap?: string; // 'nowrap', 'wrap', 'wrap-reverse'
-  'flex-wrap'?: string;
-  // Gap properties
-  gap?: string; // Shorthand for row-gap and column-gap
-  rowGap?: string; // Gap between rows (cross-axis in row layouts)
-  'row-gap'?: string;
-  columnGap?: string; // Gap between columns (main-axis in row layouts)
-  'column-gap'?: string;
-  // Flex item properties
-  flexGrow?: string; // Flex grow factor
-  'flex-grow'?: string;
-  flexShrink?: string; // Flex shrink factor
-  'flex-shrink'?: string;
-  flexBasis?: string; // Flex basis (initial size)
-  'flex-basis'?: string;
-  flex?: string; // Shorthand for flex-grow, flex-shrink, flex-basis
-}
-
-export interface TransformData {
-  translate: { x: number; y: number; z: number };
-  rotate: { x: number; y: number; z: number };
-  scale: { x: number; y: number; z: number };
-}
-
-export interface SiteData {
-  styles: StyleRule[];
-  root: {
-    children: DOMElement[];
-  };
-}
+import { StyleRule } from '../types/style-rule';
+import { SiteData } from '../types/site-data';
+import { DOMElement } from '../types/dom-element';
+import { TransformData } from '../types/transform-data';
 
 @Injectable({
   providedIn: 'root'
@@ -624,15 +526,15 @@ export class BabylonDOMService {
     }
     
     // Parse border radius and scale it to world coordinates
-    const borderRadiusPixels = this.parseBorderRadius(style?.borderRadius || style?.['border-radius']);
-    
+    const borderRadiusPixels = this.parseBorderRadius(style?.borderRadius);
+
     // Scale border radius from pixels to world coordinates using a reasonable conversion factor
     // Based on typical screen dimensions, 1 world unit ≈ 100-200 pixels in our coordinate system
     const pixelToWorldScale = 0.01; // Adjust this factor to get the right visual balance
     const borderRadius = borderRadiusPixels * pixelToWorldScale;
-    
+
     console.log(`🔧 Border radius scaling: ${borderRadiusPixels}px → ${borderRadius.toFixed(3)} world units (scale: ${pixelToWorldScale}, shape: ${dimensions.width.toFixed(1)}×${dimensions.height.toFixed(1)})`);
-    
+
     // Parse polygon properties
     const polygonType = this.parsePolygonType(style?.polygonType);
     
@@ -668,7 +570,7 @@ export class BabylonDOMService {
     }
 
     // Calculate Z position based on z-index, but prefer flex position Z if available
-    const zIndex = this.parseZIndex(style?.zIndex || style?.['z-index']);
+    const zIndex = this.parseZIndex(style?.zIndex);
     const baseZPosition = this.calculateZPosition(zIndex);
     
     // Use flex position Z if provided (it includes index-based layering), otherwise use calculated Z
@@ -679,7 +581,7 @@ export class BabylonDOMService {
       baseZPosition: baseZPosition,
       flexZPosition: flexPosition?.z,
       finalZPosition: zPosition,
-      hasZIndexStyle: !!(style?.zIndex || style?.['z-index'])
+      hasZIndexStyle: !!(style?.zIndex)
     });
     
     // Position relative to parent (parent's coordinate system)
@@ -710,7 +612,7 @@ export class BabylonDOMService {
     }
 
     // Add box shadow if specified
-    const boxShadow = this.parseBoxShadow(style?.boxShadow || style?.['box-shadow']);
+    const boxShadow = this.parseBoxShadow(style?.boxShadow);
     if (boxShadow) {
       // Scale box shadow values from pixels to world coordinates
       const scaledOffsetX = boxShadow.offsetX * pixelToWorldScale;
@@ -877,10 +779,10 @@ export class BabylonDOMService {
     
     // Parse opacity from the active style
     const opacity = this.parseOpacity(activeStyle?.opacity);
-    
+
     // Get the background to use - activeStyle should always include type defaults now
     const backgroundToUse = activeStyle?.background;
-    
+
     let material;
     if (backgroundToUse) {
       // Parse background to check if it's a gradient or solid color
@@ -910,7 +812,7 @@ export class BabylonDOMService {
       const fallbackColor = new Color3(0.7, 0.5, 0.9); // Light purple
       material = this.meshService.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, fallbackColor, undefined, opacity);
     }
-    
+
     mesh.material = material;
   }
 
@@ -1064,17 +966,11 @@ export class BabylonDOMService {
     const hoverStyle = elementStyles.hover;
     
     // For border properties, use hover values if available, otherwise fall back to normal
-    const borderWidth = isHovered && hoverStyle?.borderWidth ? hoverStyle.borderWidth :
-                       isHovered && hoverStyle?.['border-width'] ? hoverStyle['border-width'] :
-                       normalStyle?.borderWidth || normalStyle?.['border-width'];
-    
-    const borderColor = isHovered && hoverStyle?.borderColor ? hoverStyle.borderColor :
-                       isHovered && hoverStyle?.['border-color'] ? hoverStyle['border-color'] :
-                       normalStyle?.borderColor || normalStyle?.['border-color'];
-    
-    const borderStyle = isHovered && hoverStyle?.borderStyle ? hoverStyle.borderStyle :
-                       isHovered && hoverStyle?.['border-style'] ? hoverStyle['border-style'] :
-                       normalStyle?.borderStyle || normalStyle?.['border-style'];
+    const borderWidth = isHovered && hoverStyle?.borderWidth ? hoverStyle.borderWidth : normalStyle?.borderWidth;
+
+    const borderColor = isHovered && hoverStyle?.borderColor ? hoverStyle.borderColor : normalStyle?.borderColor;
+
+    const borderStyle = isHovered && hoverStyle?.borderStyle ? hoverStyle.borderStyle : normalStyle?.borderStyle;
 
     // Parse opacity from the active style
     const activeStyle = isHovered && hoverStyle ? hoverStyle : normalStyle;
@@ -1171,10 +1067,10 @@ export class BabylonDOMService {
       return { width: 0, color: new Color3(0, 0, 0), style: 'solid' };
     }
     
-    // Support both camelCase and hyphenated properties (prefer camelCase)
-    const borderWidth = style.borderWidth || style['border-width'];
-    const borderColor = style.borderColor || style['border-color'];
-    const borderStyle = style.borderStyle || style['border-style'];
+    // Only use camelCase properties
+    const borderWidth = style.borderWidth;
+    const borderColor = style.borderColor;
+    const borderStyle = style.borderStyle;
     
     return {
       width: this.parseBorderWidth(borderWidth),
@@ -2176,19 +2072,19 @@ export class BabylonDOMService {
   }
 
   private getFlexDirection(style?: StyleRule): string {
-    return style?.flexDirection || style?.['flex-direction'] || 'row';
+    return style?.flexDirection || style?.flexDirection || 'row';
   }
 
   private getJustifyContent(style?: StyleRule): string {
-    return style?.justifyContent || style?.['justify-content'] || 'flex-start';
+    return style?.justifyContent || style?.justifyContent || 'flex-start';
   }
 
   private getAlignItems(style?: StyleRule): string {
-    return style?.alignItems || style?.['align-items'] || 'stretch';
+    return style?.alignItems || style?.alignItems || 'stretch';
   }
 
   private getFlexWrap(style?: StyleRule): string {
-    return style?.flexWrap || style?.['flex-wrap'] || 'nowrap';
+    return style?.flexWrap || style?.flexWrap || 'nowrap';
   }
 
   // Move parseFlexBasis and parseGapProperties above calculateFlexLayout or declare them as function expressions
@@ -2205,11 +2101,11 @@ export class BabylonDOMService {
   private parseGapProperties(style: StyleRule): { rowGap: number; columnGap: number } {
     let rowGap = 0;
     let columnGap = 0;
-    const rowGapValue = style?.rowGap || style?.['row-gap'];
+    const rowGapValue = style?.rowGap || style?.rowGap;
     if (rowGapValue) {
       rowGap = this.parseGapValue(rowGapValue);
     }
-    const columnGapValue = style?.columnGap || style?.['column-gap'];
+    const columnGapValue = style?.columnGap || style?.columnGap;
     if (columnGapValue) {
       columnGap = this.parseGapValue(columnGapValue);
     }
@@ -2266,9 +2162,9 @@ export class BabylonDOMService {
     // Calculate child dimensions and flex properties
     const childData = children.map(child => {
       const childStyle = this.findStyleForElement(child, styles);
-      const flexGrow = parseFloat(childStyle?.flexGrow || childStyle?.['flex-grow'] || '0');
-      const flexShrink = parseFloat(childStyle?.flexShrink || childStyle?.['flex-shrink'] || '1');
-      const flexBasis = childStyle?.flexBasis || childStyle?.['flex-basis'] || 'auto';
+      const flexGrow = parseFloat(childStyle?.flexGrow || childStyle?.flexGrow || '0');
+      const flexShrink = parseFloat(childStyle?.flexShrink || childStyle?.flexShrink || '1');
+      const flexBasis = childStyle?.flexBasis || childStyle?.flexBasis || 'auto';
       
       // Calculate base size
       let baseWidth, baseHeight;

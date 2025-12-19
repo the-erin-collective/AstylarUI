@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { SiteData } from './babylon-dom.service';
+import { SiteData } from '../types/site-data';
 
 @Injectable({
   providedIn: 'root'
