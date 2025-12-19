@@ -288,7 +288,6 @@ services/
 ```
 
 ### Testing Strategy
-- Unit tests for style parsing and calculation logic
 - Visual regression tests for element rendering
 - Performance benchmarks for complex layouts
 - Cross-browser compatibility testing
