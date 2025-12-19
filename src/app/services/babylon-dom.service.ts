@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Scene, MeshBuilder, StandardMaterial, Color3, Vector3, Mesh } from '@babylonjs/core';
+import { Scene, Color3, Vector3, Mesh } from '@babylonjs/core';
+import { BabylonCameraService } from './babylon-camera.service';
+import { BabylonMeshService } from './babylon-mesh.service';
 
 export interface DOMElement {
   type: 'div';
@@ -19,6 +21,7 @@ export interface StyleRule {
   left?: string;
   width?: string;
   height?: string;
+  background?: string;
 }
 
 export interface SiteData {
@@ -33,14 +36,18 @@ export interface SiteData {
 })
 export class BabylonDOMService {
   private scene?: Scene;
+  private cameraService?: BabylonCameraService;
+  private meshService?: BabylonMeshService;
   private sceneWidth: number = 1920; // Default viewport width
   private sceneHeight: number = 1080; // Default viewport height
   private elements: Map<string, Mesh> = new Map();
 
   constructor() {}
 
-  initialize(scene: Scene, viewportWidth: number, viewportHeight: number): void {
+  initialize(scene: Scene, cameraService: BabylonCameraService, meshService: BabylonMeshService, viewportWidth: number, viewportHeight: number): void {
     this.scene = scene;
+    this.cameraService = cameraService;
+    this.meshService = meshService;
     this.sceneWidth = viewportWidth;
     this.sceneHeight = viewportHeight;
     this.elements.clear();
@@ -58,7 +65,7 @@ export class BabylonDOMService {
     this.clearElements();
 
     // Create root body element that represents the full viewport/document
-    const rootBodyMesh = this.createRootBodyElement();
+    const rootBodyMesh = this.createRootBodyElement(siteData.styles);
     
     // Process children recursively - these will be positioned relative to the body
     if (siteData.root.children) {
@@ -69,49 +76,33 @@ export class BabylonDOMService {
     console.log('Site creation complete. Elements:', this.elements.size);
   }
 
-  private createRootBodyElement(): Mesh {
-    if (!this.scene) throw new Error('Scene not initialized');
+  private createRootBodyElement(styles: StyleRule[]): Mesh {
+    if (!this.scene || !this.meshService || !this.cameraService) throw new Error('Services not initialized');
 
-    // Get the active camera to calculate proper viewport size
-    const camera = this.scene.activeCamera;
-    if (!camera) throw new Error('No active camera found');
-
-    // For a camera at Z=+30 looking at origin, calculate the visible area at Z=0
-    // Using camera's field of view and distance to calculate world space dimensions
-    const cameraDistance = 30; // Camera is at Z=+30
-    const fov = (camera as any).fov || Math.PI / 3; // Default FOV is about 60 degrees
+    // Get viewport dimensions from camera service
+    const { width: visibleWidth, height: visibleHeight } = this.cameraService.calculateViewportDimensions();
     
-    // Calculate height based on FOV: height = 2 * distance * tan(fov/2)
-    const visibleHeight = 2 * cameraDistance * Math.tan(fov / 2);
-    
-    // Calculate width based on canvas aspect ratio
-    const canvas = this.scene.getEngine().getRenderingCanvas();
-    const aspectRatio = canvas ? canvas.width / canvas.height : 16/9;
-    const visibleWidth = visibleHeight * aspectRatio;
-    
-    console.log('Calculated viewport dimensions:', { 
-      visibleWidth, 
-      visibleHeight, 
-      aspectRatio, 
-      fov, 
-      cameraDistance 
-    });
-    
-    const rootBody = MeshBuilder.CreatePlane('root-body', { 
-      width: visibleWidth,
-      height: visibleHeight 
-    }, this.scene);
+    const rootBody = this.meshService.createPlane('root-body', visibleWidth, visibleHeight);
 
     // Position at origin in the XY plane
-    rootBody.position = new Vector3(0, 0, 0);
+    this.meshService.positionMesh(rootBody, 0, 0, 0);
     
     // No rotation needed since camera is now at positive Z looking toward origin
     
     // Create material - this should be fully visible as it represents the document body
-    const material = new StandardMaterial('root-body-material', this.scene);
-    material.diffuseColor = new Color3(0.8, 0.1, 0.1); // Red background for testing
-    material.emissiveColor = new Color3(0.1, 0.1, 0.15); // Slight glow
-    material.backFaceCulling = false;
+    let material;
+    
+    // Find root style and apply background color
+    const rootStyle = this.findStyleBySelector('root', styles);
+    if (rootStyle?.background) {
+      const backgroundColor = this.parseBackgroundColor(rootStyle.background);
+      material = this.meshService.createMaterial('root-body-material', backgroundColor);
+      console.log('Applied root background color:', rootStyle.background, '-> parsed:', backgroundColor);
+    } else {
+      material = this.meshService.createMaterial('root-body-material', new Color3(0.8, 0.1, 0.1));
+      console.log('No root background style found, using test red color');
+    }
+    
     rootBody.material = material;
 
     console.log('Created root body element (calculated full screen):', { 
@@ -135,7 +126,7 @@ export class BabylonDOMService {
   }
 
   private createElement(element: DOMElement, parent: Mesh, styles: StyleRule[]): Mesh {
-    if (!this.scene) throw new Error('Scene not initialized');
+    if (!this.scene || !this.meshService) throw new Error('Services not initialized');
 
     // Find styles for this element
     const style = this.findStyleForElement(element, styles);
@@ -144,26 +135,28 @@ export class BabylonDOMService {
     const dimensions = this.calculateDimensions(style, parent);
     
     // Create the mesh
-    const mesh = MeshBuilder.CreatePlane(element.id || `element-${Date.now()}`, {
-      width: dimensions.width,
-      height: dimensions.height
-    }, this.scene);
+    const mesh = this.meshService.createPlane(element.id || `element-${Date.now()}`, dimensions.width, dimensions.height);
 
     // Position relative to parent (parent's coordinate system)
-    mesh.position = new Vector3(
-      dimensions.x,
-      dimensions.y,
-      0.1 // More forward to clearly appear on top of parent
-    );
+    this.meshService.positionMesh(mesh, dimensions.x, dimensions.y, 0.1);
 
     // Parent the mesh so it inherits parent's transformations
-    mesh.parent = parent;
+    this.meshService.parentMesh(mesh, parent);
 
     // Create material with distinct colors for visibility
-    const material = new StandardMaterial(`${element.id}-material`, this.scene);
-    material.diffuseColor = this.getColorForElement(element);
-    material.emissiveColor = new Color3(0.1, 0.1, 0.1); // Slight glow
-    material.backFaceCulling = false; // Visible from both sides
+    let material;
+    
+    // Find style and apply background color
+    if (style?.background) {
+      const backgroundColor = this.parseBackgroundColor(style.background);
+      material = this.meshService.createMaterial(`${element.id}-material`, backgroundColor);
+      console.log(`Applied ${element.id} background color:`, style.background, '-> parsed:', backgroundColor);
+    } else {
+      const defaultColor = this.getColorForElement(element);
+      material = this.meshService.createMaterial(`${element.id}-material`, defaultColor);
+      console.log(`No background style for ${element.id}, using default color`);
+    }
+    
     mesh.material = material;
 
     console.log(`Created element ${element.id}:`, {
@@ -184,6 +177,65 @@ export class BabylonDOMService {
   private findStyleForElement(element: DOMElement, styles: StyleRule[]): StyleRule | undefined {
     if (!element.id) return undefined;
     return styles.find(style => style.selector === `#${element.id}`);
+  }
+
+  private findStyleBySelector(selector: string, styles: StyleRule[]): StyleRule | undefined {
+    return styles.find(style => style.selector === selector);
+  }
+
+  private parseBackgroundColor(background?: string): Color3 {
+    if (!background) {
+      return new Color3(0.2, 0.2, 0.3); // Default color
+    }
+
+    const colorLower = background.toLowerCase();
+    
+    // Handle hex colors (#ff0000, #f00)
+    if (colorLower.startsWith('#')) {
+      return this.parseHexColor(colorLower);
+    }
+    
+    // Handle named colors
+    const namedColors: { [key: string]: Color3 } = {
+      'red': new Color3(1, 0, 0),
+      'green': new Color3(0, 1, 0),
+      'blue': new Color3(0, 0, 1),
+      'yellow': new Color3(1, 1, 0),
+      'purple': new Color3(0.5, 0, 0.5),
+      'orange': new Color3(1, 0.5, 0),
+      'pink': new Color3(1, 0.75, 0.8),
+      'cyan': new Color3(0, 1, 1),
+      'magenta': new Color3(1, 0, 1),
+      'white': new Color3(1, 1, 1),
+      'black': new Color3(0, 0, 0),
+      'gray': new Color3(0.5, 0.5, 0.5),
+      'grey': new Color3(0.5, 0.5, 0.5),
+    };
+    
+    if (namedColors[colorLower]) {
+      return namedColors[colorLower];
+    }
+    
+    // Fallback to default
+    return new Color3(0.2, 0.2, 0.3);
+  }
+
+  private parseHexColor(hex: string): Color3 {
+    hex = hex.substring(1); // Remove #
+    
+    if (hex.length === 3) {
+      hex = hex.split('').map(char => char + char).join('');
+    }
+    
+    if (hex.length !== 6) {
+      return new Color3(0.2, 0.2, 0.3);
+    }
+    
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    
+    return new Color3(r, g, b);
   }
 
   private calculateDimensions(style: StyleRule | undefined, parent: Mesh): { 

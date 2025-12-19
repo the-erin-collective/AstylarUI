@@ -1,8 +1,10 @@
 import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Engine, Scene, FreeCamera, HemisphericLight, Vector3, Color4, MeshBuilder, StandardMaterial, Color3 } from '@babylonjs/core';
+import { Engine, Scene, FreeCamera, HemisphericLight, DirectionalLight, Vector3, Color4, MeshBuilder, StandardMaterial, Color3 } from '@babylonjs/core';
 import { BabylonDOMService } from '../services/babylon-dom.service';
+import { BabylonCameraService } from '../services/babylon-camera.service';
+import { BabylonMeshService } from '../services/babylon-mesh.service';
 import { SiteDataService } from '../services/site-data.service';
 
 @Component({
@@ -172,6 +174,8 @@ export class SiteComponent {
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
   private babylonDOMService = inject(BabylonDOMService);
+  private babylonCameraService = inject(BabylonCameraService);
+  private babylonMeshService = inject(BabylonMeshService);
   private siteDataService = inject(SiteDataService);
   
   // ViewChild for canvas element
@@ -214,27 +218,29 @@ export class SiteComponent {
     
     // Create scene
     this.babylonScene = new Scene(this.engine);
-    this.babylonScene.clearColor = new Color4(0.05, 0.05, 0.1, 1.0); // Dark background
+    this.babylonScene.clearColor = new Color4(0.05, 0.05, 0.1, 1.0); // Restore original background
     
-    // Create camera for true 2D viewing - looking straight at XY plane from positive Z
-    const camera = new FreeCamera('camera', new Vector3(0, 0, 30), this.babylonScene);
-    camera.setTarget(Vector3.Zero());
-    camera.attachControl(canvas, true);
+    // Create camera using camera service
+    const camera = this.babylonCameraService.initialize(this.babylonScene, canvas);
     
-    // Disable camera movement to keep it in 2D mode
-    camera.inputs.clear();
+    // Create improved lighting setup for better edge definition
+    const hemisphericLight = new HemisphericLight('hemispheric', new Vector3(0, 1, 0), this.babylonScene);
+    hemisphericLight.intensity = 1.0; // Restore full intensity
+    hemisphericLight.diffuse = new Color3(1.0, 1.0, 1.0); // Pure white
     
-    // Create light
-    const light = new HemisphericLight('light', new Vector3(0, 0, -1), this.babylonScene);
-    light.intensity = 1.0;
+    // Add directional light for better edge contrast
+    const directionalLight = new DirectionalLight('directional', new Vector3(-0.5, -0.5, -1), this.babylonScene);
+    directionalLight.intensity = 0.8; // Slightly higher for good contrast
+    directionalLight.diffuse = new Color3(1.0, 1.0, 1.0); // Pure white
+    directionalLight.specular = new Color3(0.0, 0.0, 0.0); // No specular highlights
     
-    // Initialize the DOM service with proper viewport dimensions
+    // Initialize mesh service
+    this.babylonMeshService.initialize(this.babylonScene);
+    
+    // Initialize the DOM service with services and proper viewport dimensions
     const viewportWidth = canvas.clientWidth || 1920;
     const viewportHeight = canvas.clientHeight || 1080;
-    this.babylonDOMService.initialize(this.babylonScene, viewportWidth, viewportHeight);
-    
-    // Create site content using the abstraction layer
-    this.createSiteSpecificContent();
+    this.babylonDOMService.initialize(this.babylonScene, this.babylonCameraService, this.babylonMeshService, viewportWidth, viewportHeight);
     
     // Start render loop
     this.engine.runRenderLoop(() => {
@@ -243,7 +249,14 @@ export class SiteComponent {
     
     // Set scene loaded signal
     this.sceneLoaded.set(true);
-    
+
+    this.babylonScene.onReadyObservable.addOnce(() => {
+        this.engine?.resize(true);
+        
+        // NOW create site content AFTER high-resolution resize
+        this.createSiteSpecificContent();
+    });
+
     // Handle window resize
     window.addEventListener('resize', () => {
       this.engine?.resize();
@@ -295,8 +308,10 @@ export class SiteComponent {
   }
   
   ngOnDestroy(): void {
-    // Clean up DOM service
+    // Clean up services
     this.babylonDOMService.cleanup();
+    this.babylonCameraService.cleanup();
+    this.babylonMeshService.cleanup();
     
     // Clean up Babylon.js resources
     this.babylonScene?.dispose();
