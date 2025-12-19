@@ -3,6 +3,7 @@ import * as BABYLON from '@babylonjs/core';
 import { InputElement, TextInput, InputType } from '../../../types/input-types';
 import { TextCursorRenderer } from './text-cursor.renderer';
 import { TextInputManager } from './text-input.manager';
+import { BabylonCameraService } from '../../babylon-camera.service';
 
 /**
  * Service responsible for managing focus state and tab navigation
@@ -17,7 +18,8 @@ export class FocusManager {
 
     constructor(
         private cursorRenderer: TextCursorRenderer,
-        private textInputManager: TextInputManager
+        private textInputManager: TextInputManager,
+        private cameraService: BabylonCameraService
     ) { }
 
     /**
@@ -37,7 +39,20 @@ export class FocusManager {
 
         // Handle text input focus (hide placeholder, start cursor blinking)
         if (this.isTextInput(inputElement)) {
-            this.textInputManager.handleFocus(inputElement as TextInput);
+            // Create a minimal render object for cursor creation
+            const scene = inputElement.mesh.getScene();
+            
+            const render = {
+                scene: scene,
+                actions: {
+                    camera: this.cameraService
+                }
+            } as any;
+            
+            // Use stored style from input element
+            const style = inputElement.style;
+            
+            this.textInputManager.handleFocus(inputElement as TextInput, render, style);
             this.cursorRenderer.startBlinking(inputElement as TextInput);
         }
 

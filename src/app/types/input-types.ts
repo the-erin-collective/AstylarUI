@@ -108,10 +108,12 @@ export interface TextInput extends InputElement {
     selectionEnd: number;
     textMesh?: BABYLON.Mesh;
     cursorMesh?: BABYLON.Mesh;
-    selectionMesh?: BABYLON.Mesh;
+    selectionMeshes?: BABYLON.Mesh[]; // Changed to array for multi-line support
     placeholder?: string;
     maxLength?: number;
     cursorState: CursorState;
+    textLayoutMetrics?: any; // Will store TextLayoutMetrics from text rendering service
+    textureWidth?: number; // Store world-space texture width for cursor positioning
 }
 
 /**

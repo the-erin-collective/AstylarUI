@@ -4,9 +4,12 @@ import { DOMElement } from '../../../types/dom-element';
 import { TextInput, InputType, CursorState, ValidationState, CursorDirection } from '../../../types/input-types';
 import { TextCursorRenderer } from './text-cursor.renderer';
 import { TextRenderingService } from '../../text/text-rendering.service';
+import { TextSelectionService } from '../../text/text-selection.service';
+import { TextCanvasRendererService } from '../../text/text-canvas-renderer.service';
 import { StyleRule } from '../../../types/style-rule';
 import { BabylonRender } from '../interfaces/render.types';
 import { BabylonMeshService } from '../../babylon-mesh.service';
+import { TextLayoutMetrics, TextStyleProperties } from '../../../types/text-rendering';
 
 /**
  * Service responsible for managing text input fields
@@ -18,6 +21,8 @@ export class TextInputManager {
     constructor(
         private cursorRenderer: TextCursorRenderer,
         private textRenderingService: TextRenderingService,
+        private textSelectionService: TextSelectionService,
+        private textCanvasRenderer: TextCanvasRendererService,
         private babylonMeshService: BabylonMeshService
     ) { }
 
@@ -73,6 +78,19 @@ export class TextInputManager {
             cursorState
         };
 
+        // Always create layout metrics, even for empty inputs (needed for cursor positioning)
+        if (render.scene) {
+            // Use placeholder or a single space for layout calculation if no content
+            const layoutText = textInput.textContent || textInput.placeholder || ' ';
+            const textStyleProps = this.parseTextStyle(style);
+            console.log('[TextInputManager] Creating initial layout metrics for:', layoutText);
+            textInput.textLayoutMetrics = this.textCanvasRenderer.calculateLayoutMetrics(
+                layoutText,
+                textStyleProps
+            );
+            console.log('[TextInputManager] Initial layout metrics:', textInput.textLayoutMetrics);
+        }
+
         // Create text mesh if there's initial content or placeholder
         if ((textInput.textContent || textInput.placeholder) && render.scene) {
             this.updateTextDisplay(textInput, render, style);
@@ -82,22 +100,78 @@ export class TextInputManager {
     }
 
     /**
-     * Handles focus event - hides placeholder
+     * Handles focus event - hides placeholder and creates cursor
      */
-    handleFocus(textInput: TextInput): void {
+    handleFocus(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
+        console.log('[TextInputManager] handleFocus called for:', textInput.element.id);
+        
         // If showing placeholder (no actual value), hide the text mesh
         if (!textInput.textContent && textInput.placeholder && textInput.textMesh) {
             textInput.textMesh.isVisible = false;
         }
+
+        // If the input is empty and a placeholder was shown, recalculate layout
+        // metrics for an empty string so the cursor starts at the left (0)
+        if (!textInput.textContent && textInput.placeholder && render.scene) {
+            const textStyleProps = this.parseTextStyle(style);
+            textInput.textLayoutMetrics = this.textCanvasRenderer.calculateLayoutMetrics('', textStyleProps);
+            console.log('[TextInputManager] Recalculated empty layout metrics for focus');
+            // Also compute a texture width that matches the empty layout so cursor
+            // positioning uses consistent units (avoid using the placeholder texture width)
+            try {
+                const emptyTexture = this.textRenderingService.renderTextToTexture(
+                    textInput.element,
+                    '',
+                    style
+                );
+                const size = emptyTexture.getSize();
+                const scale = render.actions.camera.getPixelToWorldScale();
+                textInput.textureWidth = size.width * scale;
+                // We intentionally do not create a visible text mesh for empty content
+                console.log('[TextInputManager] Computed empty texture width for cursor positioning:', textInput.textureWidth);
+            } catch (err) {
+                console.warn('[TextInputManager] Failed to compute empty texture width:', err);
+                // Fallback to 0 so left-edge calculations behave reasonably
+                textInput.textureWidth = 0;
+            }
+        }
+
+        // Create cursor mesh if it doesn't exist and we have layout metrics
+        if (!textInput.cursorMesh && render.scene && textInput.textLayoutMetrics && textInput.textureWidth !== undefined) {
+            console.log('[TextInputManager] Creating cursor mesh with scale:', render.actions.camera.getPixelToWorldScale());
+            const textStyle = this.parseTextStyle(style);
+            textInput.cursorMesh = this.textSelectionService.createTextCursor(
+                textInput.cursorPosition,
+                textInput.textLayoutMetrics,
+                textInput.mesh,
+                render.scene,
+                render.actions.camera.getPixelToWorldScale(),
+                textStyle,
+                textInput.textureWidth || 0
+            );
+        }
+
+        // Show cursor
+        if (textInput.cursorMesh) {
+            textInput.cursorMesh.isVisible = true;
+            textInput.cursorState.visible = true;
+            console.log('[TextInputManager] Cursor made visible');
+        }
     }
 
     /**
-     * Handles blur event - shows placeholder if empty
+     * Handles blur event - shows placeholder if empty and hides cursor
      */
     handleBlur(textInput: TextInput): void {
         // If no content, show placeholder again
         if (!textInput.textContent && textInput.placeholder && textInput.textMesh) {
             textInput.textMesh.isVisible = true;
+        }
+
+        // Hide cursor
+        if (textInput.cursorMesh) {
+            textInput.cursorMesh.isVisible = false;
+            textInput.cursorState.visible = false;
         }
     }
 
@@ -126,6 +200,16 @@ export class TextInputManager {
         }
 
         try {
+            // Calculate layout metrics for cursor and selection positioning
+            const textStyleProps = this.parseTextStyle(textStyle);
+            console.log('[TextInputManager] Calculating layout metrics for text:', textToRender);
+            console.log('[TextInputManager] Text style props:', textStyleProps);
+            textInput.textLayoutMetrics = this.textCanvasRenderer.calculateLayoutMetrics(
+                textToRender,
+                textStyleProps
+            );
+            console.log('[TextInputManager] Layout metrics calculated:', textInput.textLayoutMetrics);
+
             // Get texture from service
             const texture = this.textRenderingService.renderTextToTexture(
                 textInput.element,
@@ -160,10 +244,12 @@ export class TextInputManager {
             // Calculate offset based on texture width and input width
             const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
             // For left alignment: position text with its left edge near input's left edge
-            // Inverting the sign because the coordinate system is opposite of expected
-            const padding = 1.5; // Aggressive left padding
+            // Use world units for padding (scale-aware)
+            const padding = 1.5 * scale; // Left padding in world units
             textMesh.position.x = (inputWidth / 2) - (textureWidth / 2) - padding;
 
+            // Store world-space texture width for cursor positioning
+            textInput.textureWidth = textureWidth;
             textInput.textMesh = textMesh;
 
         } catch (error) {
@@ -270,6 +356,45 @@ export class TextInputManager {
     }
 
     /**
+     * Updates cursor position after movement (without render/style parameters)
+     */
+    updateCursorAfterMovement(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
+        if (!textInput.cursorMesh) return;
+
+        // Use the provided render to compute correct pixel-to-world scale
+        this.updateCursorPosition(textInput, render, style);
+        this.updateSelectionHighlight(textInput, render, style);
+    }
+
+    /**
+     * Updates or creates text selection highlighting
+     */
+    updateSelectionHighlight(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
+        // Remove existing selection meshes
+        if (textInput.selectionMeshes) {
+            this.textSelectionService.disposeSelectionMeshes(textInput.selectionMeshes);
+            textInput.selectionMeshes = [];
+        }
+
+        // Only create selection if there's an active selection and we have layout metrics
+        if (!textInput.cursorState.selectionActive || 
+            textInput.selectionStart === textInput.selectionEnd ||
+            !textInput.textLayoutMetrics) {
+            return;
+        }
+
+        // Use text selection service for accurate selection highlighting
+        textInput.selectionMeshes = this.textSelectionService.createSelectionHighlight(
+            textInput.selectionStart,
+            textInput.selectionEnd,
+            textInput.textLayoutMetrics,
+            textInput.mesh,
+            render.scene!,
+            render.actions.camera.getPixelToWorldScale()
+        );
+    }
+
+    /**
      * Inserts text at the current cursor position
      */
     insertTextAtCursor(textInput: TextInput, text: string, render: BabylonRender, style: StyleRule): void {
@@ -309,6 +434,10 @@ export class TextInputManager {
 
         // Update display
         this.updateTextDisplay(textInput, render, style);
+        
+        // Update cursor position and selection
+        this.updateCursorPosition(textInput, render, style);
+        this.updateSelectionHighlight(textInput, render, style);
     }
 
     /**
@@ -355,34 +484,42 @@ export class TextInputManager {
 
         // Update display
         this.updateTextDisplay(textInput, render, style);
+        
+        // Update cursor position and selection
+        this.updateCursorPosition(textInput, render, style);
+        this.updateSelectionHighlight(textInput, render, style);
     }
 
     /**
      * Updates the cursor mesh position based on current cursor position
      */
     updateCursorPosition(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
+        if (!textInput.textLayoutMetrics) return;
+
+        // Create cursor if it doesn't exist yet and textureWidth is available
+        if (!textInput.cursorMesh && render.scene && textInput.textureWidth !== undefined) {
+            const textStyle = this.parseTextStyle(style);
+            textInput.cursorMesh = this.textSelectionService.createTextCursor(
+                textInput.cursorPosition,
+                textInput.textLayoutMetrics,
+                textInput.mesh,
+                render.scene,
+                render.actions.camera.getPixelToWorldScale(),
+                textStyle,
+                textInput.textureWidth
+            );
+        }
+
         if (!textInput.cursorMesh) return;
 
-        // Calculate cursor X position based on text width up to cursor
-        const textBeforeCursor = textInput.textContent.substring(0, textInput.cursorPosition);
-
-        // Get font metrics to calculate text width
-        const fontSizePx = this.parseSize(style.fontSize) || 16;
-        const fontFamily = style.fontFamily || 'Arial';
-
-        // Estimate character width (this is approximate, canvas measurement would be more accurate)
-        const avgCharWidth = fontSizePx * 0.6; // Approximate for most fonts
-        const textWidthPx = textBeforeCursor.length * avgCharWidth;
-
-        const scale = render.actions.camera.getPixelToWorldScale();
-        const textWidth = textWidthPx * scale;
-
-        // Position cursor relative to input mesh
-        const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
-        const padding = 1.5; // Match text padding
-
-        // Cursor X position: start from left edge + text width
-        textInput.cursorMesh.position.x = (inputWidth / 2) - padding - textWidth;
+        // Use text selection service for accurate cursor positioning
+        this.textSelectionService.updateCursorPosition(
+            textInput.cursorMesh,
+            textInput.cursorPosition,
+            textInput.textLayoutMetrics,
+            render.actions.camera.getPixelToWorldScale(),
+            textInput.textureWidth || 0
+        );
     }
 
     /**
@@ -392,6 +529,55 @@ export class TextInputManager {
         if (!value) return undefined;
         const num = parseFloat(value);
         return isNaN(num) ? undefined : num;
+    }
+
+    /**
+     * Converts StyleRule to TextStyleProperties
+     */
+    private parseTextStyle(style: StyleRule): TextStyleProperties {
+        // Helper function to safely cast font weight
+        const parseFontWeight = (weight: string | undefined): TextStyleProperties['fontWeight'] => {
+            if (!weight) return 'normal';
+            const numWeight = parseInt(weight);
+            if (!isNaN(numWeight)) return numWeight as any;
+            return weight as TextStyleProperties['fontWeight'];
+        };
+
+        // Helper function to safely cast font style
+        const parseFontStyle = (fontStyle: string | undefined): TextStyleProperties['fontStyle'] => {
+            if (!fontStyle) return 'normal';
+            if (['normal', 'italic', 'oblique'].includes(fontStyle)) {
+                return fontStyle as TextStyleProperties['fontStyle'];
+            }
+            return 'normal';
+        };
+
+        // Helper function to safely cast text decoration
+        const parseTextDecoration = (decoration: string | undefined): TextStyleProperties['textDecoration'] => {
+            if (!decoration) return 'none';
+            if (['none', 'underline', 'overline', 'line-through'].includes(decoration)) {
+                return decoration as TextStyleProperties['textDecoration'];
+            }
+            return 'none';
+        };
+
+        return {
+            fontFamily: style.fontFamily || 'Arial',
+            fontSize: this.parseSize(style.fontSize) || 16,
+            fontWeight: parseFontWeight(style.fontWeight),
+            fontStyle: parseFontStyle(style.fontStyle),
+            color: style.color || '#000000',
+            textAlign: (style.textAlign as any) || 'left',
+            verticalAlign: 'baseline',
+            lineHeight: parseFloat(style.lineHeight as string) || 1.2,
+            letterSpacing: this.parseSize(style.letterSpacing) || 0,
+            wordSpacing: this.parseSize(style.wordSpacing) || 0,
+            whiteSpace: 'normal',
+            wordWrap: 'normal',
+            textOverflow: 'clip',
+            textDecoration: parseTextDecoration(style.textDecoration),
+            textTransform: (style.textTransform as any) || 'none'
+        };
     }
 
     /**
@@ -435,8 +621,12 @@ export class TextInputManager {
             textInput.textMesh.dispose();
         }
 
-        if (textInput.selectionMesh) {
-            textInput.selectionMesh.dispose();
+        if (textInput.selectionMeshes) {
+            this.textSelectionService.disposeSelectionMeshes(textInput.selectionMeshes);
+        }
+
+        if (textInput.cursorMesh) {
+            textInput.cursorMesh.dispose();
         }
 
         if (textInput.mesh) {

@@ -70,21 +70,25 @@ export class KeyboardInputHandler {
         switch (event.key) {
             case 'ArrowLeft':
                 this.textInputManager.moveCursor(textInput, CursorDirection.Left, event.shiftKey);
+                this.textInputManager.updateCursorAfterMovement(textInput, render, style);
                 event.preventDefault();
                 break;
 
             case 'ArrowRight':
                 this.textInputManager.moveCursor(textInput, CursorDirection.Right, event.shiftKey);
+                this.textInputManager.updateCursorAfterMovement(textInput, render, style);
                 event.preventDefault();
                 break;
 
             case 'Home':
                 this.textInputManager.moveCursor(textInput, CursorDirection.Home, event.shiftKey);
+                this.textInputManager.updateCursorAfterMovement(textInput, render, style);
                 event.preventDefault();
                 break;
 
             case 'End':
                 this.textInputManager.moveCursor(textInput, CursorDirection.End, event.shiftKey);
+                this.textInputManager.updateCursorAfterMovement(textInput, render, style);
                 event.preventDefault();
                 break;
 
