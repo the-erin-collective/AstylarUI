@@ -764,7 +764,7 @@ export class SiteDataService {
           selector: '#flex-shrink-test',
           top: '35%',
           left: '55%',
-          width: '40%',
+          width: '30%', // Reduced width to trigger flex-shrink
           height: '15%',
           background: '#4a148c',
           borderWidth: '2px',
@@ -783,7 +783,7 @@ export class SiteDataService {
           selector: '#fs-1',
           background: '#f44336',
           borderRadius: '4px',
-          flexBasis: '150px',
+          flexBasis: '300px', // Increased to ensure shrinking is triggered
           flexShrink: '1',
           margin: '2px'
         },
@@ -791,7 +791,7 @@ export class SiteDataService {
           selector: '#fs-2',
           background: '#ff9800',
           borderRadius: '4px',
-          flexBasis: '150px',
+          flexBasis: '300px', // Increased to ensure shrinking is triggered
           flexShrink: '2',
           margin: '2px'
         },
@@ -799,7 +799,7 @@ export class SiteDataService {
           selector: '#fs-3',
           background: '#2196f3',
           borderRadius: '4px',
-          flexBasis: '150px',
+          flexBasis: '300px', // Increased to ensure shrinking is triggered
           flexShrink: '0',
           margin: '2px'
         },
@@ -886,7 +886,7 @@ export class SiteDataService {
           borderRadius: '4px',
           width: '50px',
           height: '50px',
-          order: '3'
+          order: '3' // Red - order 3
         },
         {
           selector: '#order-2',
@@ -894,7 +894,7 @@ export class SiteDataService {
           borderRadius: '4px',
           width: '50px',
           height: '50px',
-          order: '1'
+          order: '1' // Green - order 1
         },
         {
           selector: '#order-3',
@@ -902,7 +902,7 @@ export class SiteDataService {
           borderRadius: '4px',
           width: '50px',
           height: '50px',
-          order: '4'
+          order: '4' // Blue - order 4
         },
         {
           selector: '#order-4',
@@ -910,7 +910,7 @@ export class SiteDataService {
           borderRadius: '4px',
           width: '50px',
           height: '50px',
-          order: '2'
+          order: '2' // Orange - order 2
         },
 
         // === COMPLEX COMBINATION TEST ===
@@ -941,7 +941,7 @@ export class SiteDataService {
           selector: '#complex-1',
           background: '#d32f2f',
           borderRadius: '4px',
-          flexBasis: '20%',
+          flexBasis: '40%', // Increased to ensure wrapping
           flexGrow: '1',
           height: '30px',
           order: '2',
@@ -952,7 +952,7 @@ export class SiteDataService {
           selector: '#complex-2',
           background: '#1976d2',
           borderRadius: '4px',
-          flexBasis: '25%',
+          flexBasis: '45%', // Increased to ensure wrapping
           flexGrow: '2',
           height: '40px',
           order: '1',
@@ -963,7 +963,7 @@ export class SiteDataService {
           selector: '#complex-3',
           background: '#388e3c',
           borderRadius: '4px',
-          flexBasis: '30%',
+          flexBasis: '40%', // Increased to ensure wrapping
           flexShrink: '2',
           height: '35px',
           order: '4',
@@ -974,7 +974,7 @@ export class SiteDataService {
           selector: '#complex-4',
           background: '#f57c00',
           borderRadius: '4px',
-          flexBasis: '15%',
+          flexBasis: '45%', // Increased to ensure wrapping
           flexGrow: '1',
           height: '25px',
           order: '3',

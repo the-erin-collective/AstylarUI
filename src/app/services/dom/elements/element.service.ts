@@ -100,8 +100,10 @@ export class ElementService {
     // Parse border radius and scale it to world coordinates
     const borderRadiusPixels = this.parseBorderRadius(style?.borderRadius);
 
-    // Scale border radius from pixels to world coordinates using camera scale factor
+    // Get pixel to world scale factor
     const scaleFactor = render.actions.camera.getPixelToWorldScale();
+    
+    // Scale border radius from pixels to world coordinates
     const borderRadius = borderRadiusPixels * scaleFactor;
 
     console.log(`🔧 Border radius scaling: ${borderRadiusPixels}px → ${borderRadius.toFixed(3)} world units (scale: ${scaleFactor.toFixed(6)}, shape: ${dimensions.width.toFixed(1)}×${dimensions.height.toFixed(1)})`);
@@ -166,28 +168,32 @@ export class ElementService {
     let actualZPosition = zPosition;
 
     // Use flex positioning if provided, otherwise use normal positioning
+    let worldX: number;
+    let worldY: number;
+    
     if (flexPosition) {
-      const scaleFactor = render.actions.camera.getPixelToWorldScale();
-      const worldX = flexPosition.x * scaleFactor;
-      const worldY = flexPosition.y * scaleFactor;
-      render.actions.mesh.positionMesh(mesh, worldX, worldY, zPosition);
-      render.actions.mesh.parentMesh(mesh, parent);
+      // Convert flex position to world units
+      worldX = flexPosition.x * scaleFactor;
+      worldY = flexPosition.y * scaleFactor;
+      
       if (element.type === 'li') {
         console.log(`[LIST ITEM DEBUG] Positioned list item mesh for ${element.id}: world position: (${worldX}, ${worldY}, ${zPosition})`);
       }
-      console.log(`🔀 Using flex positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from flex: ${flexPosition.x}, ${flexPosition.y}) scaleFactor: ${scaleFactor}`);
+      console.log(`[DPR] Using flex positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from flex: ${flexPosition.x}, ${flexPosition.y}, scaleFactor: ${scaleFactor})`);
     } else {
       // Convert pixel position to world units for mesh positioning
-      const scaleFactor = render.actions.camera.getPixelToWorldScale();
-      const worldX = dimensions.x * scaleFactor;
-      const worldY = dimensions.y * scaleFactor;
-      render.actions.mesh.positionMesh(mesh, worldX, worldY, zPosition);
-      render.actions.mesh.parentMesh(mesh, parent);
+      worldX = dimensions.x * scaleFactor;
+      worldY = dimensions.y * scaleFactor;
+      
       if (element.type === 'li') {
         console.log(`[LIST ITEM DEBUG] Positioned list item mesh for ${element.id}: world position: (${worldX}, ${worldY}, ${zPosition})`);
       }
-      console.log(`[ELEMENT DEBUG] Using normal positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from dimensions.x: ${dimensions.x}, dimensions.y}) scaleFactor: ${scaleFactor}`);
+      console.log(`[DPR] Using normal positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from dimensions.x: ${dimensions.x}, dimensions.y: ${dimensions.y}, scaleFactor: ${scaleFactor})`);
     }
+    
+    // Position and parent the mesh
+    render.actions.mesh.positionMesh(mesh, worldX, worldY, zPosition);
+    render.actions.mesh.parentMesh(mesh, parent);
 
     // Apply material (start with normal state) - pass merged style that includes type defaults
     this.applyElementMaterial(dom, render, mesh, element, false, style);
@@ -439,7 +445,9 @@ export class ElementService {
           }
         } else if (typeof style.width === 'string' && style.width.endsWith('%')) {
           const percent = parseFloat(style.width);
+          // Percentage calculations are based on CSS pixels, not affected by DPR
           width = (percent / 100) * availableWidth;
+          console.log(`[DPR] Percentage width calculation for ${style.selector || 'unknown'}: ${percent}% of ${availableWidth}px = ${width}px`);
         } else {
           width = parseFloat(style.width);
         }
@@ -454,7 +462,9 @@ export class ElementService {
           }
         } else if (typeof style.height === 'string' && style.height.endsWith('%')) {
           const percent = parseFloat(style.height);
+          // Percentage calculations are based on CSS pixels, not affected by DPR
           height = (percent / 100) * availableHeight;
+          console.log(`[DPR] Percentage height calculation for ${style.selector || 'unknown'}: ${percent}% of ${availableHeight}px = ${height}px`);
         } else {
           height = parseFloat(style.height);
         }
@@ -464,38 +474,36 @@ export class ElementService {
       if (style.left !== undefined) {
         console.log(`[COORDINATE DEBUG] Element ${style.selector}: left=${style.left}, parentWidth=${parentWidth}, width=${width}`);
         
-        // TEMPORARY TEST: Hardcode coordinates to test the coordinate system
-        if (style.selector === '#unordered-list') {
-          x = -400; // Force to left side
-          console.log(`[COORDINATE DEBUG] HARDCODED unordered-list to LEFT: x=${x}`);
-        } else if (style.selector === '#ordered-list') {
-          x = 400; // Force to right side
-          console.log(`[COORDINATE DEBUG] HARDCODED ordered-list to RIGHT: x=${x}`);
-        } else {
+       
           // Normal calculation for other elements
           if (typeof style.left === 'string' && style.left.endsWith('px')) {
-            // Use pixel value directly
+            // Use pixel value directly - CSS pixels are not affected by DPR
             x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
           } else if (typeof style.left === 'string' && style.left.endsWith('%')) {
             const leftPercent = parseFloat(style.left);
-            x = (-parentWidth / 2) + ((leftPercent / 100) * availableWidth) + (width / 2);
-            console.log(`[COORDINATE DEBUG] Percentage calculation: ${leftPercent}% of ${availableWidth} = ${(leftPercent / 100) * availableWidth}`);
+            // Percentage calculations are based on CSS pixels, not affected by DPR
+            const leftPixels = (leftPercent / 100) * availableWidth;
+            x = (-parentWidth / 2) + leftPixels + (width / 2);
+            console.log(`[DPR] Percentage left calculation for ${style.selector || 'unknown'}: ${leftPercent}% of ${availableWidth}px = ${leftPixels}px`);
           } else {
             x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
           }
           console.log(`[COORDINATE DEBUG] Calculated X coordinate: ${x} for element ${style.selector}`);
-        }
+        
         // NOTE: We don't flip X coordinate here because the CoordinateTransformService
         // will handle this transformation in the positionMesh method
       }
 
       if (style.top !== undefined) {
         if (typeof style.top === 'string' && style.top.endsWith('px')) {
-          // Use pixel value directly
+          // Use pixel value directly - CSS pixels are not affected by DPR
           y = (parentHeight / 2) - parseFloat(style.top) - (height / 2);
         } else if (typeof style.top === 'string' && style.top.endsWith('%')) {
           const topPercent = parseFloat(style.top);
-          y = (parentHeight / 2) - ((topPercent / 100) * availableHeight) - (height / 2);
+          // Percentage calculations are based on CSS pixels, not affected by DPR
+          const topPixels = (topPercent / 100) * availableHeight;
+          y = (parentHeight / 2) - topPixels - (height / 2);
+          console.log(`[DPR] Percentage top calculation for ${style.selector || 'unknown'}: ${topPercent}% of ${availableHeight}px = ${topPixels}px`);
         } else {
           y = (parentHeight / 2) - parseFloat(style.top) - (height / 2);
         }

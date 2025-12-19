@@ -66,37 +66,61 @@ export class FlexLayoutService {
   ): FlexLine[] {
     // align-content only applies to multi-line containers
     if (lines.length <= 1 || container.flexWrap === 'nowrap') {
+      console.log(`[FLEX-ALIGN] Skipping align-content: ${lines.length} lines, flexWrap=${container.flexWrap}`);
       return lines;
     }
 
     const totalLinesSize = lines.reduce((sum, line) => sum + line.crossSize, 0);
     const remainingSpace = Math.max(0, availableCrossSpace - totalLinesSize);
     
+    console.log(`[FLEX-ALIGN] Applying align-content: ${container.alignContent}`);
+    console.log(`[FLEX-ALIGN] Lines: ${lines.length}, totalLinesSize=${totalLinesSize}px, availableCrossSpace=${availableCrossSpace}px, remainingSpace=${remainingSpace}px`);
+    
+    let result: FlexLine[];
+    
     switch (container.alignContent) {
       case 'flex-start':
-        return this.alignContentFlexStart(lines);
+        result = this.alignContentFlexStart(lines);
+        break;
       
       case 'flex-end':
-        return this.alignContentFlexEnd(lines, remainingSpace);
+        result = this.alignContentFlexEnd(lines, remainingSpace);
+        break;
       
       case 'center':
-        return this.alignContentCenter(lines, remainingSpace);
+        result = this.alignContentCenter(lines, remainingSpace);
+        break;
       
       case 'space-between':
-        return this.alignContentSpaceBetween(lines, remainingSpace);
+        result = this.alignContentSpaceBetween(lines, remainingSpace);
+        break;
       
       case 'space-around':
-        return this.alignContentSpaceAround(lines, remainingSpace);
+        result = this.alignContentSpaceAround(lines, remainingSpace);
+        break;
       
       case 'space-evenly':
-        return this.alignContentSpaceEvenly(lines, remainingSpace);
+        result = this.alignContentSpaceEvenly(lines, remainingSpace);
+        break;
       
       case 'stretch':
-        return this.alignContentStretch(lines, remainingSpace);
+        result = this.alignContentStretch(lines, remainingSpace);
+        break;
       
       default:
-        return lines;
+        result = lines;
     }
+    
+    console.log(`[FLEX-ALIGN] Result:`, 
+      result.map((line, i) => ({
+        index: i,
+        crossOffset: line.crossOffset,
+        crossSize: line.crossSize,
+        itemCount: line.items.length
+      }))
+    );
+    
+    return result;
   }
 
   private alignContentFlexStart(lines: FlexLine[]): FlexLine[] {
@@ -129,13 +153,24 @@ export class FlexLayoutService {
 
   private alignContentCenter(lines: FlexLine[], remainingSpace: number): FlexLine[] {
     // Lines are centered in the cross axis
-    let currentOffset = remainingSpace / 2;
-    return lines.map(line => {
+    const totalLinesSize = lines.reduce((sum, line) => sum + line.crossSize, 0);
+    
+    // Calculate the starting offset to center all lines
+    // This should be half of the remaining space
+    const startOffset = remainingSpace / 2;
+    let currentOffset = startOffset;
+    
+    console.log(`[FLEX-ALIGN] Center: ${lines.length} lines, remainingSpace=${remainingSpace}px, totalLinesSize=${totalLinesSize}px, startOffset=${startOffset}px`);
+    
+    return lines.map((line, index) => {
       const result = {
         ...line,
         crossOffset: currentOffset,
         crossSize: line.crossSize
       };
+      
+      console.log(`[FLEX-ALIGN] Center line ${index}: crossOffset=${currentOffset}px, crossSize=${line.crossSize}px`);
+      
       currentOffset += line.crossSize;
       return result;
     });
@@ -150,13 +185,24 @@ export class FlexLayoutService {
     const spacing = remainingSpace / (lines.length - 1);
     let currentOffset = 0;
     
+    console.log(`[FLEX-ALIGN] Space-between: ${lines.length} lines, remainingSpace=${remainingSpace}px, spacing=${spacing}px`);
+    
     return lines.map((line, index) => {
       const result = {
         ...line,
         crossOffset: currentOffset,
         crossSize: line.crossSize
       };
-      currentOffset += line.crossSize + spacing;
+      
+      console.log(`[FLEX-ALIGN] Space-between line ${index}: crossOffset=${currentOffset}px, crossSize=${line.crossSize}px`);
+      
+      // Add spacing after each line except the last one
+      if (index < lines.length - 1) {
+        currentOffset += line.crossSize + spacing;
+      } else {
+        currentOffset += line.crossSize;
+      }
+      
       return result;
     });
   }
@@ -166,12 +212,17 @@ export class FlexLayoutService {
     const spacing = remainingSpace / lines.length;
     let currentOffset = spacing / 2;
     
-    return lines.map(line => {
+    console.log(`[FLEX-ALIGN] Space-around: ${lines.length} lines, remainingSpace=${remainingSpace}px, spacing=${spacing}px, startOffset=${currentOffset}px`);
+    
+    return lines.map((line, index) => {
       const result = {
         ...line,
         crossOffset: currentOffset,
         crossSize: line.crossSize
       };
+      
+      console.log(`[FLEX-ALIGN] Space-around line ${index}: crossOffset=${currentOffset}px, crossSize=${line.crossSize}px`);
+      
       currentOffset += line.crossSize + spacing;
       return result;
     });
@@ -222,11 +273,21 @@ export class FlexLayoutService {
   ): FlexItem[] {
     const isRow = container.flexDirection === 'row' || container.flexDirection === 'row-reverse';
     
+    console.log(`[FLEX-SIZE] Calculating flex item sizes: availableMainSpace=${availableMainSpace}px, isRow=${isRow}`);
+    
     // Step 1: Calculate flex-basis for each item (in pixels)
     const itemsWithBasis = items.map(item => ({
       ...item,
       calculatedFlexBasis: this.calculateFlexBasis(item, container, isRow)
     }));
+    
+    console.log(`[FLEX-SIZE] Items with calculated flex-basis:`, itemsWithBasis.map(item => ({
+      id: item.element.id,
+      flexBasis: item.flexBasis,
+      calculatedFlexBasis: item.calculatedFlexBasis,
+      flexGrow: item.flexGrow,
+      flexShrink: item.flexShrink
+    })));
 
     // Step 2: Calculate total used space and remaining space (all in pixels)
     const totalBasisSize = itemsWithBasis.reduce((sum, item) => {
@@ -237,19 +298,34 @@ export class FlexLayoutService {
     }, 0);
 
     const remainingSpace = availableMainSpace - totalBasisSize;
+    
+    console.log(`[FLEX-SIZE] Total basis size: ${totalBasisSize}px, availableMainSpace: ${availableMainSpace}px, remainingSpace: ${remainingSpace}px`);
 
     // Step 3: Apply flex-grow or flex-shrink based on available space
+    let result: FlexItem[];
+    
     if (remainingSpace > 0) {
-      return this.applyFlexGrow(itemsWithBasis, remainingSpace, isRow);
+      console.log(`[FLEX-SIZE] Applying flex-grow (remainingSpace > 0)`);
+      result = this.applyFlexGrow(itemsWithBasis, remainingSpace, isRow);
     } else if (remainingSpace < 0) {
-      return this.applyFlexShrink(itemsWithBasis, Math.abs(remainingSpace), isRow);
+      console.log(`[FLEX-SIZE] Applying flex-shrink (remainingSpace < 0)`);
+      result = this.applyFlexShrink(itemsWithBasis, Math.abs(remainingSpace), isRow);
+    } else {
+      // No remaining space, use flex-basis sizes (in pixels)
+      console.log(`[FLEX-SIZE] No remaining space, using flex-basis sizes`);
+      result = itemsWithBasis.map(item => ({
+        ...item,
+        [isRow ? 'width' : 'height']: item.calculatedFlexBasis
+      }));
     }
-
-    // No remaining space, use flex-basis sizes (in pixels)
-    return itemsWithBasis.map(item => ({
-      ...item,
-      [isRow ? 'width' : 'height']: item.calculatedFlexBasis
-    }));
+    
+    console.log(`[FLEX-SIZE] Final item sizes:`, result.map(item => ({
+      id: item.element.id,
+      width: item.width,
+      height: item.height
+    })));
+    
+    return result;
   }
 
   /**
@@ -274,10 +350,11 @@ export class FlexLayoutService {
         if (isNaN(percentage)) {
           throw new Error(`Invalid percentage value for flex-basis: ${item.flexBasis}`);
         }
-        // Container size is already in pixels
+        // Container size is already in CSS pixels
         const containerSize = isRow ? container.width : container.height;
+        // Percentage calculations are based on CSS pixels, not affected by DPR
         const result = containerSize * (percentage / 100);
-        console.log(`[FLEX-BASIS] ${item.element.id}: ${percentage}% of ${containerSize}px = ${result}px`);
+        console.log(`[DPR] Flex-basis percentage calculation for ${item.element.id}: ${percentage}% of ${containerSize}px = ${result}px`);
         return result;
       }
       
@@ -327,31 +404,66 @@ export class FlexLayoutService {
    * All calculations in screen units (pixels)
    */
   private applyFlexShrink(items: Array<FlexItem & { calculatedFlexBasis: number }>, deficit: number, isRow: boolean): FlexItem[] {
+    console.log(`[FLEX-SHRINK] Applying flex-shrink: deficit=${deficit}px, isRow=${isRow}`);
+    console.log(`[FLEX-SHRINK] Items before shrinking:`, items.map(item => ({
+      id: item.element.id,
+      flexShrink: item.flexShrink,
+      flexBasis: item.calculatedFlexBasis,
+      width: item.width,
+      height: item.height
+    })));
+    
     // Calculate weighted flex-shrink factors
     const totalWeightedShrink = items.reduce((sum, item) => {
+      // Skip items with flex-shrink: 0
+      if (item.flexShrink === 0) {
+        return sum;
+      }
       const flexBasis = item.calculatedFlexBasis;
       return sum + (item.flexShrink * flexBasis);
     }, 0);
+    
+    console.log(`[FLEX-SHRINK] Total weighted shrink: ${totalWeightedShrink}`);
 
     if (totalWeightedShrink === 0) {
       // No flex-shrink, items keep their flex-basis size (in pixels)
+      console.log(`[FLEX-SHRINK] No shrinking applied (totalWeightedShrink = 0)`);
       return items.map(item => ({
         ...item,
         [isRow ? 'width' : 'height']: item.calculatedFlexBasis
       }));
     }
 
-    return items.map(item => {
+    const result = items.map(item => {
+      // Items with flex-shrink: 0 don't shrink at all
+      if (item.flexShrink === 0) {
+        console.log(`[FLEX-SHRINK] Item ${item.element.id} has flex-shrink: 0, not shrinking`);
+        return {
+          ...item,
+          [isRow ? 'width' : 'height']: item.calculatedFlexBasis
+        };
+      }
+      
       const weightedShrink = item.flexShrink * item.calculatedFlexBasis;
       const shrinkRatio = weightedShrink / totalWeightedShrink;
       const reductionSize = deficit * shrinkRatio;
       const newSize = Math.max(0, item.calculatedFlexBasis - reductionSize);
+      
+      console.log(`[FLEX-SHRINK] Item ${item.element.id}: flexShrink=${item.flexShrink}, weightedShrink=${weightedShrink}, shrinkRatio=${shrinkRatio}, reductionSize=${reductionSize}px, newSize=${newSize}px`);
       
       return {
         ...item,
         [isRow ? 'width' : 'height']: newSize
       };
     });
+    
+    console.log(`[FLEX-SHRINK] Items after shrinking:`, result.map(item => ({
+      id: item.element.id,
+      width: item.width,
+      height: item.height
+    })));
+    
+    return result;
   }
 
   /**
@@ -366,33 +478,56 @@ export class FlexLayoutService {
     isRow: boolean
   ): { crossOffset: number; crossSize: number } {
     const alignValue = item.alignSelf === 'auto' ? container.alignItems : item.alignSelf;
+    
+    console.log(`[FLEX-ALIGN-SELF] Applying align-self for item ${item.element.id}: alignSelf=${item.alignSelf}, containerAlignItems=${container.alignItems}, effectiveValue=${alignValue}, lineHeight=${lineHeight}px, isRow=${isRow}`);
 
+    let result: { crossOffset: number; crossSize: number };
+    
     switch (alignValue) {
       case 'flex-start':
-        return this.alignSelfFlexStart(item, isRow);
+        result = this.alignSelfFlexStart(item, isRow);
+        break;
       
       case 'flex-end':
-        return this.alignSelfFlexEnd(item, lineHeight, isRow);
+        result = this.alignSelfFlexEnd(item, lineHeight, isRow);
+        break;
       
       case 'center':
-        return this.alignSelfCenter(item, lineHeight, isRow);
+        result = this.alignSelfCenter(item, lineHeight, isRow);
+        break;
       
       case 'baseline':
-        return this.alignSelfBaseline(item, lineHeight, isRow);
+        try {
+          result = this.alignSelfBaseline(item, lineHeight, isRow);
+        } catch (error) {
+          console.warn(`[FLEX-ALIGN-SELF] Baseline not implemented, falling back to flex-start:`, error);
+          result = this.alignSelfFlexStart(item, isRow);
+        }
+        break;
       
       case 'stretch':
-        return this.alignSelfStretch(item, lineHeight, isRow);
+        result = this.alignSelfStretch(item, lineHeight, isRow);
+        break;
       
       default:
-        return this.alignSelfFlexStart(item, isRow);
+        console.warn(`[FLEX-ALIGN-SELF] Unknown align-self value: ${alignValue}, falling back to flex-start`);
+        result = this.alignSelfFlexStart(item, isRow);
     }
+    
+    console.log(`[FLEX-ALIGN-SELF] Result for item ${item.element.id}: crossOffset=${result.crossOffset}px, crossSize=${result.crossSize}px`);
+    
+    return result;
   }
 
   private alignSelfFlexStart(item: FlexItem, isRow: boolean): { crossOffset: number; crossSize: number } {
     const marginStart = isRow ? item.margin.top : item.margin.left;
+    const itemCrossSize = isRow ? item.height : item.width;
+    
+    console.log(`[FLEX-ALIGN-SELF] flex-start for item ${item.element.id}: marginStart=${marginStart}px, itemCrossSize=${itemCrossSize}px`);
+    
     return {
       crossOffset: marginStart,
-      crossSize: isRow ? item.height : item.width
+      crossSize: itemCrossSize
     };
   }
 
@@ -400,6 +535,8 @@ export class FlexLayoutService {
     const itemCrossSize = isRow ? item.height : item.width;
     const marginEnd = isRow ? item.margin.bottom : item.margin.right;
     const crossOffset = lineHeight - itemCrossSize - marginEnd;
+    
+    console.log(`[FLEX-ALIGN-SELF] flex-end for item ${item.element.id}: lineHeight=${lineHeight}px, itemCrossSize=${itemCrossSize}px, marginEnd=${marginEnd}px, crossOffset=${crossOffset}px`);
     
     return {
       crossOffset,
@@ -413,6 +550,8 @@ export class FlexLayoutService {
     const marginEnd = isRow ? item.margin.bottom : item.margin.right;
     const availableSpace = lineHeight - itemCrossSize - marginStart - marginEnd;
     const crossOffset = marginStart + (availableSpace / 2);
+    
+    console.log(`[FLEX-ALIGN-SELF] center for item ${item.element.id}: lineHeight=${lineHeight}px, itemCrossSize=${itemCrossSize}px, marginStart=${marginStart}px, marginEnd=${marginEnd}px, availableSpace=${availableSpace}px, crossOffset=${crossOffset}px`);
     
     return {
       crossOffset,
@@ -431,9 +570,21 @@ export class FlexLayoutService {
     const marginEnd = isRow ? item.margin.bottom : item.margin.right;
     const stretchedSize = lineHeight - marginStart - marginEnd;
     
+    // Check if the item has an explicit height/width that should prevent stretching
+    const hasExplicitSize = isRow 
+      ? (item.style?.height && item.style.height !== 'auto')
+      : (item.style?.width && item.style.width !== 'auto');
+    
+    // Only stretch if there's no explicit size
+    const finalSize = hasExplicitSize 
+      ? (isRow ? item.height : item.width)
+      : Math.max(0, stretchedSize);
+    
+    console.log(`[FLEX-ALIGN-SELF] stretch for item ${item.element.id}: lineHeight=${lineHeight}px, marginStart=${marginStart}px, marginEnd=${marginEnd}px, stretchedSize=${stretchedSize}px, hasExplicitSize=${hasExplicitSize}, finalSize=${finalSize}px`);
+    
     return {
       crossOffset: marginStart,
-      crossSize: Math.max(0, stretchedSize)
+      crossSize: finalSize
     };
   }
 
@@ -442,6 +593,11 @@ export class FlexLayoutService {
    * Implements stable sorting to maintain source order for items with same order value
    */
   public sortItemsByOrder(items: FlexItem[]): FlexItem[] {
+    console.log(`[FLEX-ORDER] Sorting ${items.length} items by order:`, items.map(item => ({
+      id: item.element.id,
+      order: item.order
+    })));
+    
     // Create array with original indices for stable sorting
     const itemsWithIndex = items.map((item, index) => ({
       item,
@@ -456,8 +612,15 @@ export class FlexLayoutService {
       // Same order value, maintain source order
       return a.originalIndex - b.originalIndex;
     });
+    
+    const result = itemsWithIndex.map(({ item }) => item);
+    
+    console.log(`[FLEX-ORDER] After sorting:`, result.map(item => ({
+      id: item.element.id,
+      order: item.order
+    })));
 
-    return itemsWithIndex.map(({ item }) => item);
+    return result;
   }
 
   /**
@@ -465,16 +628,28 @@ export class FlexLayoutService {
    * Handles interaction between order and flex-direction reverse
    */
   public applySortedOrder(items: FlexItem[], container: FlexContainer): FlexItem[] {
+    console.log(`[FLEX-ORDER] Applying sorted order with flexDirection: ${container.flexDirection}`);
+    
     const sortedItems = this.sortItemsByOrder(items);
     
     // If flex-direction is reverse, we need to reverse the final order
     const isReverse = container.flexDirection.includes('reverse');
     
+    let result: FlexItem[];
+    
     if (isReverse) {
-      return [...sortedItems].reverse();
+      result = [...sortedItems].reverse();
+      console.log(`[FLEX-ORDER] Reversed due to flex-direction: ${container.flexDirection}`);
+    } else {
+      result = sortedItems;
     }
     
-    return sortedItems;
+    console.log(`[FLEX-ORDER] Final order:`, result.map(item => ({
+      id: item.element.id,
+      order: item.order
+    })));
+    
+    return result;
   }
 
   /**
