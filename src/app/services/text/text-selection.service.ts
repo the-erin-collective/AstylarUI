@@ -157,21 +157,23 @@ export class TextSelectionService {
     const inputHeight = (inputBounds.maximumWorld.y - inputBounds.minimumWorld.y);
     
     // Apply same positioning logic as text in input fields
-    // Text mesh center is at: (inputWidth / 2) - padding - (textureWidth / 2)
-    // The text's left edge starts at that center position minus half the texture width
-    // which equals: (inputWidth / 2) - padding - textureWidth
+    // Text mesh is positioned at: (inputWidth / 2) - (textureWidth / 2) - padding
+    // So the text's left edge is at: (inputWidth / 2) - (textureWidth / 2) - padding
     // Cursor position is measured from the left edge of text in CSS pixels, so convert to world
     const padding = 1.5 * scale; // Match text padding from text-input.manager.ts
-    const leftEdgeX = (inputWidth / 2) - padding - textureWidth;
+    const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2) - padding;
     
-    cursor.position.x = leftEdgeX + (cursorX * scale);
+    // Position cursor at the correct location
+    // Adjust distance to account for scaling discrepancy
+    const adjustedDistance = cursorX * scale * (2/3); // Compensate for 1.5x over-distance
+    cursor.position.x = textLeftEdgeX - adjustedDistance;
     cursor.position.y = 0; // Center vertically in input field
     cursor.position.z = 0.1 * scale; // In front of text
     
     console.log('[TextSelectionService] Positioning details:', {
       inputWidth: inputWidth,
       padding: padding,
-      leftEdgeX: leftEdgeX,
+      textLeftEdgeX: textLeftEdgeX,
       cursorX: cursorX,
       scale: scale,
       finalX: cursor.position.x,
@@ -208,21 +210,12 @@ export class TextSelectionService {
       const inputWidth = (inputBounds.maximumWorld.x - inputBounds.minimumWorld.x);
       
       const padding = 1.5 * scale; // Match text padding
-      const leftEdgeX = (inputWidth / 2) - padding - textureWidth;
+      const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2) - padding;
 
-      const finalX = leftEdgeX + (cursorX * scale);
-      console.log('[TextSelectionService] updateCursorPosition details:', {
-        cursorPosition,
-        cursorX,
-        inputWidth,
-        padding,
-        textureWidth,
-        leftEdgeX,
-        scale,
-        finalX
-      });
-
-      cursor.position.x = finalX;
+      // Position cursor at the correct location
+      // Adjust distance to account for scaling discrepancy
+      const adjustedDistance = cursorX * scale * (2/3); // Compensate for 1.5x over-distance
+      cursor.position.x = textLeftEdgeX - adjustedDistance;
     } else {
       cursor.position.x = cursorX * scale;
     }
