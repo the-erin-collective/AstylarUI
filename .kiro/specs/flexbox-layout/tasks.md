@@ -67,12 +67,20 @@
 - [x] 2. Enhance Layout Service with Advanced Flexbox Algorithms
 
 
+
+
+
+
+
   - Implement core algorithms for advanced flexbox features
   - Add support for multi-line flex containers
   - Add support for flex item sizing
   - _Requirements: 1.1, 2.1, 3.1, 4.1_
 
 - [x] 2.1 Implement align-content algorithm
+
+
+
 
 
 
@@ -84,6 +92,8 @@
 - [x] 2.2 Implement flex item sizing algorithms
 
 
+
+
   - Create calculateFlexItemSizes method in LayoutService
   - Implement flex-basis calculation logic
   - Implement flex-grow distribution algorithm
@@ -91,6 +101,8 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.11, 2.12_
 
 - [x] 2.3 Implement align-self algorithm
+
+
 
 
   - Create applyAlignSelf method in LayoutService
@@ -102,18 +114,20 @@
 
 
 
+
+
   - Create sortItemsByOrder method in LayoutService
   - Implement stable sorting to maintain source order when needed
   - Handle interaction with flex-direction
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
 
-- [x] 3. Update Element Service for Advanced Flexbox Features
+- [ ] 3. Update Element Service for Advanced Flexbox Features
 
   - Enhance element dimension calculations
   - Update position calculations for flex items
   - _Requirements: 1.1, 2.1, 3.1, 4.1_
 
-- [x] 3.1 Update element dimension calculations
+- [ ] 3.1 Update element dimension calculations
 
 
   - Enhance calculateDimensions method to handle flex-basis
@@ -121,7 +135,7 @@
   - Update cross-axis dimension calculations for align-self
   - _Requirements: 2.1, 2.2, 2.3, 3.1_
 
-- [x] 3.2 Update position calculations for flex items
+- [ ] 3.2 Update position calculations for flex items
 
 
 
@@ -131,21 +145,24 @@
   - Update cross-axis positioning based on align-self
   - _Requirements: 3.1, 4.1_
 
-- [x] 4. Integrate Advanced Flexbox Features with DOM Service
+- [ ] 4. Integrate Advanced Flexbox Features with DOM Service
+
+
+
 
 
   - Update flex container layout logic
   - Enhance flex item layout logic
   - _Requirements: 1.1, 2.1, 3.1, 4.1_
 
-- [x] 4.1 Update flex container layout logic
+- [ ] 4.1 Update flex container layout logic
 
 
   - Enhance createFlexContainer method to handle align-content
   - Update multi-line flex container layout
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10_
 
-- [x] 4.2 Enhance flex item layout logic
+- [ ] 4.2 Enhance flex item layout logic
 
 
   - Update layoutFlexItems method to handle flex-grow, flex-shrink, flex-basis
@@ -153,14 +170,14 @@
   - Update flex item ordering based on order property
   - _Requirements: 2.1, 2.2, 2.3, 3.1, 4.1_
 
-- [x] 5. Create Test Scenes for Advanced Flexbox Features
+- [ ] 5. Create Test Scenes for Advanced Flexbox Features
 
 
   - Create visual test scenes for each feature
   - Implement comprehensive test coverage
   - _Requirements: 1.1, 2.1, 3.1, 4.1_
 
-- [x] 5.1 Create align-content test scenes
+- [ ] 5.1 Create align-content test scenes
 
 
   - Create test scenes for each align-content value
@@ -168,7 +185,7 @@
   - Test with different numbers of flex items and lines
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10_
 
-- [x] 5.2 Create flex item sizing test scenes
+- [ ] 5.2 Create flex item sizing test scenes
 
 
 
@@ -180,7 +197,7 @@
   - Test with different combinations of values
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 2.12_
 
-- [x] 5.3 Create align-self test scenes
+- [ ] 5.3 Create align-self test scenes
 
 
   - Create test scenes for each align-self value
@@ -188,7 +205,7 @@
   - Test with different flex item sizes
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
 
-- [x] 5.4 Create order test scenes
+- [ ] 5.4 Create order test scenes
 
 
   - Create test scenes with different order values
@@ -196,13 +213,13 @@
   - Test with mixed positive and negative order values
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
 
-- [x] 6. Finalize Implementation
+- [ ] 6. Finalize Implementation
 
 
   - Fix edge cases and bugs
   - _Requirements: 1.1, 2.1, 3.1, 4.1_
 
-- [x] 6.1 Fix edge cases and bugs
+- [ ] 6.1 Fix edge cases and bugs
 
 
   - Handle zero-sized containers

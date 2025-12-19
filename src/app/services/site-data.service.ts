@@ -592,6 +592,483 @@ export class SiteDataService {
       }
     },
 
+    // ADVANCED FLEXBOX FEATURES TEST SITE
+    'flexbox-advanced': {
+      styles: [
+        {
+          selector: 'root',
+          background: '#1a1a2e'
+        },
+
+        // === ALIGN-CONTENT TESTS (Multi-line containers) ===
+
+        // Test 1: align-content: space-between with flex-wrap
+        {
+          selector: '#align-content-space-between',
+          top: '10%',
+          left: '5%',
+          width: '40%',
+          height: '20%',
+          background: '#16213e',
+          borderWidth: '2px',
+          borderColor: '#0f3460',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-start',
+          alignContent: 'space-between',
+          padding: '10px'
+        },
+
+        // Items for space-between test
+        {
+          selector: '#ac-sb-1',
+          background: '#e74c3c',
+          borderRadius: '4px',
+          flexBasis: '30%',
+          height: '40px',
+          margin: '2px'
+        },
+        {
+          selector: '#ac-sb-2',
+          background: '#f39c12',
+          borderRadius: '4px',
+          flexBasis: '35%',
+          height: '40px',
+          margin: '2px'
+        },
+        {
+          selector: '#ac-sb-3',
+          background: '#27ae60',
+          borderRadius: '4px',
+          flexBasis: '25%',
+          height: '40px',
+          margin: '2px'
+        },
+        {
+          selector: '#ac-sb-4',
+          background: '#3498db',
+          borderRadius: '4px',
+          flexBasis: '40%',
+          height: '40px',
+          margin: '2px'
+        },
+        {
+          selector: '#ac-sb-5',
+          background: '#9b59b6',
+          borderRadius: '4px',
+          flexBasis: '30%',
+          height: '40px',
+          margin: '2px'
+        },
+
+        // Test 2: align-content: center with flex-wrap
+        {
+          selector: '#align-content-center',
+          top: '10%',
+          left: '55%',
+          width: '40%',
+          height: '20%',
+          background: '#2d1b69',
+          borderWidth: '2px',
+          borderColor: '#512da8',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'flex-start',
+          alignItems: 'flex-start',
+          alignContent: 'center',
+          padding: '10px'
+        },
+
+        // Items for center test
+        {
+          selector: '#ac-c-1',
+          background: '#ff5722',
+          borderRadius: '4px',
+          flexBasis: '45%',
+          height: '35px',
+          margin: '3px'
+        },
+        {
+          selector: '#ac-c-2',
+          background: '#795548',
+          borderRadius: '4px',
+          flexBasis: '40%',
+          height: '35px',
+          margin: '3px'
+        },
+        {
+          selector: '#ac-c-3',
+          background: '#607d8b',
+          borderRadius: '4px',
+          flexBasis: '50%',
+          height: '35px',
+          margin: '3px'
+        },
+
+        // === FLEX ITEM SIZING TESTS ===
+
+        // Test 3: flex-grow distribution
+        {
+          selector: '#flex-grow-test',
+          top: '35%',
+          left: '5%',
+          width: '40%',
+          height: '15%',
+          background: '#0d4f3c',
+          borderWidth: '2px',
+          borderColor: '#16a085',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+          padding: '8px'
+        },
+
+        // Flex-grow items with different grow values
+        {
+          selector: '#fg-1',
+          background: '#e91e63',
+          borderRadius: '4px',
+          flexBasis: '50px',
+          flexGrow: '1',
+          margin: '2px'
+        },
+        {
+          selector: '#fg-2',
+          background: '#ff9800',
+          borderRadius: '4px',
+          flexBasis: '50px',
+          flexGrow: '2',
+          margin: '2px'
+        },
+        {
+          selector: '#fg-3',
+          background: '#4caf50',
+          borderRadius: '4px',
+          flexBasis: '50px',
+          flexGrow: '3',
+          margin: '2px'
+        },
+
+        // Test 4: flex-shrink reduction
+        {
+          selector: '#flex-shrink-test',
+          top: '35%',
+          left: '55%',
+          width: '40%',
+          height: '15%',
+          background: '#4a148c',
+          borderWidth: '2px',
+          borderColor: '#7b1fa2',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
+          padding: '8px'
+        },
+
+        // Flex-shrink items with different shrink values
+        {
+          selector: '#fs-1',
+          background: '#f44336',
+          borderRadius: '4px',
+          flexBasis: '150px',
+          flexShrink: '1',
+          margin: '2px'
+        },
+        {
+          selector: '#fs-2',
+          background: '#ff9800',
+          borderRadius: '4px',
+          flexBasis: '150px',
+          flexShrink: '2',
+          margin: '2px'
+        },
+        {
+          selector: '#fs-3',
+          background: '#2196f3',
+          borderRadius: '4px',
+          flexBasis: '150px',
+          flexShrink: '0',
+          margin: '2px'
+        },
+
+        // === ALIGN-SELF TESTS ===
+
+        // Test 5: align-self variations
+        {
+          selector: '#align-self-test',
+          top: '55%',
+          left: '5%',
+          width: '40%',
+          height: '20%',
+          background: '#bf360c',
+          borderWidth: '2px',
+          borderColor: '#d84315',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          padding: '8px'
+        },
+
+        // Items with different align-self values
+        {
+          selector: '#as-1',
+          background: '#00bcd4',
+          borderRadius: '4px',
+          width: '60px',
+          height: '40px',
+          alignSelf: 'flex-start'
+        },
+        {
+          selector: '#as-2',
+          background: '#8bc34a',
+          borderRadius: '4px',
+          width: '60px',
+          height: '60px',
+          alignSelf: 'center'
+        },
+        {
+          selector: '#as-3',
+          background: '#ffc107',
+          borderRadius: '4px',
+          width: '60px',
+          height: '40px',
+          alignSelf: 'flex-end'
+        },
+        {
+          selector: '#as-4',
+          background: '#e91e63',
+          borderRadius: '4px',
+          width: '60px',
+          alignSelf: 'stretch'
+        },
+
+        // === ORDER TESTS ===
+
+        // Test 6: order property with different values
+        {
+          selector: '#order-test',
+          top: '55%',
+          left: '55%',
+          width: '40%',
+          height: '20%',
+          background: '#1b5e20',
+          borderWidth: '2px',
+          borderColor: '#2e7d32',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          padding: '8px'
+        },
+
+        // Items with different order values (visual order will be different from DOM order)
+        {
+          selector: '#order-1',
+          background: '#ff1744',
+          borderRadius: '4px',
+          width: '50px',
+          height: '50px',
+          order: '3'
+        },
+        {
+          selector: '#order-2',
+          background: '#00e676',
+          borderRadius: '4px',
+          width: '50px',
+          height: '50px',
+          order: '1'
+        },
+        {
+          selector: '#order-3',
+          background: '#2979ff',
+          borderRadius: '4px',
+          width: '50px',
+          height: '50px',
+          order: '4'
+        },
+        {
+          selector: '#order-4',
+          background: '#ff6d00',
+          borderRadius: '4px',
+          width: '50px',
+          height: '50px',
+          order: '2'
+        },
+
+        // === COMPLEX COMBINATION TEST ===
+
+        // Test 7: Combined features
+        {
+          selector: '#complex-test',
+          top: '80%',
+          left: '5%',
+          width: '90%',
+          height: '15%',
+          background: '#263238',
+          borderWidth: '2px',
+          borderColor: '#37474f',
+          borderStyle: 'solid',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          alignContent: 'space-around',
+          padding: '8px'
+        },
+
+        // Complex items with multiple properties
+        {
+          selector: '#complex-1',
+          background: '#d32f2f',
+          borderRadius: '4px',
+          flexBasis: '20%',
+          flexGrow: '1',
+          height: '30px',
+          order: '2',
+          alignSelf: 'center',
+          margin: '2px'
+        },
+        {
+          selector: '#complex-2',
+          background: '#1976d2',
+          borderRadius: '4px',
+          flexBasis: '25%',
+          flexGrow: '2',
+          height: '40px',
+          order: '1',
+          alignSelf: 'flex-start',
+          margin: '2px'
+        },
+        {
+          selector: '#complex-3',
+          background: '#388e3c',
+          borderRadius: '4px',
+          flexBasis: '30%',
+          flexShrink: '2',
+          height: '35px',
+          order: '4',
+          alignSelf: 'flex-end',
+          margin: '2px'
+        },
+        {
+          selector: '#complex-4',
+          background: '#f57c00',
+          borderRadius: '4px',
+          flexBasis: '15%',
+          flexGrow: '1',
+          height: '25px',
+          order: '3',
+          alignSelf: 'stretch',
+          margin: '2px'
+        }
+      ],
+      root: {
+        children: [
+          // Align-content: space-between test
+          {
+            type: 'div',
+            id: 'align-content-space-between',
+            children: [
+              { type: 'div', id: 'ac-sb-1' },
+              { type: 'div', id: 'ac-sb-2' },
+              { type: 'div', id: 'ac-sb-3' },
+              { type: 'div', id: 'ac-sb-4' },
+              { type: 'div', id: 'ac-sb-5' }
+            ]
+          },
+
+          // Align-content: center test
+          {
+            type: 'div',
+            id: 'align-content-center',
+            children: [
+              { type: 'div', id: 'ac-c-1' },
+              { type: 'div', id: 'ac-c-2' },
+              { type: 'div', id: 'ac-c-3' }
+            ]
+          },
+
+          // Flex-grow test
+          {
+            type: 'div',
+            id: 'flex-grow-test',
+            children: [
+              { type: 'div', id: 'fg-1' },
+              { type: 'div', id: 'fg-2' },
+              { type: 'div', id: 'fg-3' }
+            ]
+          },
+
+          // Flex-shrink test
+          {
+            type: 'div',
+            id: 'flex-shrink-test',
+            children: [
+              { type: 'div', id: 'fs-1' },
+              { type: 'div', id: 'fs-2' },
+              { type: 'div', id: 'fs-3' }
+            ]
+          },
+
+          // Align-self test
+          {
+            type: 'div',
+            id: 'align-self-test',
+            children: [
+              { type: 'div', id: 'as-1' },
+              { type: 'div', id: 'as-2' },
+              { type: 'div', id: 'as-3' },
+              { type: 'div', id: 'as-4' }
+            ]
+          },
+
+          // Order test
+          {
+            type: 'div',
+            id: 'order-test',
+            children: [
+              { type: 'div', id: 'order-1' },
+              { type: 'div', id: 'order-2' },
+              { type: 'div', id: 'order-3' },
+              { type: 'div', id: 'order-4' }
+            ]
+          },
+
+          // Complex combination test
+          {
+            type: 'div',
+            id: 'complex-test',
+            children: [
+              { type: 'div', id: 'complex-1' },
+              { type: 'div', id: 'complex-2' },
+              { type: 'div', id: 'complex-3' },
+              { type: 'div', id: 'complex-4' }
+            ]
+          }
+        ]
+      }
+    },
+
     flexbox: {
       styles: [
         {

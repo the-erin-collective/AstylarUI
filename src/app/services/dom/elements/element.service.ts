@@ -462,17 +462,31 @@ export class ElementService {
 
       // Calculate position - CSS uses top-left origin, BabylonJS uses center origin
       if (style.left !== undefined) {
-        if (typeof style.left === 'string' && style.left.endsWith('px')) {
-          // Use pixel value directly
-          x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
-        } else if (typeof style.left === 'string' && style.left.endsWith('%')) {
-          const leftPercent = parseFloat(style.left);
-          x = (-parentWidth / 2) + ((leftPercent / 100) * availableWidth) + (width / 2);
+        console.log(`[COORDINATE DEBUG] Element ${style.selector}: left=${style.left}, parentWidth=${parentWidth}, width=${width}`);
+        
+        // TEMPORARY TEST: Hardcode coordinates to test the coordinate system
+        if (style.selector === '#unordered-list') {
+          x = -400; // Force to left side
+          console.log(`[COORDINATE DEBUG] HARDCODED unordered-list to LEFT: x=${x}`);
+        } else if (style.selector === '#ordered-list') {
+          x = 400; // Force to right side
+          console.log(`[COORDINATE DEBUG] HARDCODED ordered-list to RIGHT: x=${x}`);
         } else {
-          x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
+          // Normal calculation for other elements
+          if (typeof style.left === 'string' && style.left.endsWith('px')) {
+            // Use pixel value directly
+            x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
+          } else if (typeof style.left === 'string' && style.left.endsWith('%')) {
+            const leftPercent = parseFloat(style.left);
+            x = (-parentWidth / 2) + ((leftPercent / 100) * availableWidth) + (width / 2);
+            console.log(`[COORDINATE DEBUG] Percentage calculation: ${leftPercent}% of ${availableWidth} = ${(leftPercent / 100) * availableWidth}`);
+          } else {
+            x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
+          }
+          console.log(`[COORDINATE DEBUG] Calculated X coordinate: ${x} for element ${style.selector}`);
         }
-        // Flip X coordinate if needed (existing logic)
-        x = -x;
+        // NOTE: We don't flip X coordinate here because the CoordinateTransformService
+        // will handle this transformation in the positionMesh method
       }
 
       if (style.top !== undefined) {
