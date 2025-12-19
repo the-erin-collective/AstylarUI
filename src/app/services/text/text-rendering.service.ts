@@ -248,7 +248,7 @@ export class TextRenderingService implements TextCacheManager {
         lines = [{
           text: text,
           width: bounds.width,
-          y: style.fontSize * 0.8 // Approximate baseline position
+          y: style.fontSize
         }];
       }
       

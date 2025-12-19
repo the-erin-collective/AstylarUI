@@ -11,7 +11,7 @@ import { TextInput, CursorState } from '../../../types/input-types';
 export class TextCursorRenderer {
     private blinkIntervals: Map<string, number> = new Map();
     private readonly BLINK_INTERVAL_MS = 530; // Standard cursor blink rate
-    private readonly CURSOR_WIDTH = 0.02;
+    private readonly CURSOR_WIDTH = 0.01;
     private readonly CURSOR_COLOR = BABYLON.Color3.Black();
 
     /**
@@ -109,8 +109,8 @@ export class TextCursorRenderer {
 
             // Position cursor at the calculated X position
             // Adjust for padding (assuming 10px padding)
-            const padding = 0.1;
-            textInput.cursorMesh.position.x = parentMesh.position.x - (parentWidth / 2) + padding + cursorX;
+           // const padding = 0.1;
+            textInput.cursorMesh.position.x = parentMesh.position.x - (parentWidth / 2) + cursorX;
             textInput.cursorMesh.position.y = parentMesh.position.y;
             textInput.cursorMesh.position.z = parentMesh.position.z + 0.02; // Slightly in front
             

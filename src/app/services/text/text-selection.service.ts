@@ -161,12 +161,12 @@ export class TextSelectionService {
     // So the text's left edge is at: (inputWidth / 2) - (textureWidth / 2) - padding
     // Cursor position is measured from the left edge of text in CSS pixels, so convert to world
     const padding = 1.5 * scale; // Match text padding from text-input.manager.ts
-    const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2);
+    const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2) - padding;
     
     // Position cursor at the correct location
-    // Now that layout metrics are corrected for device pixel ratio,
-    // we can use the camera scale directly
-    cursor.position.x = textLeftEdgeX - (cursorX * scale);
+    // Adjust distance to account for scaling discrepancy
+    const adjustedDistance = cursorX * scale * (2/3); // Compensate for 1.5x over-distance
+    cursor.position.x = textLeftEdgeX - adjustedDistance;
     cursor.position.y = 0; // Center vertically in input field
     cursor.position.z = 0.1 * scale; // In front of text
     
@@ -210,12 +210,12 @@ export class TextSelectionService {
       const inputWidth = (inputBounds.maximumWorld.x - inputBounds.minimumWorld.x);
       
       const padding = 1.5 * scale; // Match text padding
-      const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2);
+      const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2) - padding;
 
       // Position cursor at the correct location
-      // Now that layout metrics are corrected for device pixel ratio,
-      // we can use the camera scale directly
-      cursor.position.x = textLeftEdgeX - (cursorX * scale);
+      // Adjust distance to account for scaling discrepancy
+      const adjustedDistance = cursorX * scale * (2/3); // Compensate for 1.5x over-distance
+      cursor.position.x = textLeftEdgeX - adjustedDistance;
     } else {
       cursor.position.x = cursorX * scale;
     }

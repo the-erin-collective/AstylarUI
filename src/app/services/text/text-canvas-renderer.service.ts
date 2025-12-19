@@ -133,11 +133,8 @@ export class TextCanvasRendererService {
 
     const letterSpacing = style.letterSpacing ?? 0;
     const wordSpacing = style.wordSpacing ?? 0;
-    const approxAscent = style.fontSize * 0.8;
-    const approxDescent = style.fontSize * 0.2;
-    
-    // Get device pixel ratio to correctly convert measurements
-    const devicePixelRatio = window.devicePixelRatio || 1;
+    const approxAscent = style.fontSize;
+    const approxDescent = style.fontSize;
 
     const lineMetrics: TextLineMetrics[] = [];
     const characterMetrics: TextCharacterMetrics[] = [];
@@ -160,24 +157,15 @@ export class TextCanvasRendererService {
       let lineAscent = lineMeasure.actualBoundingBoxAscent ?? approxAscent;
       let lineDescent = lineMeasure.actualBoundingBoxDescent ?? approxDescent;
 
-      // Convert measurements from device pixels to CSS pixels
-      lineAscent = lineAscent / devicePixelRatio;
-      lineDescent = lineDescent / devicePixelRatio;
-
       const characters = Array.from(line.text);
 
       characters.forEach((char, charIndex) => {
         const glyphMetrics = ctx.measureText(char);
-        // Convert width from device pixels to CSS pixels
-        const width = glyphMetrics.width / devicePixelRatio;
+        const width = glyphMetrics.width;
         const advanceSpacing = (charIndex < characters.length - 1 ? letterSpacing : 0) + (char === ' ' ? wordSpacing : 0);
 
-        // Convert ascent/descent measurements from device pixels to CSS pixels
-        const charAscent = (glyphMetrics.actualBoundingBoxAscent ?? approxAscent) / devicePixelRatio;
-        const charDescent = (glyphMetrics.actualBoundingBoxDescent ?? approxDescent) / devicePixelRatio;
-
-        lineAscent = Math.max(lineAscent, charAscent);
-        lineDescent = Math.max(lineDescent, charDescent);
+        lineAscent = Math.max(lineAscent, glyphMetrics.actualBoundingBoxAscent ?? approxAscent);
+        lineDescent = Math.max(lineDescent, glyphMetrics.actualBoundingBoxDescent ?? approxDescent);
 
         characterMetrics.push({
           index: globalIndex,
@@ -226,8 +214,8 @@ export class TextCanvasRendererService {
         bottom,
         x: 0,
         y: baseline,
-        actualLeft: (lineMeasure.actualBoundingBoxLeft ?? 0) / devicePixelRatio,
-        actualRight: (lineMeasure.actualBoundingBoxRight ?? widthWithoutSpacing) / devicePixelRatio
+        actualLeft: lineMeasure.actualBoundingBoxLeft ?? 0,
+        actualRight: lineMeasure.actualBoundingBoxRight ?? widthWithoutSpacing
       });
 
       if (lineIndex < linesWithPositions.length - 1) {
@@ -323,8 +311,8 @@ export class TextCanvasRendererService {
       style.fontSize * style.lineHeight;
     
     // Get font bounding box information
-    const fontBoundingBoxAscent = style.fontSize * 0.8; // Approximate ascent
-    const fontBoundingBoxDescent = style.fontSize * 0.2; // Approximate descent
+    const fontBoundingBoxAscent = style.fontSize; // Approximate ascent
+    const fontBoundingBoxDescent = style.fontSize; // Approximate descent
     
     return {
       width: totalWidth,
