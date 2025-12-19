@@ -1,42 +1,22 @@
 import { Injectable } from '@angular/core';
+import { DOMElement } from '../../types/dom-element';
+import { StyleRule } from '../../types/style-rule';
+import { BabylonDOM } from './dom';
 import { Mesh } from '@babylonjs/core';
-import { BabylonMeshService } from './babylon-mesh.service';
-import { BabylonCameraService } from './babylon-camera.service';
-import { StyleService } from './style.service';
-import { ElementService } from './element.service';
-import { StyleRule } from '../types/style-rule';
-import { DOMElement } from '../types/dom-element';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class FlexService {
-  private meshService?: BabylonMeshService;
-  private cameraService?: BabylonCameraService;
-  private styleService?: StyleService;
-  private elementService?: ElementService;
-  private elementDimensions: Map<string, { width: number, height: number, padding: { top: number; right: number; bottom: number; left: number } }> = new Map();
-  private storeElementCallback?: (element: DOMElement, mesh: Mesh, dimensions?: { width: number; height: number; padding: { top: number; right: number; bottom: number; left: number } }) => void;
-
-  initialize(meshService: BabylonMeshService, cameraService: BabylonCameraService, styleService: StyleService, elementService: ElementService, storeElementCallback?: (element: DOMElement, mesh: Mesh, dimensions?: { width: number; height: number; padding: { top: number; right: number; bottom: number; left: number } }) => void): void {
-    this.meshService = meshService;
-    this.cameraService = cameraService;
-    this.styleService = styleService;
-    this.elementService = elementService;
-    this.storeElementCallback = storeElementCallback;
-  }
-
-  isFlexContainer(parentElement: DOMElement, styles: StyleRule[]): boolean {
-    const parentStyle = this.styleService?.findStyleForElement(parentElement, styles);
-    const display = parentStyle?.display;
-    return display === 'flex';
-  }
-
-  processFlexChildren(children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement): void {
+    public isFlexContainer(dom: BabylonDOM, parentElement: DOMElement, styles: StyleRule[]): boolean {
+        const parentStyle = dom.actions.findStyleForElement(parentElement, styles);
+        const display = parentStyle?.display;
+        return display === 'flex';
+      }
+   
+  public processFlexChildren(dom: BabylonDOM, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement): void {
     console.log(`🔀 Processing ${children.length} flex children for parent:`, parent.name);
     console.log('🔍 Children IDs:', children.map(c => c.id));
     
-    const parentStyle = this.styleService?.findStyleForElement(parentElement, styles);
+    const parentStyle = dom.actions.findStyleForElement(parentElement, styles);
     const flexDirection = this.getFlexDirection(parentStyle);
     const justifyContent = this.getJustifyContent(parentStyle);
     const alignItems = this.getAlignItems(parentStyle);
@@ -45,7 +25,7 @@ export class FlexService {
     console.log(`🔀 Flex properties - direction: ${flexDirection}, justify: ${justifyContent}, align: ${alignItems}, wrap: ${flexWrap}`);
     
     // Calculate flex layout
-    const flexLayout = this.calculateFlexLayout(children, parent, styles, parentElement, parentStyle, {
+    const flexLayout = this.calculateFlexLayout(dom, children, parent, styles, parentElement, parentStyle, {
       flexDirection,
       justifyContent,
       alignItems,
@@ -65,20 +45,13 @@ export class FlexService {
       console.log(`🔀 Child ${child.id} layout position: (${childLayout.position.x.toFixed(2)}, ${childLayout.position.y.toFixed(2)}, ${childLayout.position.z.toFixed(6)}) size: (${childLayout.size.width.toFixed(2)}x${childLayout.size.height.toFixed(2)})`);
       
       try {
-        const childMesh = this.elementService?.createElement(child, parent, styles, childLayout.position, childLayout.size);
-        console.log(`✅ Created flex child mesh:`, childMesh?.name, `Position:`, childMesh?.position);
-        console.log(`🎯 VERIFICATION: ${child.id} -> X position ${childMesh?.position.x.toFixed(2)} (expected ${childLayout.position.x.toFixed(2)})`);
+        const childMesh = dom.actions.createElement(child, parent, styles, childLayout.position, childLayout.size);
+        console.log(`✅ Created flex child mesh:`, childMesh.name, `Position:`, childMesh.position);
+        console.log(`🎯 VERIFICATION: ${child.id} -> X position ${childMesh.position.x.toFixed(2)} (expected ${childLayout.position.x.toFixed(2)})`);
         
-        // Store element in main service if callback is provided
-        if (this.storeElementCallback && child.id && childMesh) {
-          const dimensions = this.elementService?.getCalculatedDimensions(child, parent, styles);
-          this.storeElementCallback(child, childMesh, dimensions || undefined);
-        }
-        
-        if (child.children && child.children.length > 0 && childMesh) {
+        if (child.children && child.children.length > 0) {
           console.log(`🔄 Flex child ${child.id} has ${child.children.length} sub-children`);
-          // Process sub-children recursively
-          this.processSubChildren(child.children, childMesh, styles, child);
+          dom.actions.processChildren(child.children, childMesh, styles, child);
           console.log(`✅ Completed sub-children processing for flex child ${child.id}`);
         }
       } catch (error) {
@@ -90,23 +63,7 @@ export class FlexService {
     console.log(`✅ Finished processing all flex children for parent:`, parent.name);
   }
 
-  private getFlexDirection(style?: StyleRule): string {
-    return style?.flexDirection || 'row';
-  }
-
-  private getJustifyContent(style?: StyleRule): string {
-    return style?.justifyContent || 'flex-start';
-  }
-
-  private getAlignItems(style?: StyleRule): string {
-    return style?.alignItems || 'stretch';
-  }
-
-  private getFlexWrap(style?: StyleRule): string {
-    return style?.flexWrap || 'nowrap';
-  }
-
-  private calculateFlexLayout(children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement, parentStyle?: StyleRule, flexProps?: {
+  private calculateFlexLayout(dom: BabylonDOM, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement, parentStyle?: StyleRule, flexProps?: {
     flexDirection: string;
     justifyContent: string;
     alignItems: string;
@@ -120,12 +77,12 @@ export class FlexService {
     
     // Get parent dimensions from stored data - parent.name should match parentElement.id
     const parentId = parentElement?.id || parent.name.replace('-body', '');
-    const parentDimensions = this.elementDimensions.get(parentId) || {
+    const parentDimensions = dom.context.elementDimensions.get(parentId) || {
       width: 20, height: 10, padding: { top: 0, right: 0, bottom: 0, left: 0 }
     };
     
-    console.log(`🧮 Parent ID: ${parentId}, stored dimensions:`, this.elementDimensions.get(parentId));
-    console.log(`🧮 Available dimension keys:`, Array.from(this.elementDimensions.keys()));
+    console.log(`🧮 Parent ID: ${parentId}, stored dimensions:`, dom.context.elementDimensions.get(parentId));
+    console.log(`🧮 Available dimension keys:`, Array.from(dom.context.elementDimensions.keys()));
     
     const isRow = flexProps.flexDirection === 'row' || flexProps.flexDirection === 'row-reverse';
     const isReverse = flexProps.flexDirection.includes('reverse');
@@ -143,10 +100,10 @@ export class FlexService {
     
     // Calculate child dimensions and flex properties
     const childData = children.map(child => {
-      const childStyle = this.styleService?.findStyleForElement(child, styles);
-      const flexGrow = parseFloat(childStyle?.flexGrow || '0');
-      const flexShrink = parseFloat(childStyle?.flexShrink || '1');
-      const flexBasis = childStyle?.flexBasis || 'auto';
+      const childStyle = dom.actions.findStyleForElement(child, styles);
+      const flexGrow = parseFloat(childStyle?.flexGrow || childStyle?.flexGrow || '0');
+      const flexShrink = parseFloat(childStyle?.flexShrink || childStyle?.flexShrink || '1');
+      const flexBasis = childStyle?.flexBasis || childStyle?.flexBasis || 'auto';
       
       // Calculate base size
       let baseWidth, baseHeight;
@@ -393,15 +350,14 @@ export class FlexService {
       return parseFloat(flexBasis) || containerSize / 3; // Fallback
     }
   }
-
   private parseGapProperties(style: StyleRule): { rowGap: number; columnGap: number } {
     let rowGap = 0;
     let columnGap = 0;
-    const rowGapValue = style?.rowGap;
+    const rowGapValue = style?.rowGap || style?.rowGap;
     if (rowGapValue) {
       rowGap = this.parseGapValue(rowGapValue);
     }
-    const columnGapValue = style?.columnGap;
+    const columnGapValue = style?.columnGap || style?.columnGap;
     if (columnGapValue) {
       columnGap = this.parseGapValue(columnGapValue);
     }
@@ -419,6 +375,8 @@ export class FlexService {
     }
     return { rowGap, columnGap };
   }
+
+
 
   private parseGapValue(gapValue: string): number {
     if (!gapValue || gapValue === '0' || gapValue === 'normal') {
@@ -441,61 +399,21 @@ export class FlexService {
     }
   }
 
-  setElementDimensions(elementId: string, dimensions: { width: number, height: number, padding: { top: number; right: number; bottom: number; left: number } }): void {
-    this.elementDimensions.set(elementId, dimensions);
+
+  private getFlexDirection(style?: StyleRule): string {
+    return style?.flexDirection || style?.flexDirection || 'row';
   }
 
-  getElementDimensions(elementId: string): { width: number, height: number, padding: { top: number; right: number; bottom: number; left: number } } | undefined {
-    return this.elementDimensions.get(elementId);
+  private getJustifyContent(style?: StyleRule): string {
+    return style?.justifyContent || style?.justifyContent || 'flex-start';
   }
 
-  private processSubChildren(children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement): void {
-    console.log(`🔄 Processing ${children.length} sub-children for flex parent:`, parent.name);
-    
-    // Check if parent is a list container (ul or ol) - then apply automatic stacking
-    const isListContainer = parentElement?.type === 'ul' || parentElement?.type === 'ol';
-    
-    // Check if parent is a flex container
-    const isFlexContainer = parentElement ? this.isFlexContainer(parentElement, styles) : false;
-    
-    console.log(`🔍 Sub-parent element type: ${parentElement?.type}, isListContainer: ${isListContainer}, isFlexContainer: ${isFlexContainer}`);
-    
-    if (isListContainer) {
-      console.log(`📋 Sub-parent is list container (${parentElement?.type}), applying automatic stacking to ${children.length} items`);
-      // Note: List processing would need to be handled by the main service
-      console.log(`📋 List processing would be handled by main service`);
-    } else if (isFlexContainer && parentElement) {
-      console.log(`🔀 Sub-parent is flex container, applying flexbox layout to ${children.length} items`);
-      // Recursively process flex children
-      this.processFlexChildren(children, parent, styles, parentElement);
-    } else {
-      console.log(`📄 Sub-parent is NOT a list or flex container, using standard processing`);
-      // Standard processing for non-list, non-flex elements
-      children.forEach((child, index) => {
-        console.log(`👶 Processing sub-child ${index + 1}/${children.length}: ${child.type}#${child.id}`);
-        
-        try {
-          const childMesh = this.elementService?.createElement(child, parent, styles);
-          console.log(`✅ Created sub-child mesh:`, childMesh?.name, `Position:`, childMesh?.position);
-          
-          // Store element in main service if callback is provided
-          if (this.storeElementCallback && child.id && childMesh) {
-            const dimensions = this.elementService?.getCalculatedDimensions(child, parent, styles);
-            this.storeElementCallback(child, childMesh, dimensions || undefined);
-          }
-          
-          if (child.children && child.children.length > 0 && childMesh) {
-            console.log(`🔄 Sub-child ${child.id} has ${child.children.length} sub-sub-children`);
-            this.processSubChildren(child.children, childMesh, styles, child);
-            console.log(`✅ Completed sub-sub-children processing for ${child.id}`);
-          }
-        } catch (error) {
-          console.error(`❌ Error processing sub-child ${child.type}#${child.id}:`, error);
-          throw error;
-        }
-      });
-    }
-    
-    console.log(`✅ Finished processing all sub-children for flex parent:`, parent.name);
+  private getAlignItems(style?: StyleRule): string {
+    return style?.alignItems || style?.alignItems || 'stretch';
   }
+
+  private getFlexWrap(style?: StyleRule): string {
+    return style?.flexWrap || style?.flexWrap || 'nowrap';
+  }
+
 } 

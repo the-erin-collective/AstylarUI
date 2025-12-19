@@ -133,6 +133,14 @@ export class BabylonDOMService {
     } else if (isFlexContainer && parentElement) {
       console.log(`🔀 Parent is flex container, applying flexbox layout to ${children.length} items`);
       try {
+        // Get container dimensions for flex processing
+        if (parentElement?.id) {
+          const containerDimensions = this.elementDimensions.get(parentElement.id);
+          if (containerDimensions) {
+            this.flexService.setElementDimensions(parentElement.id, containerDimensions);
+          }
+        }
+        
         this.flexService.processFlexChildren(children, parent, styles, parentElement);
         console.log(`✅ Completed flex processing for ${parentElement?.id}`);
       } catch (error) {
