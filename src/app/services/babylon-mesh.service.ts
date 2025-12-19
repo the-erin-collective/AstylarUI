@@ -12,7 +12,7 @@ export class BabylonMeshService {
   private cameraService?: BabylonCameraService;
   private coordinateTransform: CoordinateTransformService;
 
-  constructor() { 
+  constructor() {
     this.coordinateTransform = new CoordinateTransformService();
   }
 
@@ -192,6 +192,12 @@ export class BabylonMeshService {
 
   public createPolygonVertexData(polygonType: string, width: number, height: number, borderRadius: number): VertexData {
     console.log(`🔍 createPolygonVertexData: ${polygonType}, ${width.toFixed(1)}×${height.toFixed(1)}, radius=${borderRadius.toFixed(3)}`);
+
+    // Special case for rectangles with border radius - use optimized rectangle method
+    if (polygonType === 'rectangle' && borderRadius > 0) {
+      console.log(`✅ Using createRoundedRectangleVertexData for rectangle with radius ${borderRadius.toFixed(3)}`);
+      return this.createRoundedRectangleVertexData(width, height, borderRadius);
+    }
 
     const positions: number[] = [];
     const indices: number[] = [];
@@ -454,19 +460,20 @@ export class BabylonMeshService {
 
     console.log(`🔍 Using round-polygon library for polygon border (radius=${borderRadius.toFixed(1)}):`);
 
+
     // Generate rounded outer polygon
     const roundedOuter = roundPolygon(outerPoints, borderRadius);
     const segmentLength = Math.max(0.3, borderRadius / 10);
     const outerSegments = getSegments(roundedOuter, "LENGTH", segmentLength);
 
     // Generate rounded inner polygon with proportionally smaller radius
-    // Reduce inner radius proportionally to the border width
-    const borderWidthRatio = borderWidth / (Math.min(width, height) / 2);
-    const innerBorderRadius = Math.max(0, borderRadius * (1 - borderWidthRatio * 0.5));
+    // Use exact geometric subtraction for concentric corners
+    // innerRadius = outerRadius - borderWidth
+    const innerBorderRadius = Math.max(0, borderRadius - borderWidth);
     const roundedInner = roundPolygon(innerPoints, innerBorderRadius);
     const innerSegments = getSegments(roundedInner, "LENGTH", segmentLength);
 
-    console.log(`   Border radius: outer=${borderRadius.toFixed(3)}, inner=${innerBorderRadius.toFixed(3)} (ratio=${borderWidthRatio.toFixed(3)})`);
+    console.log(`   Border radius: outer=${borderRadius.toFixed(3)}, inner=${innerBorderRadius.toFixed(3)}`);
     console.log(`   Generated ${outerSegments.length} outer segments, ${innerSegments.length} inner segments`);
 
     const halfWidth = width / 2;
@@ -843,8 +850,10 @@ export class BabylonMeshService {
     // Handle rounded borders (single mesh)
     if (borders.length === 1) {
       const borderMesh = borders[0];
-      borderMesh.position.set(centerX, centerY, centerZ + 0.001);
-      console.log(`🎯 Positioned rounded border at (${centerX.toFixed(3)}, ${centerY.toFixed(3)}, ${(centerZ + 0.001).toFixed(3)})`);
+      // Add a consistent Z offset to ensure visibility and avoid Z-fighting, matching rectangular borders
+      const borderZ = centerZ + 0.05;
+      borderMesh.position.set(centerX, centerY, borderZ);
+      console.log(`🎯 Positioned rounded border at (${centerX.toFixed(3)}, ${centerY.toFixed(3)}, ${borderZ.toFixed(3)})`);
       return;
     }
 
@@ -1036,7 +1045,7 @@ export class BabylonMeshService {
             gl_FragColor = vec4(shadowColor, shadowAlpha);
         }
       `;
-      
+
       console.log(`🎨 Registered drop shadow shaders`);
     }
 
@@ -1058,7 +1067,7 @@ export class BabylonMeshService {
     shaderMaterial.backFaceCulling = false;
     shaderMaterial.disableDepthWrite = true; // Don't write to depth buffer (allows proper transparency)
     shaderMaterial.needDepthPrePass = true; // Ensure proper depth testing order for z-sorting
-    
+
     // Set rendering group to ensure shadows render before other elements
     // This helps with z-ordering issues during hover
 
@@ -1188,11 +1197,11 @@ export class BabylonMeshService {
     // Create a single mesh with a custom shader material for the drop shadow effect
     // Make shadow mesh same size as element - shader will handle the blur expansion
     const shadowMesh = this.createSingleShadow(name, width, height, polygonType, borderRadius);
-    
+
     // Create custom shader material for drop shadow effect
     const shadowMaterial = this.createDropShadowMaterial(name, width, height, blur, color, offsetX, offsetY, borderRadius);
     shadowMesh.material = shadowMaterial;
-    
+
     // Shadow will inherit rendering group from its parent element
     // This ensures it stays in the same rendering layer as the element
 
@@ -1225,34 +1234,34 @@ export class BabylonMeshService {
 
     // Create a hollow shadow by creating a frame (outer shape minus inner shape)
     // This creates the effect of a shadow that only appears around the edges
-    
+
     const shadowFrameWidth = Math.max(shadowWidth, 1); // Minimum 1 unit shadow width
-    
+
     if (polygonType === 'rectangle') {
       // For rectangles, create a border frame
       const borderMeshes = this.createRectangularBorderMesh(name, width, height, shadowFrameWidth);
-      
+
       if (borderMeshes.length === 4) {
         // Combine the 4 border pieces into a single mesh
         const combinedMesh = new Mesh(`${name}-combined`, this.scene);
-        
+
         // Parent all border pieces to the combined mesh
         borderMeshes.forEach((borderMesh, index) => {
           borderMesh.parent = combinedMesh;
           // Position border pieces to form a frame
           this.positionBorderFrames(borderMeshes, 0, 0, 0, width, height, shadowFrameWidth);
         });
-        
+
         return combinedMesh;
       } else if (borderMeshes.length === 1) {
         // Single border frame mesh (rounded borders)
         return borderMeshes[0];
       }
     }
-    
+
     // Fallback: create polygon border frame
     const borderMeshes = this.createPolygonBorder(name, polygonType, width, height, shadowFrameWidth, borderRadius);
-    
+
     if (borderMeshes.length === 1) {
       return borderMeshes[0];
     } else if (borderMeshes.length > 1) {
@@ -1263,7 +1272,7 @@ export class BabylonMeshService {
       });
       return combinedMesh;
     }
-    
+
     // Final fallback: create a simple plane (shouldn't happen)
     console.warn(`🌒 Fallback to plane shadow for ${name}`);
     return this.createPlane(name, width, height);
@@ -1272,7 +1281,7 @@ export class BabylonMeshService {
   positionMesh(mesh: Mesh, x: number, y: number, z: number): void {
     // Use the coordinate transform service to convert from logical to render coordinates
     const renderPosition = this.coordinateTransform.transformToRenderCoordinates(x, y, z);
-    
+
     mesh.position = renderPosition;
     console.log(`[BabylonMeshService] mesh.position after set: (${mesh.position.x}, ${mesh.position.y}, ${mesh.position.z})`);
   }
@@ -1431,26 +1440,26 @@ export class BabylonMeshService {
         const indices = [];
         const normals = [];
         const uvs = [];
-        
+
         // Create new vertex data with the updated border radius
         const vertexData = new VertexData();
-        
+
         // Calculate rectangle bounds
         const halfWidth = width / 2;
         const halfHeight = height / 2;
-        
+
         if (borderRadius <= 0) {
           // No border radius - create a simple rectangle
           positions.push(-halfWidth, halfHeight, 0);  // Top-left
           positions.push(halfWidth, halfHeight, 0);   // Top-right
           positions.push(halfWidth, -halfHeight, 0);  // Bottom-right
           positions.push(-halfWidth, -halfHeight, 0); // Bottom-left
-          
+
           indices.push(0, 1, 2); // First triangle
           indices.push(0, 2, 3); // Second triangle
-          
+
           normals.push(0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1);
-          
+
           uvs.push(0, 0, 1, 0, 1, 1, 0, 1);
         } else {
           // With border radius - create a rounded rectangle
@@ -1461,17 +1470,17 @@ export class BabylonMeshService {
             { x: halfWidth, y: -halfHeight },   // Bottom-right
             { x: -halfWidth, y: -halfHeight }   // Bottom-left
           ];
-          
+
           // Generate rounded polygon
           const roundedPolygon = roundPolygon(rectangleCorners, borderRadius);
-          
+
           // Convert to segments for smooth curves
           const segmentLength = Math.max(0.3, borderRadius / 10);
           const segments = getSegments(roundedPolygon, "LENGTH", segmentLength);
-          
+
           let vertexIndex = 0;
           const vertices = [];
-          
+
           // Add all segment points as vertices
           for (const segment of segments) {
             positions.push(segment.x, segment.y, 0);
@@ -1479,25 +1488,25 @@ export class BabylonMeshService {
             uvs.push((segment.x + halfWidth) / width, (segment.y + halfHeight) / height);
             vertices.push(vertexIndex++);
           }
-          
+
           // Create triangles using fan triangulation
           for (let i = 1; i < vertices.length - 1; i++) {
             indices.push(vertices[0], vertices[i], vertices[i + 1]);
           }
         }
-        
+
         // Apply the new vertex data to the mesh
         vertexData.positions = positions;
         vertexData.indices = indices;
         vertexData.normals = normals;
         vertexData.uvs = uvs;
-        
+
         // Apply to the mesh with updateable flag set to true
         vertexData.applyToMesh(mesh, true);
-        
+
         // Refresh the bounding info to ensure proper interactions
         mesh.refreshBoundingInfo();
-        
+
         console.log(`✅ Successfully updated mesh geometry with border radius=${borderRadius.toFixed(2)}`);
       } else {
         console.error(`❌ Mesh has no geometry to update`);
@@ -1520,34 +1529,34 @@ export class BabylonMeshService {
     if (!this.scene) {
       throw new Error('Mesh service not initialized');
     }
-    
+
     console.log(`🔄 Creating new mesh with border radius: width=${width}, height=${height}, radius=${borderRadius.toFixed(2)}`);
-    
+
     try {
       // Create a new mesh with the desired border radius
       const newMesh = this.createRoundedRectangle(
-        `${originalMesh.name}_with_radius`, 
-        width, 
-        height, 
+        `${originalMesh.name}_with_radius`,
+        width,
+        height,
         borderRadius
       );
-      
+
       // Copy position, rotation, scaling from the original mesh
       newMesh.position.copyFrom(originalMesh.position);
       newMesh.rotation.copyFrom(originalMesh.rotation);
       newMesh.scaling.copyFrom(originalMesh.scaling);
-      
+
       // Copy parent and material
       newMesh.parent = originalMesh.parent;
       newMesh.material = originalMesh.material;
-      
+
       // Copy action manager to preserve event handlers
       if (originalMesh.actionManager) {
         newMesh.actionManager = originalMesh.actionManager;
       }
-      
+
       console.log(`✅ Successfully created new mesh with border radius=${borderRadius.toFixed(2)}`);
-      
+
       return newMesh;
     } catch (error) {
       console.error(`❌ Error creating mesh with border radius:`, error);
@@ -1607,19 +1616,19 @@ export class BabylonMeshService {
     }
 
     const material = new StandardMaterial(name, this.scene);
-    
+
     // Apply the text texture
     material.diffuseTexture = texture;
-    
+
     // Configure material for text rendering
     material.useAlphaFromDiffuseTexture = true;
     material.transparencyMode = Material.MATERIAL_ALPHABLEND;
     material.backFaceCulling = false;
-    
+
     // Disable lighting effects for consistent text appearance
     material.disableLighting = true;
     material.emissiveTexture = texture; // Use texture as emissive for consistent brightness
-    
+
     // Remove specular and other effects
     material.specularColor = new Color3(0, 0, 0);
     material.roughness = 1.0;
@@ -1646,7 +1655,7 @@ export class BabylonMeshService {
       // Update material texture
       if (textMesh.material && textMesh.material instanceof StandardMaterial) {
         const material = textMesh.material as StandardMaterial;
-        
+
         // Dispose old texture if it exists
         if (material.diffuseTexture) {
           material.diffuseTexture.dispose();
@@ -1654,7 +1663,7 @@ export class BabylonMeshService {
         if (material.emissiveTexture && material.emissiveTexture !== material.diffuseTexture) {
           material.emissiveTexture.dispose();
         }
-        
+
         // Apply new texture
         material.diffuseTexture = newTexture;
         material.emissiveTexture = newTexture;
@@ -1666,7 +1675,7 @@ export class BabylonMeshService {
         const newVertexData = this.createPlaneVertexData(newWidth, newHeight);
         newVertexData.applyToMesh(textMesh, true);
         textMesh.refreshBoundingInfo();
-        
+
         console.log(`📏 Updated text mesh dimensions: ${newWidth.toFixed(3)} x ${newHeight.toFixed(3)}`);
       }
 
@@ -1733,7 +1742,7 @@ export class BabylonMeshService {
       // Dispose material and textures
       if (textMesh.material) {
         const material = textMesh.material;
-        
+
         if (material instanceof StandardMaterial) {
           // Dispose textures
           if (material.diffuseTexture) {
@@ -1743,7 +1752,7 @@ export class BabylonMeshService {
             material.emissiveTexture.dispose();
           }
         }
-        
+
         // Dispose material
         material.dispose();
       }
@@ -1803,14 +1812,14 @@ export class BabylonMeshService {
       // Update opacity
       if (opacity !== undefined) {
         material.alpha = Math.max(0, Math.min(1, opacity));
-        
+
         // Update transparency mode based on opacity
         if (material.alpha < 1.0) {
           material.transparencyMode = Material.MATERIAL_ALPHABLEND;
         } else {
           material.transparencyMode = Material.MATERIAL_OPAQUE;
         }
-        
+
         console.log(`🎨 Updated text mesh opacity: ${textMesh.name} = ${material.alpha.toFixed(2)}`);
       }
 

@@ -5,6 +5,7 @@ import { Button, ButtonState, InputType, ValidationState, ButtonInteraction } fr
 import { StyleRule } from '../../../types/style-rule';
 import { BabylonRender } from '../interfaces/render.types';
 import { TextRenderingService } from '../../text/text-rendering.service';
+import { ElementBorderService } from '../elements/element-border.service';
 
 /**
  * Service responsible for managing button elements
@@ -16,7 +17,10 @@ export class ButtonManager {
     private readonly PRESS_OFFSET = 0.05; // Visual press down effect
     private readonly STATE_TRANSITION_MS = 100;
 
-    constructor(private textRenderingService: TextRenderingService) { }
+    constructor(
+        private textRenderingService: TextRenderingService,
+        private borderService: ElementBorderService
+    ) { }
 
     /**
      * Creates a button element
@@ -222,13 +226,13 @@ export class ButtonManager {
     ): BABYLON.Mesh {
         const width = worldDimensions.width;
         const height = worldDimensions.height;
-        const depth = 0.1 * render.actions.camera.getPixelToWorldScale() * 100;
 
-        const buttonMesh = BABYLON.MeshBuilder.CreateBox(`button_${element.id}`, {
-            width,
-            height,
-            depth
-        }, render.scene);
+        // Parse border radius
+        const borderRadiusPixels = this.borderService.parseBorderRadius(style?.borderRadius);
+        const scaleFactor = render.actions.camera.getPixelToWorldScale();
+        const borderRadius = borderRadiusPixels * scaleFactor;
+
+        const buttonMesh = render.actions.mesh.createPolygon(`button_${element.id}`, 'rectangle', width, height, borderRadius);
 
         const material = new BABYLON.StandardMaterial(`buttonMaterial_${element.id}`, render.scene);
         material.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);

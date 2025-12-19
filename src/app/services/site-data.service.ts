@@ -553,7 +553,7 @@ export class SiteDataService {
 
         {
           selector: '#external-link:hover',
-          background: '#ec7063', // Lighter red on hover
+          background: '#c0392b', // Lighter red on hover
           borderColor: '#e74c3c',
           borderWidth: '15px',
           borderStyle: 'solid',

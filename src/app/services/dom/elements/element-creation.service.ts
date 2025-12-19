@@ -180,21 +180,28 @@ export class ElementCreationService {
                     // Parent all border frames to main mesh FIRST
                     borderMeshes.forEach((borderMesh: BABYLON.Mesh) => {
                         borderMesh.material = borderMaterial;
+                        // Removed zOffset to rely on physical separation
                         render.actions.mesh.parentMesh(borderMesh, mesh);
                     });
 
                     // Position border frames at (0,0) relative to main mesh with POSITIVE Z offset
                     // Borders should be slightly in front for visibility
-                    const borderZPosition = zPosition + 0.001;
+                    // Since parented, use local Z offset, not world Z
                     render.actions.mesh.positionBorderFrames(
                         borderMeshes,
                         0, // x relative to main mesh
                         0, // y relative to main mesh
-                        borderZPosition, // positive offset so borders appear in front
+                        0.05, // positive offset so borders appear in front
                         worldWidth,
                         worldHeight,
                         borderProps.width
                     );
+
+                    // Store border meshes in context so they can be disposed/updated later (e.g. on hover)
+                    borderMeshes.forEach(borderMesh => {
+                        dom.context.elements.set(borderMesh.name, borderMesh);
+                    });
+
                     console.log(`[ElementCreation] Created borders for ${meshId}`);
                 }
             }

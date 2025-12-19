@@ -89,12 +89,30 @@ export class ElementService {
     // Set hover state BEFORE recreating so createElement uses the right styles
     dom.context.hoverStates.set(elementId, styleType === 'hover');
 
-    // Remove old border meshes (4 polygon borders)
+    // Remove old border meshes
+    // Handle single polygon border
+    const singleBorderMesh = dom.context.elements.get(`${elementId}_polygon_border_frame`);
+    if (singleBorderMesh) {
+      singleBorderMesh.dispose();
+      dom.context.elements.delete(`${elementId}_polygon_border_frame`);
+    }
+    
+    // Remove up to 4 rectangular borders
     for (let i = 0; i < 4; i++) {
       const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
       if (borderMesh) {
         borderMesh.dispose();
         dom.context.elements.delete(`${elementId}-border-${i}`);
+      }
+      
+      // Also check for named rectangular borders
+      const borderNames = ['-top', '-bottom', '-left', '-right'];
+      if (i < borderNames.length) {
+        const namedBorderMesh = dom.context.elements.get(`${elementId}-border${borderNames[i]}`);
+        if (namedBorderMesh) {
+          namedBorderMesh.dispose();
+          dom.context.elements.delete(`${elementId}-border${borderNames[i]}`);
+        }
       }
     }
 

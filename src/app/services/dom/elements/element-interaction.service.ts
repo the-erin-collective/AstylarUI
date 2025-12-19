@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BabylonDOM } from '../interfaces/dom.types';
 import { BabylonRender } from '../interfaces/render.types';
+import * as BABYLON from '@babylonjs/core';
 import { Mesh, ActionManager, ExecuteCodeAction, Observer, PointerInfo, Vector3, Color3 } from '@babylonjs/core';
 import { PointerInteractionService } from '../interaction/pointer-interaction.service';
 import { StyleDefaultsService } from '../style-defaults.service';
@@ -65,9 +66,9 @@ export class ElementInteractionService {
             const elementStyles = dom.context.elementStyles.get(elementId);
             const hoverMergedStyle = elementStyles?.hover ? { ...baseMergedStyle, ...elementStyles.hover } : baseMergedStyle;
 
-            console.log(`🌒 Mouse over for ${elementId} - boxShadow in base style:`, baseMergedStyle.boxShadow);
-            console.log(`🌒 Mouse over for ${elementId} - boxShadow in hover style:`, elementStyles?.hover?.boxShadow);
-            console.log(`🌒 Mouse over for ${elementId} - boxShadow in merged hover style:`, hoverMergedStyle.boxShadow);
+            console.log(`RYPT Mouse over for ${elementId} - boxShadow in base style:`, baseMergedStyle.boxShadow);
+            console.log(`RYPT Mouse over for ${elementId} - boxShadow in hover style:`, elementStyles?.hover?.boxShadow);
+            console.log(`RYPT Mouse over for ${elementId} - boxShadow in merged hover style:`, hoverMergedStyle.boxShadow);
 
             // Check if we need to recreate geometry (border radius or polygon type changes)
             const normalRadius = this.parseBorderRadius(baseMergedStyle?.borderRadius);
@@ -76,17 +77,21 @@ export class ElementInteractionService {
             const hoverPolygonType = this.parsePolygonType(hoverMergedStyle?.polygonType) || 'rectangle';
 
             const needsGeometryUpdate = (normalRadius !== hoverRadius) || (normalPolygonType !== hoverPolygonType);
+            console.log(`[HOVER DEBUG] Element: ${elementId}`);
+            console.log(`[HOVER DEBUG] Normal Radius: ${normalRadius}, Hover Radius: ${hoverRadius}`);
+            console.log(`[HOVER DEBUG] Normal Type: ${normalPolygonType}, Hover Type: ${hoverPolygonType}`);
+            console.log(`[HOVER DEBUG] Needs Geometry Update: ${needsGeometryUpdate}`);
+            console.log(`[HOVER DEBUG] Dimensions found: ${!!dom.context.elementDimensions.get(elementId)}`);
 
             const safeHoverRadius = isNaN(hoverRadius) ? 0 : hoverRadius;
             const dimensions = dom.context.elementDimensions.get(elementId);
             const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
+            const worldWidth = dimensions ? dimensions.width * pixelToWorldScale : 0;
+            const worldHeight = dimensions ? dimensions.height * pixelToWorldScale : 0;
+            const worldBorderRadius = safeHoverRadius * pixelToWorldScale;
+            const polygonType = hoverPolygonType;
 
             if (dimensions && needsGeometryUpdate) {
-                const worldBorderRadius = safeHoverRadius * pixelToWorldScale;
-                const worldWidth = dimensions.width * pixelToWorldScale;
-                const worldHeight = dimensions.height * pixelToWorldScale;
-                const polygonType = hoverPolygonType;
-
                 // Update mesh geometry for hover border radius
                 const vertexData = render.actions.mesh.generatePolygonVertexData(
                     polygonType,
@@ -96,7 +101,17 @@ export class ElementInteractionService {
                 );
                 vertexData.applyToMesh(mainMesh, true);
 
-                // Remove old border meshes
+                // Update the main mesh's bounding info to ensure proper rendering
+                mainMesh.refreshBoundingInfo();
+
+                const singleBorderMesh = dom.context.elements.get(`${elementId}-border_polygon_border_frame`);
+                if (singleBorderMesh) {
+                    singleBorderMesh.dispose();
+                    dom.context.elements.delete(`${elementId}-border_polygon_border_frame`);
+                    console.log(`[ELEMENT HOVER DEBUG] Disposed old single border mesh for hover: ${elementId}-border_polygon_border_frame`);
+                }
+
+                // Remove up to 4 rectangular border meshes
                 for (let i = 0; i < 4; i++) {
                     const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
                     if (borderMesh) {
@@ -104,12 +119,32 @@ export class ElementInteractionService {
                         dom.context.elements.delete(`${elementId}-border-${i}`);
                         console.log(`[ELEMENT HOVER DEBUG] Disposed old border mesh for hover: ${elementId}-border-${i}`);
                     }
+
+                    // Also check for named rectangular borders
+                    const borderNames = ['-top', '-bottom', '-left', '-right'];
+                    if (i < borderNames.length) {
+                        const namedBorderMesh = dom.context.elements.get(`${elementId}-border${borderNames[i]}`);
+                        if (namedBorderMesh) {
+                            namedBorderMesh.dispose();
+                            dom.context.elements.delete(`${elementId}-border${borderNames[i]}`);
+                            console.log(`[ELEMENT HOVER DEBUG] Disposed old named border mesh for hover: ${elementId}-border${borderNames[i]}`);
+                        }
+                    }
                 }
 
                 // Create new border meshes for hover
+                console.log(`[BORDER DEBUG] ${elementId} - hoverMergedStyle.borderWidth RAW: "${hoverMergedStyle?.borderWidth}"`);
+                console.log(`[BORDER DEBUG] ${elementId} - hoverMergedStyle.borderColor RAW: "${hoverMergedStyle?.borderColor}"`);
+                console.log(`[BORDER DEBUG] ${elementId} - hoverMergedStyle.borderStyle RAW: "${hoverMergedStyle?.borderStyle}"`);
+
                 const borderWidth = this.parseBorderWidth(render, hoverMergedStyle?.borderWidth);
                 const borderColor = render.actions.style.parseBackgroundColor(hoverMergedStyle?.borderColor);
-                console.log(`[BORDER DEBUG] ${elementId} hover - borderWidth: ${borderWidth}, borderColor: ${JSON.stringify(borderColor)}, borderStyle: ${hoverMergedStyle?.borderStyle}`);
+
+                console.log(`[BORDER DEBUG] ${elementId} hover - PARSED borderWidth: ${borderWidth} (world units)`);
+                console.log(`[BORDER DEBUG] ${elementId} hover - PARSED borderColor: ${JSON.stringify(borderColor)}`);
+                console.log(`[BORDER DEBUG] ${elementId} hover - borderStyle: ${hoverMergedStyle?.borderStyle}`);
+
+                // Use polygon border for proper rounded corner support
                 const borderMeshes = render.actions.mesh.createPolygonBorder(
                     `${elementId}-border`,
                     polygonType,
@@ -120,33 +155,38 @@ export class ElementInteractionService {
                 );
 
                 // Parent all border frames to main mesh BEFORE positioning for correct transform inheritance
+                const borderParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mainMesh;
                 borderMeshes.forEach(borderMesh => {
-                    render.actions.mesh.parentMesh(borderMesh, mainMesh);
+                    render.actions.mesh.parentMesh(borderMesh, borderParent);
                 });
 
-                const borderZPosition = mainMesh.position.z + 0.001;
+                // Position borders at the same world position as mainMesh
+                // Since borders are now parented to the same parent as mainMesh, they need absolute positioning
+                const worldPos = mainMesh.position;
                 render.actions.mesh.positionBorderFrames(
                     borderMeshes,
-                    0, // x relative to main mesh
-                    0, // y relative to main mesh
-                    borderZPosition,
+                    worldPos.x, // Use mainMesh's position X
+                    worldPos.y, // Use mainMesh's position Y
+                    worldPos.z + 1.0, // Z position above the element
                     worldWidth,
                     worldHeight,
-                    borderWidth * pixelToWorldScale
+                    borderWidth
                 );
-                const borderOpacity = render.actions.style.parseOpacity(hoverMergedStyle?.opacity);
 
+                const borderOpacity = render.actions.style.parseOpacity(hoverMergedStyle.opacity);
+                // ALWAYS create a NEW material for hover to ensure color updates
+                const materialName = `${elementId}-hover-border-material-${Date.now()}`;
                 let borderMaterial;
                 if (borderColor === null || borderColor === undefined) {
                     borderMaterial = render.actions.mesh.createMaterial(
-                        `${elementId}-border-material`,
+                        materialName,
                         new Color3(0, 0, 0),
                         undefined,
                         0
-                    ); // Fully transparent
+                    );
                 } else {
                     borderMaterial = render.actions.mesh.createMaterial(
-                        `${elementId}-border-material`,
+                        materialName,
                         borderColor,
                         undefined,
                         borderOpacity
@@ -155,8 +195,49 @@ export class ElementInteractionService {
 
                 borderMeshes.forEach((borderMesh, index) => {
                     borderMesh.material = borderMaterial;
-                    dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
-                    console.log(`[ELEMENT HOVER DEBUG] Created hover border mesh: ${elementId}-border-${index}`);
+                    console.log(`[BORDER MATERIAL DEBUG] Applied material:`, {
+                        meshName: borderMesh.name,
+                        materialName: borderMaterial.name,
+                        diffuseColor: (borderMaterial as any).diffuseColor,
+                        expectedColor: borderColor
+                    });
+
+                    // Refresh bounding info to ensure proper rendering of rounded corners
+                    borderMesh.refreshBoundingInfo();
+                    // Force bounding box update for rounded corners to prevent clipping
+                    if (worldBorderRadius > 0 && borderMeshes.length === 1) {
+                        // For rounded border meshes, we need to ensure the bounding box encompasses the rounded corners
+                        // The rounded corners extend beyond the basic rectangular bounds
+                        // Update the bounding info with extended bounds to prevent clipping
+                        const boundingInfo = borderMesh.getBoundingInfo();
+                        if (boundingInfo) {
+                            // Extend the bounding box to fully encompass the rounded corners by updating the mesh's bounding vectors
+                            // We need to extend by both the border radius and a small buffer to ensure no clipping
+                            const extendAmount = worldBorderRadius + 0.1; // Adding a small buffer
+                            const min = boundingInfo.boundingBox.minimum.clone();
+                            const max = boundingInfo.boundingBox.maximum.clone();
+                            min.x -= extendAmount;
+                            min.y -= extendAmount;
+                            max.x += extendAmount;
+                            max.y += extendAmount;
+
+                            // Update the bounding info with extended bounds
+                            borderMesh.setBoundingInfo(new BABYLON.BoundingInfo(min, max));
+                        }
+                    }
+                    // Disable frustum culling for border meshes to prevent clipping issues
+                    borderMesh.alwaysSelectAsActiveMesh = true;
+                    // Removed zOffset to rely on physical separation
+                    // Store border meshes with their actual names
+                    if (borderMeshes.length === 1) {
+                        // Single polygon border - store with actual mesh name
+                        dom.context.elements.set(`${elementId}-border_polygon_border_frame`, borderMesh);
+                        console.log(`[ELEMENT HOVER DEBUG] Created hover border mesh: ${elementId}-border_polygon_border_frame`);
+                    } else {
+                        // Multiple rectangular borders
+                        dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
+                        console.log(`[ELEMENT HOVER DEBUG] Created hover border mesh: ${elementId}-border-${index}`);
+                    }
                 });
 
                 // Calculate worldBorderRadius and polygonType for shadow
@@ -169,7 +250,7 @@ export class ElementInteractionService {
             }
 
             dom.context.hoverStates.set(elementId, true);
-            this.applyElementMaterial(dom, render, mainMesh, element, true, baseMergedStyle);
+            this.applyElementMaterial(dom, render, mainMesh, element, true, hoverMergedStyle);
 
             // Apply transforms smoothly without recreating geometry
             const transform = this.parseTransform(hoverMergedStyle?.transform);
@@ -177,6 +258,16 @@ export class ElementInteractionService {
                 this.applyTransformsSmooth(mainMesh, transform, 150); // 150ms smooth animation
 
                 // For borders, we want them to inherit position but not scaling
+                // Handle single polygon border
+                const singleBorderMesh = dom.context.elements.get(`${elementId}_polygon_border_frame`);
+                if (singleBorderMesh) {
+                    // Apply only translation and rotation, not scaling
+                    const borderTransform = { ...transform };
+                    borderTransform.scale = { x: 1, y: 1, z: 1 }; // Reset scaling for borders
+                    this.applyTransformsSmooth(singleBorderMesh, borderTransform, 150);
+                }
+
+                // Handle up to 4 rectangular borders
                 for (let i = 0; i < 4; i++) {
                     const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
                     if (borderMesh) {
@@ -185,13 +276,25 @@ export class ElementInteractionService {
                         borderTransform.scale = { x: 1, y: 1, z: 1 }; // Reset scaling for borders
                         this.applyTransformsSmooth(borderMesh, borderTransform, 150);
                     }
+
+                    // Also check for named rectangular borders
+                    const borderNames = ['-top', '-bottom', '-left', '-right'];
+                    if (i < borderNames.length) {
+                        const namedBorderMesh = dom.context.elements.get(`${elementId}-border${borderNames[i]}`);
+                        if (namedBorderMesh) {
+                            // Apply only translation and rotation, not scaling
+                            const borderTransform = { ...transform };
+                            borderTransform.scale = { x: 1, y: 1, z: 1 }; // Reset scaling for borders
+                            this.applyTransformsSmooth(namedBorderMesh, borderTransform, 150);
+                        }
+                    }
                 }
 
                 // Shadow automatically inherits transforms through parenting - no manual intervention needed
                 const shadowMesh = dom.context.elements.get(`${elementId}-shadow`);
                 if (shadowMesh) {
-                    console.log(`🌒 HOVER: Shadow for ${elementId} will automatically inherit element transforms via parenting`);
-                    console.log(`🌒 Element transform: scale=(${transform.scale.x}, ${transform.scale.y}), rotation=(${transform.rotate.x}, ${transform.rotate.y}, ${transform.rotate.z})`);
+                    console.log(`RYPT HOVER: Shadow for ${elementId} will automatically inherit element transforms via parenting`);
+                    console.log(`RYPT Element transform: scale=(${transform.scale.x}, ${transform.scale.y}), rotation=(${transform.rotate.x}, ${transform.rotate.y}, ${transform.rotate.z})`);
                 }
             }
 
@@ -225,8 +328,8 @@ export class ElementInteractionService {
             const normalStyle = (elementStyles?.normal || {}) as StyleRule;
             const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle, selector: `#${elementId}` };
 
-            console.log(`🌒 Mouse out for ${elementId} - boxShadow in normal style:`, normalStyle.boxShadow);
-            console.log(`🌒 Mouse out for ${elementId} - boxShadow in merged style:`, mergedStyle.boxShadow);
+            console.log(`RYPT Mouse out for ${elementId} - boxShadow in normal style:`, normalStyle.boxShadow);
+            console.log(`RYPT Mouse out for ${elementId} - boxShadow in merged style:`, mergedStyle.boxShadow);
 
             // Check if we need to recreate geometry (border radius or polygon type changes)
             const hoverMergedStyle = elementStyles?.hover ? { ...mergedStyle, ...elementStyles.hover } : mergedStyle;
@@ -256,7 +359,19 @@ export class ElementInteractionService {
                 );
                 vertexData.applyToMesh(mainMesh, true);
 
+                // Update the main mesh's bounding info to ensure proper rendering
+                mainMesh.refreshBoundingInfo();
+
                 // Remove old border meshes
+                // Handle both single polygon border and 4 rectangular borders
+                const singleBorderMesh = dom.context.elements.get(`${elementId}-border_polygon_border_frame`);
+                if (singleBorderMesh) {
+                    singleBorderMesh.dispose();
+                    dom.context.elements.delete(`${elementId}-border_polygon_border_frame`);
+                    console.log(`[ELEMENT HOVER DEBUG] Disposed old single border mesh for normal: ${elementId}-border_polygon_border_frame`);
+                }
+
+                // Remove up to 4 rectangular border meshes
                 for (let i = 0; i < 4; i++) {
                     const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
                     if (borderMesh) {
@@ -264,12 +379,25 @@ export class ElementInteractionService {
                         dom.context.elements.delete(`${elementId}-border-${i}`);
                         console.log(`[ELEMENT HOVER DEBUG] Disposed old border mesh for normal: ${elementId}-border-${i}`);
                     }
+
+                    // Also check for named rectangular borders
+                    const borderNames = ['-top', '-bottom', '-left', '-right'];
+                    if (i < borderNames.length) {
+                        const namedBorderMesh = dom.context.elements.get(`${elementId}-border${borderNames[i]}`);
+                        if (namedBorderMesh) {
+                            namedBorderMesh.dispose();
+                            dom.context.elements.delete(`${elementId}-border${borderNames[i]}`);
+                            console.log(`[ELEMENT HOVER DEBUG] Disposed old named border mesh for normal: ${elementId}-border${borderNames[i]}`);
+                        }
+                    }
                 }
 
                 // Create new border meshes for normal
                 const borderWidth = this.parseBorderWidth(render, mergedStyle.borderWidth);
                 const borderColor = render.actions.style.parseBackgroundColor(mergedStyle.borderColor);
                 console.log(`[BORDER DEBUG] ${elementId} normal - borderWidth: ${borderWidth}, borderColor: ${JSON.stringify(borderColor)}, borderStyle: ${mergedStyle?.borderStyle}`);
+
+                // Use polygon border for proper rounded corner support
                 const borderMeshes = render.actions.mesh.createPolygonBorder(
                     `${elementId}-border`,
                     polygonType,
@@ -284,15 +412,16 @@ export class ElementInteractionService {
                     render.actions.mesh.parentMesh(borderMesh, mainMesh);
                 });
 
-                const borderZPosition = mainMesh.position.z + 0.001;
+                // Position borders correctly relative to the main mesh (local coordinates)
+                // Since borders are parented to mainMesh, position should be 0,0
                 render.actions.mesh.positionBorderFrames(
                     borderMeshes,
-                    0, // x relative to main mesh
-                    0, // y relative to main mesh
-                    borderZPosition,
+                    0, // Center X (local)
+                    0, // Center Y (local)
+                    0.05, // Z position (local offset) - increased to ensure visibility
                     worldWidth,
                     worldHeight,
-                    borderWidth * pixelToWorldScale
+                    borderWidth
                 );
                 const borderOpacity = render.actions.style.parseOpacity(mergedStyle.opacity);
                 let borderMaterial;
@@ -315,8 +444,42 @@ export class ElementInteractionService {
 
                 borderMeshes.forEach((borderMesh, index) => {
                     borderMesh.material = borderMaterial;
-                    dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
-                    console.log(`[ELEMENT HOVER DEBUG] Created normal border mesh: ${elementId}-border-${index}`);
+                    // Refresh bounding info to ensure proper rendering of rounded corners
+                    borderMesh.refreshBoundingInfo();
+                    // Force bounding box update for rounded corners to prevent clipping
+                    if (worldBorderRadius > 0 && borderMeshes.length === 1) {
+                        // For rounded border meshes, we need to ensure the bounding box encompasses the rounded corners
+                        // The rounded corners extend beyond the basic rectangular bounds
+                        // Update the bounding info with extended bounds to prevent clipping
+                        const boundingInfo = borderMesh.getBoundingInfo();
+                        if (boundingInfo) {
+                            // Extend the bounding box to fully encompass the rounded corners by updating the mesh's bounding vectors
+                            // We need to extend by both the border radius and a small buffer to ensure no clipping
+                            const extendAmount = worldBorderRadius + 0.1; // Adding a small buffer
+                            const min = boundingInfo.boundingBox.minimum.clone();
+                            const max = boundingInfo.boundingBox.maximum.clone();
+                            min.x -= extendAmount;
+                            min.y -= extendAmount;
+                            max.x += extendAmount;
+                            max.y += extendAmount;
+
+                            // Update the bounding info with extended bounds
+                            borderMesh.setBoundingInfo(new BABYLON.BoundingInfo(min, max));
+                        }
+                    }
+                    // Disable frustum culling for border meshes to prevent clipping issues
+                    borderMesh.alwaysSelectAsActiveMesh = true;
+                    // Removed zOffset to rely on physical separation
+                    // Store border meshes with their actual names
+                    if (borderMeshes.length === 1) {
+                        // Single polygon border - store with actual mesh name
+                        dom.context.elements.set(`${elementId}-border_polygon_border_frame`, borderMesh);
+                        console.log(`[ELEMENT HOVER DEBUG] Created normal border mesh: ${elementId}-border_polygon_border_frame`);
+                    } else {
+                        // Multiple rectangular borders
+                        dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
+                        console.log(`[ELEMENT HOVER DEBUG] Created normal border mesh: ${elementId}-border-${index}`);
+                    }
                 });
 
                 // Calculate worldBorderRadius and polygonType for shadow
@@ -336,6 +499,15 @@ export class ElementInteractionService {
             if (transform) {
                 this.applyTransformsSmooth(mainMesh, transform, 150); // 150ms smooth animation
                 // Also apply to all border meshes and parent them to the main mesh
+                // Handle single polygon border
+                const singleBorderMesh = dom.context.elements.get(`${elementId}_polygon_border_frame`);
+                if (singleBorderMesh) {
+                    this.applyTransformsSmooth(singleBorderMesh, transform, 150);
+                    // Parent border mesh to main mesh for transform inheritance
+                    render.actions.mesh.parentMesh(singleBorderMesh, mainMesh);
+                }
+
+                // Handle up to 4 rectangular borders
                 for (let i = 0; i < 4; i++) {
                     const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
                     if (borderMesh) {
@@ -343,13 +515,24 @@ export class ElementInteractionService {
                         // Parent border mesh to main mesh for transform inheritance
                         render.actions.mesh.parentMesh(borderMesh, mainMesh);
                     }
+
+                    // Also check for named rectangular borders
+                    const borderNames = ['-top', '-bottom', '-left', '-right'];
+                    if (i < borderNames.length) {
+                        const namedBorderMesh = dom.context.elements.get(`${elementId}-border${borderNames[i]}`);
+                        if (namedBorderMesh) {
+                            this.applyTransformsSmooth(namedBorderMesh, transform, 150);
+                            // Parent border mesh to main mesh for transform inheritance
+                            render.actions.mesh.parentMesh(namedBorderMesh, mainMesh);
+                        }
+                    }
                 }
 
                 // Shadow automatically inherits transforms through parenting - no manual intervention needed
                 const shadowMesh = dom.context.elements.get(`${elementId}-shadow`);
                 if (shadowMesh) {
-                    console.log(`🌒 NORMAL: Shadow for ${elementId} will automatically inherit element transforms via parenting`);
-                    console.log(`🌒 Element transform: scale=(${transform.scale.x}, ${transform.scale.y}), rotation=(${transform.rotate.x}, ${transform.rotate.y}, ${transform.rotate.z})`);
+                    console.log(`RYPT NORMAL: Shadow for ${elementId} will automatically inherit element transforms via parenting`);
+                    console.log(`RYPT Element transform: scale=(${transform.scale.x}, ${transform.scale.y}), rotation=(${transform.rotate.x}, ${transform.rotate.y}, ${transform.rotate.z})`);
                 }
             } else {
                 // Smoothly reset transforms to default values
@@ -361,20 +544,36 @@ export class ElementInteractionService {
 
                 this.applyTransformsSmooth(mainMesh, resetTransform, 150);
 
+                // Handle single polygon border
+                const singleBorderMesh = dom.context.elements.get(`${elementId}_polygon_border_frame`);
+                if (singleBorderMesh) {
+                    this.applyTransformsSmooth(singleBorderMesh, resetTransform, 150);
+                }
+
+                // Handle up to 4 rectangular borders
                 for (let i = 0; i < 4; i++) {
                     const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
                     if (borderMesh) {
                         this.applyTransformsSmooth(borderMesh, resetTransform, 150);
+                    }
+
+                    // Also check for named rectangular borders
+                    const borderNames = ['-top', '-bottom', '-left', '-right'];
+                    if (i < borderNames.length) {
+                        const namedBorderMesh = dom.context.elements.get(`${elementId}-border${borderNames[i]}`);
+                        if (namedBorderMesh) {
+                            this.applyTransformsSmooth(namedBorderMesh, resetTransform, 150);
+                        }
                     }
                 }
 
                 // Shadow automatically resets transforms through parenting - no manual intervention needed
                 const shadowMesh = dom.context.elements.get(`${elementId}-shadow`);
                 if (shadowMesh) {
-                    console.log(`🌒 RESET: Shadow for ${elementId} will automatically reset transforms via parenting`);
-                    console.log(`🌒 RESET: Reset shadow transforms and shader uniforms for ${elementId}`);
-                    console.log(`🌒 Element position: (${mainMesh.position.x.toFixed(3)}, ${mainMesh.position.y.toFixed(3)}, ${mainMesh.position.z.toFixed(3)})`);
-                    console.log(`🌒 Shadow position: (${shadowMesh.position.x.toFixed(3)}, ${shadowMesh.position.y.toFixed(3)}, ${shadowMesh.position.z.toFixed(3)})`);
+                    console.log(`RYPT RESET: Shadow for ${elementId} will automatically reset transforms via parenting`);
+                    console.log(`RYPT RESET: Reset shadow transforms and shader uniforms for ${elementId}`);
+                    console.log(`RYPT Element position: (${mainMesh.position.x.toFixed(3)}, ${mainMesh.position.y.toFixed(3)}, ${mainMesh.position.z.toFixed(3)})`);
+                    console.log(`RYPT Shadow position: (${shadowMesh.position.x.toFixed(3)}, ${shadowMesh.position.y.toFixed(3)}, ${shadowMesh.position.z.toFixed(3)})`);
                 }
             }
 
@@ -660,25 +859,25 @@ export class ElementInteractionService {
      * Intelligently only recreates when parameters change
      */
     private updateShadowMesh(dom: BabylonDOM, render: BabylonRender, elementId: string, style: StyleRule, parent: Mesh, dimensions: any, zPosition: number, borderRadius: number, polygonType: string, transform?: TransformData) {
-        console.log(`🌒 updateShadowMesh called for ${elementId} with boxShadow: "${style?.boxShadow}"`);
+        console.log(`RYPT updateShadowMesh called for ${elementId} with boxShadow: "${style?.boxShadow}"`);
 
         const boxShadow = this.parseBoxShadow(style?.boxShadow);
         const existingShadow = dom.context.elements.get(`${elementId}-shadow`);
 
-        console.log(`🌒 Parsed boxShadow for ${elementId}:`, boxShadow);
+        console.log(`RYPT Parsed boxShadow for ${elementId}:`, boxShadow);
 
         // Check if this is initial creation or hover update
         const isHoverState = dom.context.hoverStates.get(elementId) || false;
-        console.log(`🌒 Shadow update context for ${elementId}: ${isHoverState ? 'HOVER' : 'NORMAL'} state`);
+        console.log(`RYPT Shadow update context for ${elementId}: ${isHoverState ? 'HOVER' : 'NORMAL'} state`);
 
         // If no box shadow is needed, remove existing shadow
         if (!boxShadow) {
             if (existingShadow) {
                 existingShadow.dispose();
                 dom.context.elements.delete(`${elementId}-shadow`);
-                console.log(`🌒 Removed shadow for ${elementId} (no box-shadow style)`);
+                console.log(`RYPT Removed shadow for ${elementId} (no box-shadow style)`);
             } else {
-                console.log(`🌒 No shadow to remove for ${elementId} (no box-shadow style and no existing shadow)`);
+                console.log(`RYPT No shadow to remove for ${elementId} (no box-shadow style and no existing shadow)`);
             }
             return;
         }
@@ -694,7 +893,7 @@ export class ElementInteractionService {
         const styleOpacity = render.actions.style.parseOpacity(style.opacity);
         const shadowColor = this.getBoxShadowColorWithOpacity(boxShadow.color, styleOpacity);
 
-        console.log(`🌒 Shadow parameters for ${elementId}:`, {
+        console.log(`RYPT Shadow parameters for ${elementId}:`, {
             originalBlur: boxShadow.blur,
             scaledBlur: scaledBlur,
             originalColor: boxShadow.color,
@@ -721,9 +920,9 @@ export class ElementInteractionService {
             needsRecreation = paramChanged;
 
             if (!paramChanged) {
-                console.log(`🌒 ✅ Reusing existing shadow for ${elementId} (all parameters identical)`);
+                console.log(`RYPT ✅ Reusing existing shadow for ${elementId} (all parameters identical)`);
             } else {
-                console.log(`🌒 ❌ Shadow parameters changed for ${elementId}:`, {
+                console.log(`RYPT ❌ Shadow parameters changed for ${elementId}:`, {
                     widthChanged: widthChanged ? `${lastParams.width} → ${worldWidth}` : 'unchanged',
                     heightChanged: heightChanged ? `${lastParams.height} → ${worldHeight}` : 'unchanged',
                     blurChanged: blurChanged ? `${lastParams.blur} → ${scaledBlur}` : 'unchanged',
@@ -733,20 +932,20 @@ export class ElementInteractionService {
                 });
             }
         } else {
-            console.log(`🌒 🆕 No existing shadow metadata for ${elementId}, creating new shadow`);
+            console.log(`RYPT 🆕 No existing shadow metadata for ${elementId}, creating new shadow`);
         }
 
         // Remove old shadow if recreating
         if (needsRecreation && existingShadow) {
             existingShadow.dispose();
             dom.context.elements.delete(`${elementId}-shadow`);
-            console.log(`🌒 Disposed existing shadow for ${elementId}`);
+            console.log(`RYPT Disposed existing shadow for ${elementId}`);
         }
 
         // Get the element mesh for parenting and positioning
         const elementMesh = dom.context.elements.get(elementId);
         if (!elementMesh) {
-            console.warn(`🌒 Could not find element mesh for shadow positioning: ${elementId}`);
+            console.warn(`RYPT Could not find element mesh for shadow positioning: ${elementId}`);
             return;
         }
 
@@ -782,7 +981,7 @@ export class ElementInteractionService {
             render.actions.mesh.parentMesh(shadowMesh, elementMesh);
             dom.context.elements.set(`${elementId}-shadow`, shadowMesh);
 
-            console.log(`🌒 Created shadow for ${elementId} (${worldWidth.toFixed(1)}x${worldHeight.toFixed(1)}) blur=${scaledBlur.toFixed(1)} color=${shadowColor}`);
+            console.log(`RYPT Created shadow for ${elementId} (${worldWidth.toFixed(1)}x${worldHeight.toFixed(1)}) blur=${scaledBlur.toFixed(1)} color=${shadowColor}`);
         } else {
             shadowMesh = existingShadow!;
         }
@@ -795,11 +994,11 @@ export class ElementInteractionService {
             // Position shadow relative to element (parenting will handle world positioning)
             shadowMesh.position.set(shadowX, shadowY, -0.01); // Behind element in local space
 
-            console.log(`🌒 Set initial shadow offset for ${elementId}: (${shadowX.toFixed(3)}, ${shadowY.toFixed(3)}, -0.01)`);
+            console.log(`RYPT Set initial shadow offset for ${elementId}: (${shadowX.toFixed(3)}, ${shadowY.toFixed(3)}, -0.01)`);
         }
 
         // Since shadow is parented to element, it will automatically inherit all transforms and position changes
         // No need to manually apply transforms - parenting handles this automatically
-        console.log(`🌒 Shadow will automatically follow element ${elementId} via parenting`);
+        console.log(`RYPT Shadow will automatically follow element ${elementId} via parenting`);
     }
 }
