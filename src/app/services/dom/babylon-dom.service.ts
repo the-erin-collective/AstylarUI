@@ -539,6 +539,9 @@ export class BabylonDOMService {
     // Create text mesh with proper material using BabylonMeshService
     const textMesh = this.babylonMeshService.createTextMesh(`${elementId}_text`, texture, dimensions.width, dimensions.height);
 
+    // Rotate the text mesh 180 degrees around the Z axis to fix horizontal flipping without affecting vertical orientation
+    textMesh.rotation.z = Math.PI;
+
     // Make text mesh pickable for text selection
     textMesh.isPickable = true;
     textMesh.metadata = {

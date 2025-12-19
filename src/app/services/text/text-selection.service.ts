@@ -164,21 +164,13 @@ export class TextSelectionService {
     const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2) - padding;
     
     // Position cursor at the correct location
-    // Adjust distance to account for scaling discrepancy
-    const adjustedDistance = cursorX * scale * (2/3); // Compensate for 1.5x over-distance
-    cursor.position.x = textLeftEdgeX - adjustedDistance;
+    // The cursorX is in CSS pixels, so we need to convert it to world units using the scale
+    // With the text mesh rotated 180 degrees around Z axis, we need to invert the positioning
+    cursor.position.x = textLeftEdgeX - (cursorX * scale);
     cursor.position.y = 0; // Center vertically in input field
     cursor.position.z = 0.1 * scale; // In front of text
     
-    console.log('[TextSelectionService] Positioning details:', {
-      inputWidth: inputWidth,
-      padding: padding,
-      textLeftEdgeX: textLeftEdgeX,
-      cursorX: cursorX,
-      scale: scale,
-      finalX: cursor.position.x,
-      finalPosition: cursor.position
-    });
+    console.log('[TextSelectionService] Final cursor position:', cursor.position);
     
     cursor.isPickable = false;
     cursor.renderingGroupId = 3; // Highest priority for UI elements
@@ -213,12 +205,14 @@ export class TextSelectionService {
       const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2) - padding;
 
       // Position cursor at the correct location
-      // Adjust distance to account for scaling discrepancy
-      const adjustedDistance = cursorX * scale * (2/3); // Compensate for 1.5x over-distance
-      cursor.position.x = textLeftEdgeX - adjustedDistance;
+      // The cursorX is in CSS pixels, so we need to convert it to world units using the scale
+      // With the text mesh rotated 180 degrees around Z axis, we need to invert the positioning
+      cursor.position.x = textLeftEdgeX - (cursorX * scale);
     } else {
       cursor.position.x = cursorX * scale;
     }
+    
+    console.log('[TextSelectionService] Updated cursor position:', cursor.position);
   }
 
   /**

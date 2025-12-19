@@ -379,6 +379,9 @@ export class CheckboxManager {
                 textureHeight
             );
 
+            // Rotate the text mesh 180 degrees around the Z axis to fix horizontal flipping without affecting vertical orientation
+            labelPlane.rotation.z = Math.PI;
+
             labelPlane.parent = input.mesh;
             labelPlane.isPickable = true; // Ensure label handles clicks
 

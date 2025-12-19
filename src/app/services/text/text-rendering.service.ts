@@ -166,14 +166,8 @@ export class TextRenderingService implements TextCacheManager {
       // Clear the texture with transparent background
       textureContext.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Manually flip the canvas vertically and horizontally
-      textureContext.save();
-      textureContext.translate(canvas.width, canvas.height);
-      textureContext.scale(-1, -1);
-      
-      // Draw the canvas content with the transformation
+      // Draw the canvas content directly without any flipping to prevent horizontal mirroring
       textureContext.drawImage(canvas, 0, 0);
-      textureContext.restore();
       
       // Update the texture
       texture.hasAlpha = true;

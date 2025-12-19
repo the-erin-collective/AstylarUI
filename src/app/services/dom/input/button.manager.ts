@@ -282,6 +282,9 @@ export class ButtonManager {
                 textureHeight
             );
 
+            // Rotate the text mesh 180 degrees around the Z axis to fix horizontal flipping without affecting vertical orientation
+            labelPlane.rotation.z = Math.PI;
+
             labelPlane.parent = button.mesh;
             labelPlane.position.z = -0.15; // Slightly in front
             labelPlane.isPickable = false;

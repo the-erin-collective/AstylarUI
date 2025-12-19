@@ -240,6 +240,10 @@ export class TextInputManager {
             textMesh.isPickable = false;
             textMesh.renderingGroupId = 2; // Ensure it renders on top
 
+            // Rotate the text mesh 180 degrees around the Z axis to fix horizontal flipping without affecting vertical orientation
+            // Only apply this rotation to text input meshes
+            textMesh.rotation.z = Math.PI;
+
             // Align text to left edge
             // Calculate offset based on texture width and input width
             const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;

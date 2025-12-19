@@ -421,6 +421,9 @@ export class SelectManager {
                 textureHeight
             );
 
+            // Rotate the text mesh 180 degrees around the Z axis to fix horizontal flipping without affecting vertical orientation
+            displayPlane.rotation.z = Math.PI;
+
             displayPlane.parent = selectElement.mesh;
             // Ensure display text sits IN FRONT of the Select Mesh (Positive Z, assuming Front is Positive)
             displayPlane.position.z = 0.05;
@@ -605,6 +608,9 @@ export class SelectManager {
                     textureWidth,
                     textureHeight
                 );
+
+                // Rotate the text mesh 180 degrees around the Z axis to fix horizontal flipping without affecting vertical orientation
+                textMesh.rotation.z = Math.PI;
 
                 textMesh.parent = optionMesh;
                 textMesh.isPickable = false;

@@ -45,12 +45,15 @@ export class MultiLineTextRendererService {
     // Apply text styling for accurate measurement
     this.applyTextStylingToContext(ctx, style);
 
+    // Get device pixel ratio to correctly convert measurements from device pixels to CSS pixels
+    const devicePixelRatio = window.devicePixelRatio || 1;
+
     // Handle different white-space modes
     switch (style.whiteSpace) {
       case 'nowrap':
         return this.wrapNoWrap(processedText, ctx, style);
       case 'pre':
-        return this.wrapPreserved(processedText, ctx, style, false);
+        return this.wrapPreserved(processedText, ctx, style, false, undefined);
       case 'pre-wrap':
         return this.wrapPreserved(processedText, ctx, style, true, maxWidth);
       case 'pre-line':
@@ -201,13 +204,15 @@ export class MultiLineTextRendererService {
     for (const word of words) {
       const testLine = currentLine + (currentLine ? ' ' : '') + word;
       const metrics = ctx.measureText(testLine);
+      const width = metrics.width;
 
-      if (metrics.width > maxWidth && currentLine) {
+      if (width > maxWidth && currentLine) {
         // Current line exceeds max width, push current line and start new one
         const lineMetrics = ctx.measureText(currentLine);
+        const lineWidth = lineMetrics.width;
         lines.push({
           text: currentLine,
-          width: lineMetrics.width,
+          width: lineWidth,
           y: 0 // Will be calculated later
         });
         currentLine = word;
@@ -219,9 +224,10 @@ export class MultiLineTextRendererService {
             // Add all but the last broken word as complete lines
             for (let i = 0; i < brokenWords.length - 1; i++) {
               const brokenMetrics = ctx.measureText(brokenWords[i]);
+              const brokenWidth = brokenMetrics.width;
               lines.push({
                 text: brokenWords[i],
-                width: brokenMetrics.width,
+                width: brokenWidth,
                 y: 0
               });
             }
@@ -237,9 +243,10 @@ export class MultiLineTextRendererService {
     // Add the last line if it exists
     if (currentLine) {
       const lineMetrics = ctx.measureText(currentLine);
+      const lineWidth = lineMetrics.width;
       lines.push({
         text: currentLine,
-        width: lineMetrics.width,
+        width: lineWidth,
         y: 0
       });
     }
@@ -260,9 +267,10 @@ export class MultiLineTextRendererService {
     style: TextStyleProperties
   ): TextLine[] {
     const metrics = ctx.measureText(text);
+    const width = metrics.width;
     return [{
       text: text,
-      width: metrics.width,
+      width: width,
       y: 0
     }];
   }
@@ -290,9 +298,10 @@ export class MultiLineTextRendererService {
       if (!allowWrap || !maxWidth) {
         // No wrapping - preserve line as-is
         const metrics = ctx.measureText(textLine);
+        const width = metrics.width;
         lines.push({
           text: textLine,
-          width: metrics.width,
+          width: width,
           y: 0
         });
       } else {
@@ -352,13 +361,15 @@ export class MultiLineTextRendererService {
       const char = line[i];
       const testLine = currentLine + char;
       const metrics = ctx.measureText(testLine);
+      const width = metrics.width;
 
-      if (metrics.width > maxWidth && currentLine) {
+      if (width > maxWidth && currentLine) {
         // Line exceeds width, push current line and start new one
         const lineMetrics = ctx.measureText(currentLine);
+        const lineWidth = lineMetrics.width;
         lines.push({
           text: currentLine,
-          width: lineMetrics.width,
+          width: lineWidth,
           y: 0
         });
         currentLine = char;
@@ -370,9 +381,10 @@ export class MultiLineTextRendererService {
     // Add the last line
     if (currentLine) {
       const lineMetrics = ctx.measureText(currentLine);
+      const lineWidth = lineMetrics.width;
       lines.push({
         text: currentLine,
-        width: lineMetrics.width,
+        width: lineWidth,
         y: 0
       });
     }
@@ -395,8 +407,9 @@ export class MultiLineTextRendererService {
       const char = word[i];
       const testSegment = currentSegment + char;
       const metrics = ctx.measureText(testSegment);
+      const width = metrics.width;
 
-      if (metrics.width > maxWidth && currentSegment) {
+      if (width > maxWidth && currentSegment) {
         // Segment exceeds width, push current segment and start new one
         segments.push(currentSegment);
         currentSegment = char;

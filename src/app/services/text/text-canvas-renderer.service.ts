@@ -73,6 +73,9 @@ export class TextCanvasRendererService {
       throw new Error('Failed to get 2D rendering context from canvas');
     }
 
+    // Get device pixel ratio for consistent measurements
+    const devicePixelRatio = window.devicePixelRatio || 1;
+
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -91,12 +94,12 @@ export class TextCanvasRendererService {
     const positionedLines = this.multiLineTextRenderer.calculateLinePositions(
       lines, 
       style, 
-      canvas.height / (window.devicePixelRatio || 1)
+      canvas.height
     );
 
     // Render each line of text
     positionedLines.forEach((line) => {
-      const x = this.calculateLineX(line.width, canvas.width / (window.devicePixelRatio || 1), style.textAlign);
+      const x = this.calculateLineX(line.width, canvas.width, style.textAlign);
       
       // Render text stroke (outline) first if specified
       if (style.textStroke && style.textStroke.width > 0) {
@@ -121,6 +124,10 @@ export class TextCanvasRendererService {
     this.applyTextStylingToContext(ctx, style);
 
     const transformedText = this.applyTextTransform(text, style.textTransform);
+    
+    // Get device pixel ratio to correctly convert measurements from device pixels to CSS pixels
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    
     const wrappedLines = maxWidth
       ? this.multiLineTextRenderer.wrapText(transformedText, maxWidth, style)
       : [{ text: transformedText, width: ctx.measureText(transformedText).width, y: 0 }];
@@ -133,9 +140,9 @@ export class TextCanvasRendererService {
 
     const letterSpacing = style.letterSpacing ?? 0;
     const wordSpacing = style.wordSpacing ?? 0;
-    const approxAscent = style.fontSize;
-    const approxDescent = style.fontSize;
-
+    const approxAscent = style.fontSize * 0.8;
+    const approxDescent = style.fontSize * 0.2;
+    
     const lineMetrics: TextLineMetrics[] = [];
     const characterMetrics: TextCharacterMetrics[] = [];
 
@@ -164,8 +171,11 @@ export class TextCanvasRendererService {
         const width = glyphMetrics.width;
         const advanceSpacing = (charIndex < characters.length - 1 ? letterSpacing : 0) + (char === ' ' ? wordSpacing : 0);
 
-        lineAscent = Math.max(lineAscent, glyphMetrics.actualBoundingBoxAscent ?? approxAscent);
-        lineDescent = Math.max(lineDescent, glyphMetrics.actualBoundingBoxDescent ?? approxDescent);
+        const charAscent = glyphMetrics.actualBoundingBoxAscent ?? approxAscent;
+        const charDescent = glyphMetrics.actualBoundingBoxDescent ?? approxDescent;
+
+        lineAscent = Math.max(lineAscent, charAscent);
+        lineDescent = Math.max(lineDescent, charDescent);
 
         characterMetrics.push({
           index: globalIndex,
