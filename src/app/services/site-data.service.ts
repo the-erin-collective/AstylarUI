@@ -157,10 +157,41 @@ export class SiteDataService {
           background: 'radial-gradient(circle, #2980b9, #3498db)',
           borderRadius: '15px',
           borderColor: '#2980b9'
+        },
+        // Positioning test styles
+        {
+          selector: '#positioning-test-relative',
+          position: 'relative',
+          top: '10px',
+          left: '20px',
+          width: '100px',
+          height: '50px',
+          background: '#9b59b6',
+          borderRadius: '5px'
+        },
+        {
+          selector: '#positioning-test-absolute',
+          position: 'absolute',
+          top: '50px',
+          right: '30px',
+          width: '80px',
+          height: '40px',
+          background: '#e67e22',
+          borderRadius: '8px',
+          zIndex: '10'
         }
       ],
       root: {
         children: [
+          // Positioning test elements
+          {
+            type: 'div',
+            id: 'positioning-test-relative'
+          },
+          {
+            type: 'div',
+            id: 'positioning-test-absolute'
+          },
           // Section elements (left column)
           {
             type: 'section',

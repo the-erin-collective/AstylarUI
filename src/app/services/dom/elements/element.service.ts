@@ -6,16 +6,29 @@ import { BabylonDOM } from '../interfaces/dom.types';
 import { TransformData } from '../../../types/transform-data';
 import { BabylonRender } from '../interfaces/render.types';
 import { StyleDefaultsService } from '../style-defaults.service';
+// TEMPORARY: Comment out StackingContextManager to debug
+// import { StackingContextManager } from '../positioning/stacking-context.manager';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ElementService {
-  constructor(private styleDefaults: StyleDefaultsService) { }
+  constructor(
+    private styleDefaults: StyleDefaultsService
+    // TEMPORARY: Comment out StackingContextManager to debug
+    // private stackingContextManager: StackingContextManager
+  ) { }
 
   public processChildren(dom: BabylonDOM, render: BabylonRender, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement?: DOMElement): void {
     console.log(`🔄 Processing ${children.length} children for parent:`, parent.name);
     console.log(`🔍 Children details:`, children.map(c => `${c.type}#${c.id}`));
+    
+    // SPECIAL DEBUG: Log when we're processing flex containers
+    if (parentElement?.id?.includes('container')) {
+      console.log(`🚨 [FLEX CONTAINER DEBUG] Processing ${parentElement.id} with ${children.length} children`);
+      console.log(`🚨 [FLEX CONTAINER DEBUG] Parent mesh:`, parent.name);
+      console.log(`🚨 [FLEX CONTAINER DEBUG] Children:`, children.map(c => `${c.type}#${c.id}`));
+    }
     
     // Debug table cell children specifically
     if (parent.name === 'td-1-2' || parent.name === 'td-2-3') {
@@ -34,6 +47,10 @@ export class ElementService {
       throw new Error("[PARENT TEST] No parent element.");
     }
 
+    // TEMPORARY: Skip positioning separation completely for debugging
+    const normalFlowChildren = children;
+    const positionedChildren: DOMElement[] = [];
+
     // Check if parent is a list container (ul or ol)
     const isListContainer = parentElement?.type === 'ul' || parentElement?.type === 'ol';
     // Check if parent is a table container
@@ -48,10 +65,11 @@ export class ElementService {
       console.log(`[PROCESS-PATH] Spanning cell ${parent.name} - parentElement: ${parentElement?.type}, isTable: ${isTableContainer}, isFlex: ${isFlexContainer}, taking path: ${isListContainer ? 'LIST' : isTableContainer ? 'TABLE' : isFlexContainer ? 'FLEX' : 'STANDARD'}`);
     }
 
+    // Process normal flow children first
     if (isListContainer) {
-      console.log(`📋 Parent is list container (${parentElement?.type}), applying automatic stacking to ${children.length} items`);
+      console.log(`📋 Parent is list container (${parentElement?.type}), applying automatic stacking to ${normalFlowChildren.length} items`);
       try {
-        dom.actions.processListChildren(dom, render, children, parent, styles, parentElement.type as 'ul' | 'ol');
+        dom.actions.processListChildren(dom, render, normalFlowChildren, parent, styles, parentElement.type as 'ul' | 'ol');
         console.log(`✅ Completed list processing for ${parentElement?.type}`);
       } catch (error) {
         console.error(`❌ Error in processListChildren for ${parentElement?.type}:`, error);
@@ -60,16 +78,16 @@ export class ElementService {
     } else if (isTableContainer && parentElement) {
       console.log(`📊 Parent is table container, delegating to TableService for layout and rendering.`);
       try {
-        dom.actions.processTable(dom, render, children, parent, styles, parentElement);
+        dom.actions.processTable(dom, render, normalFlowChildren, parent, styles, parentElement);
         console.log(`✅ Completed table processing for ${parentElement?.id}`);
       } catch (error) {
         console.error(`❌ Error in handleTableElement for table:`, error);
         throw error;
       }
     } else if (isFlexContainer && parentElement) {
-      console.log(`🔀 Parent is flex container, applying flexbox layout to ${children.length} items`);
+      console.log(`🔀 Parent is flex container, applying flexbox layout to ${normalFlowChildren.length} items`);
       try {
-        dom.actions.processFlexChildren(dom, render, children, parent, styles, parentElement);
+        dom.actions.processFlexChildren(dom, render, normalFlowChildren, parent, styles, parentElement);
         console.log(`✅ Completed flex processing for ${parentElement?.id}`);
       } catch (error) {
         console.error(`❌ Error in processFlexChildren for ${parentElement?.id}:`, error);
@@ -78,7 +96,7 @@ export class ElementService {
     } else {
       console.log(`📄 Parent is NOT a list, table, or flex container, using standard processing`);
       // Standard processing for non-list, non-table, non-flex elements
-      children.forEach((child, index) => {
+      normalFlowChildren.forEach((child, index) => {
         console.log(`👶 Processing child ${index + 1}/${children.length}: ${child.type}#${child.id}`);
         
         // Debug spanning cell children specifically
@@ -107,6 +125,9 @@ export class ElementService {
         }
       });
     }
+
+    // TEMPORARY: Skip positioned children processing for debugging
+
     console.log(`✅ Finished processing all children for parent:`, parent.name);
   }
 
@@ -114,6 +135,13 @@ export class ElementService {
     // Debug all div creation to see if content divs are being processed - MOVED TO TOP
     if (element.type === 'div') {
       console.log(`[DIV-DEBUG] ${element.id || 'no-id'} class: ${element.class || 'none'} parent: ${parent?.name || 'none'} - ENTERING createElement`);
+    }
+    
+    // SPECIAL DEBUG: Log when we're creating flex containers
+    if (element.id?.includes('container')) {
+      console.log(`🚨 [CONTAINER CREATE DEBUG] Creating ${element.id}`);
+      console.log(`🚨 [CONTAINER CREATE DEBUG] Element:`, element);
+      console.log(`🚨 [CONTAINER CREATE DEBUG] Parent mesh:`, parent.name);
     }
     
     // Debug: log element properties for table elements
@@ -156,6 +184,11 @@ export class ElementService {
       explicitStyle = { ...explicitStyle, ...mergedClassStyles };
     }
     
+    // DEBUG: Log what we found in elementStyles
+    if (element.id?.includes('container')) {
+      console.log(`🔍 [CONTAINER STYLE DEBUG] ${element.id} elementStyles?.normal:`, JSON.stringify(elementStyles?.normal || 'NOT FOUND'));
+    }
+
     // Then apply ID styles, but be careful about auto-generated table cell styles
     if (elementStyles?.normal) {
       // For table cells, if we have class styles, only override with ID styles that are explicitly different from defaults
@@ -172,9 +205,21 @@ export class ElementService {
         });
         
         explicitStyle = { ...explicitStyle, ...idStylesWithoutDefaults };
+        
+        if (element.id?.includes('container')) {
+          console.log(`🔍 [CONTAINER STYLE DEBUG] ${element.id} used table cell logic, idStylesWithoutDefaults:`, JSON.stringify(idStylesWithoutDefaults));
+        }
       } else {
         // For non-table cells or when no class styles, apply ID styles normally
         explicitStyle = { ...explicitStyle, ...elementStyles.normal };
+        
+        if (element.id?.includes('container')) {
+          console.log(`🔍 [CONTAINER STYLE DEBUG] ${element.id} used normal logic, applied elementStyles.normal:`, JSON.stringify(elementStyles.normal));
+        }
+      }
+    } else {
+      if (element.id?.includes('container')) {
+        console.log(`🔍 [CONTAINER STYLE DEBUG] ${element.id} NO elementStyles?.normal found!`);
       }
     }
     
@@ -283,28 +328,49 @@ export class ElementService {
     }
     console.log(`[ELEMENT DEBUG] [BABYLON MESH DEBUG] Created mesh for ${element.id} (type: ${element.type}, polygon: ${polygonType}, meshId: ${meshId}) with dimensions: width=${worldWidth}, height=${worldHeight}, borderRadius=${borderRadius}`);
 
-    // Calculate Z position based on z-index, but prefer flex position Z if available
-    const zIndex = this.parseZIndex(style?.zIndex);
-    const baseZPosition = this.calculateZPosition(zIndex);
-    const zPosition = flexPosition ? flexPosition.z : baseZPosition;
-    let actualZPosition = zPosition;
+    // Check if element needs CSS positioning (relative, absolute, fixed)
+    // TEMPORARY: Disable positioning to debug flex container issue
+    const needsPositioning = false;
+    
+    /* ORIGINAL CODE - COMMENTED OUT FOR DEBUGGING
+    const needsPositioning = typeof dom.actions.calculateElementPosition === 'function' && 
+                            style?.position && 
+                            style.position !== 'static';
+    */
 
-    // Mesh positioning: always relative to parent mesh, no extra offset
     let worldX: number;
     let worldY: number;
-    if (flexPosition) {
-      worldX = flexPosition.x * scaleFactor;
-      worldY = flexPosition.y * scaleFactor;
-      console.log(`[DPR] Using flex positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from flex: ${flexPosition.x}, ${flexPosition.y}, scaleFactor: ${scaleFactor})`);
-    } else {
-      worldX = dimensions.x * scaleFactor;
-      worldY = dimensions.y * scaleFactor;
-      console.log(`[DPR] Using normal positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from dimensions.x: ${dimensions.x}, dimensions.y: ${dimensions.y}, scaleFactor: ${scaleFactor})`);
+    let zPosition: number;
+
+    if (needsPositioning) {
+      // TEMPORARY: CSS positioning disabled for debugging
+      console.log(`[POSITIONING] CSS positioning disabled for debugging: ${element.id}`);
+    }
+    
+    // Use existing positioning logic (flex or normal flow)
+    {
+      // Use existing positioning logic (flex or normal flow)
+      // TEMPORARY: Use old z-index calculation instead of stackingContextManager
+      const zIndex = this.parseZIndex(style?.zIndex);
+      const baseZPosition = this.calculateZPosition(zIndex);
+      zPosition = flexPosition ? flexPosition.z : baseZPosition;
+
+      if (flexPosition) {
+        worldX = flexPosition.x * scaleFactor;
+        worldY = flexPosition.y * scaleFactor;
+        console.log(`[DPR] Using flex positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from flex: ${flexPosition.x}, ${flexPosition.y}, scaleFactor: ${scaleFactor})`);
+      } else {
+        worldX = dimensions.x * scaleFactor;
+        worldY = dimensions.y * scaleFactor;
+        console.log(`[DPR] Using normal positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from dimensions.x: ${dimensions.x}, dimensions.y: ${dimensions.y}, scaleFactor: ${scaleFactor})`);
+      }
     }
 
     // Position and parent the mesh
     render.actions.mesh.positionMesh(mesh, worldX, worldY, zPosition);
     render.actions.mesh.parentMesh(mesh, parent);
+
+    // TEMPORARY: CSS positioning disabled for debugging
 
     // Debug checkpoint before material application
     if (element.type === 'div') {
@@ -378,7 +444,7 @@ export class ElementService {
 
       // Calculate Z position for borders (slightly above element for visibility)
       // Use the actual Z position that was calculated for the element
-      const borderZPosition = actualZPosition + 0.001; // Borders with significant offset above element
+      const borderZPosition = zPosition + 0.001; // Borders with significant offset above element
 
       // Position border frames around the element
       // Use flex positioning if provided, otherwise use normal positioning
@@ -750,13 +816,7 @@ export class ElementService {
   }
 
 
-  private parseZIndex(zIndexValue: string | undefined): number {
-    if (!zIndexValue) return 0;
 
-    const zIndex = parseInt(zIndexValue, 10);
-    // Return parsed integer, allow negative values for behind elements
-    return isNaN(zIndex) ? 0 : zIndex;
-  }
 
   private parseBorderRadius(borderRadiusValue: string | undefined): number {
     console.log(`🔄 parseBorderRadius called with: "${borderRadiusValue}"`);
@@ -1653,15 +1713,66 @@ export class ElementService {
     return 'rectangle';
   }
 
+
+
+  /**
+   * Separates children into normal flow and positioned elements
+   * Positioned elements (absolute, fixed) are removed from normal flow
+   */
+  private separatePositionedElements(children: DOMElement[], styles: StyleRule[]): {
+    normalFlowChildren: DOMElement[];
+    positionedChildren: DOMElement[];
+  } {
+    // TEMPORARY: Disable positioning separation to debug flex container issue
+    // All children go to normal flow for now
+    return {
+      normalFlowChildren: children,
+      positionedChildren: []
+    };
+
+    /* ORIGINAL CODE - COMMENTED OUT FOR DEBUGGING
+    const normalFlowChildren: DOMElement[] = [];
+    const positionedChildren: DOMElement[] = [];
+
+    children.forEach(child => {
+      const childStyle = this.getElementStyle(child, styles);
+      const position = childStyle?.position;
+
+      if (position === 'absolute' || position === 'fixed') {
+        positionedChildren.push(child);
+        console.log(`[POSITIONING] Element ${child.id} removed from normal flow (position: ${position})`);
+      } else {
+        normalFlowChildren.push(child);
+      }
+    });
+
+    return { normalFlowChildren, positionedChildren };
+    */
+  }
+
+  /**
+   * Gets the computed style for an element from the styles array
+   */
+  private getElementStyle(element: DOMElement, styles: StyleRule[]): StyleRule | undefined {
+    // Find style that matches this element
+    const elementSelector = element.class ? `.${element.class}` : `#${element.id}`;
+    return styles.find(style => 
+      style.selector === elementSelector || 
+      style.selector === element.type ||
+      style.selector === `${element.type}#${element.id}`
+    );
+  }
+
+  // TEMPORARY: Add back old z-index methods for debugging
+  private parseZIndex(zIndexValue: string | undefined): number {
+    if (!zIndexValue) return 0;
+    const zIndex = parseInt(zIndexValue, 10);
+    return isNaN(zIndex) ? 0 : zIndex;
+  }
+
   private calculateZPosition(zIndex: number): number {
-    // Base Z position for elements (slightly in front of the root background)
     const baseZ = 0.01;
-
-    // Z-index scale factor - increase to 0.01 for much larger separation
     const zScale = 0.01;
-
-    // Calculate final Z position: base + (zIndex * scale)
-    // Positive z-index moves toward camera, negative moves away from camera
     return baseZ + (zIndex * zScale);
   }
 

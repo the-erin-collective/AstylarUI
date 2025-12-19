@@ -257,9 +257,24 @@ export class StyleService {
                 if (!dom.context.elementStyles.has(elementId)) {
                     dom.context.elementStyles.set(elementId, { normal: style });
                 } else {
-                    dom.context.elementStyles.get(elementId)!.normal = style;
+                    // MERGE with existing style instead of overwriting
+                    const existingStyle = dom.context.elementStyles.get(elementId)!.normal;
+                    const mergedStyle = { ...existingStyle, ...style };
+                    dom.context.elementStyles.get(elementId)!.normal = mergedStyle;
+                    
+                    // DEBUG: Log when we merge styles
+                    if (elementId.includes('container')) {
+                        console.log(`🔍 [CONTAINER MERGE DEBUG] Merged styles for ${elementId}. Existing:`, JSON.stringify(existingStyle));
+                        console.log(`🔍 [CONTAINER MERGE DEBUG] New:`, JSON.stringify(style));
+                        console.log(`🔍 [CONTAINER MERGE DEBUG] Result:`, JSON.stringify(mergedStyle));
+                    }
                 }
                 console.log(`[STYLE-PARSE] ID style for ${elementId}: background=${style.background || 'none'}`);
+                
+                // DEBUG: Extra logging for containers
+                if (elementId.includes('container')) {
+                    console.log(`🔍 [CONTAINER PARSE DEBUG] Storing style for ${elementId}:`, JSON.stringify(style));
+                }
             } else if (style.selector.startsWith('.')) {
                 // This is a class selector
                 const className = style.selector.replace('.', '');

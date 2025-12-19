@@ -1,6 +1,7 @@
 export interface StyleRule {
   selector: string;
   // Positioning
+  position?: 'static' | 'relative' | 'absolute' | 'fixed';
   top?: string;
   left?: string;
   right?: string;
