@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { 
-  TextStyleProperties, 
-  TextDimensions, 
-  TextBounds, 
-  TextEffects, 
+import {
+  TextStyleProperties,
+  TextDimensions,
+  TextBounds,
+  TextEffects,
   TextShadowEffect,
   TextLine,
   TextLayoutMetrics,
@@ -22,7 +22,7 @@ import { MultiLineTextRendererService } from './multi-line-text-renderer.service
 })
 export class TextCanvasRendererService {
 
-  constructor(private multiLineTextRenderer: MultiLineTextRendererService) {}
+  constructor(private multiLineTextRenderer: MultiLineTextRendererService) { }
 
   /**
    * Creates a styled canvas element with proper dimensions for text rendering
@@ -34,29 +34,29 @@ export class TextCanvasRendererService {
   createStyledCanvas(text: string, style: TextStyleProperties, maxWidth?: number): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
+
     if (!ctx) {
       throw new Error('Failed to get 2D rendering context from canvas');
     }
 
     // Calculate text dimensions first to size the canvas appropriately
     const dimensions = this.measureTextBounds(text, style, maxWidth);
-    
+
     // Set canvas dimensions with device pixel ratio for crisp rendering
     const devicePixelRatio = window.devicePixelRatio || 1;
     canvas.width = Math.ceil(dimensions.width * devicePixelRatio);
     canvas.height = Math.ceil(dimensions.height * devicePixelRatio);
-    
+
     // Scale the canvas back down using CSS for proper display
     canvas.style.width = `${dimensions.width}px`;
     canvas.style.height = `${dimensions.height}px`;
-    
+
     // Scale the drawing context to match device pixel ratio
     ctx.scale(devicePixelRatio, devicePixelRatio);
-    
+
     // Apply text styling to the canvas context
     this.applyTextStylingToContext(ctx, style);
-    
+
     return canvas;
   }
 
@@ -78,36 +78,36 @@ export class TextCanvasRendererService {
 
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Re-apply styling (in case context was reset)
     this.applyTextStylingToContext(ctx, style);
-    
+
     // Handle text transformation
     const transformedText = this.applyTextTransform(text, style.textTransform);
-    
+
     // Handle multi-line text or single line using MultiLineTextRenderer
-    const lines = maxWidth ? 
-      this.multiLineTextRenderer.wrapText(transformedText, maxWidth, style) : 
+    const lines = maxWidth ?
+      this.multiLineTextRenderer.wrapText(transformedText, maxWidth, style) :
       [{ text: transformedText, width: ctx.measureText(transformedText).width, y: 0 }];
-    
+
     // Calculate proper line positions using MultiLineTextRenderer
     const positionedLines = this.multiLineTextRenderer.calculateLinePositions(
-      lines, 
-      style, 
+      lines,
+      style,
       canvas.height
     );
 
     // Render each line of text
     positionedLines.forEach((line) => {
       const x = this.calculateLineX(line.width, canvas.width, style.textAlign);
-      
+
       // Render text stroke (outline) first if specified
       if (style.textStroke && style.textStroke.width > 0) {
         ctx.strokeStyle = style.textStroke.color;
         ctx.lineWidth = style.textStroke.width;
         ctx.strokeText(line.text, x, line.y);
       }
-      
+
       // Render the main text
       ctx.fillText(line.text, x, line.y);
     });
@@ -124,10 +124,15 @@ export class TextCanvasRendererService {
     this.applyTextStylingToContext(ctx, style);
 
     const transformedText = this.applyTextTransform(text, style.textTransform);
-    
+
     // Get device pixel ratio to correctly convert measurements from device pixels to CSS pixels
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    
+    // Note: We intentionally DO NOT scale the context here to match how measureTextBounds works.
+    // measureTextBounds determines the canvas size (and thus texture size) using unscaled metrics.
+    // If we scale here, sub-pixel rendering might result in slightly different metrics than the
+    // integer-snapped unscaled metrics, causing cursor drift.
+    // const devicePixelRatio = window.devicePixelRatio || 1;
+    // ctx.scale(devicePixelRatio, devicePixelRatio);
+
     const wrappedLines = maxWidth
       ? this.multiLineTextRenderer.wrapText(transformedText, maxWidth, style)
       : [{ text: transformedText, width: ctx.measureText(transformedText).width, y: 0 }];
@@ -142,7 +147,7 @@ export class TextCanvasRendererService {
     const wordSpacing = style.wordSpacing ?? 0;
     const approxAscent = style.fontSize * 0.8;
     const approxDescent = style.fontSize * 0.2;
-    
+
     const lineMetrics: TextLineMetrics[] = [];
     const characterMetrics: TextCharacterMetrics[] = [];
 
@@ -159,20 +164,38 @@ export class TextCanvasRendererService {
       renderedLines.push(line.text);
 
       const lineStartIndex = globalIndex;
-      const lineMeasure = ctx.measureText(line.text);
       let cursorX = 0;
+
+      // Measure line dimensions initially
+      const lineMeasure = ctx.measureText(line.text);
       let lineAscent = lineMeasure.actualBoundingBoxAscent ?? approxAscent;
       let lineDescent = lineMeasure.actualBoundingBoxDescent ?? approxDescent;
 
       const characters = Array.from(line.text);
+      let previousCharEndX = 0;
 
       characters.forEach((char, charIndex) => {
-        const glyphMetrics = ctx.measureText(char);
-        const width = glyphMetrics.width;
-        const advanceSpacing = (charIndex < characters.length - 1 ? letterSpacing : 0) + (char === ' ' ? wordSpacing : 0);
+        // Calculate cumulative width up to this character
+        // This automatically accounts for kerning since we're measuring the full substring
+        const substring = line.text.substring(0, charIndex + 1);
+        const metrics = ctx.measureText(substring);
+        const currentEndX = metrics.width;
 
-        const charAscent = glyphMetrics.actualBoundingBoxAscent ?? approxAscent;
-        const charDescent = glyphMetrics.actualBoundingBoxDescent ?? approxDescent;
+        // The character width is the difference between current cumulative width and previous
+        // This effectively "assigns" the kerning adjustment to the character itself
+        const charWidth = currentEndX - previousCharEndX;
+
+        // Since fillText ignores manual letterSpacing/wordSpacing on the canvas unless manually handled,
+        // and we are rendering full lines, we should NOT add extra spacing here to match the render.
+        const advanceSpacing = 0;
+
+        // For height metrics, we still might want individual character metrics if possible,
+        // but usually line metrics are sufficient. Let's try to get specific char metrics if needed
+        // but usually using the line's max or the char's own measureText for height is okay.
+        // However, measuring single char for height is safer than substring for height
+        const singleCharMetrics = ctx.measureText(char);
+        const charAscent = singleCharMetrics.actualBoundingBoxAscent ?? approxAscent;
+        const charDescent = singleCharMetrics.actualBoundingBoxDescent ?? approxDescent;
 
         lineAscent = Math.max(lineAscent, charAscent);
         lineDescent = Math.max(lineDescent, charDescent);
@@ -182,20 +205,28 @@ export class TextCanvasRendererService {
           char,
           lineIndex,
           column: charIndex,
-          x: cursorX,
-          width,
-          advance: width + advanceSpacing,
+          x: previousCharEndX, // Start at previous end
+          width: charWidth,
+          advance: charWidth + advanceSpacing,
           isLineBreak: false
         });
 
-        cursorX += width + advanceSpacing;
+        previousCharEndX = currentEndX + advanceSpacing;
+
+        // Note: cursorX isn't strictly needed variable since we track previousCharEndX, 
+        // but we can keep it for parity if we want to track total width with manual spacing
+        cursorX = previousCharEndX;
+
         globalIndex += 1;
       });
 
       const lineEndIndex = globalIndex;
+
+      // Total width is the end of the last character
       const widthWithoutSpacing = characters.length
         ? characterMetrics[characterMetrics.length - 1].x + characterMetrics[characterMetrics.length - 1].width
         : 0;
+
       const widthWithSpacing = characters.length ? cursorX : 0;
 
       const baseline = line.y;
@@ -269,61 +300,61 @@ export class TextCanvasRendererService {
     // Create a temporary canvas for measurement
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
+
     if (!ctx) {
       throw new Error('Failed to get 2D rendering context for text measurement');
     }
 
     // Apply text styling for accurate measurement
     this.applyTextStylingToContext(ctx, style);
-    
+
     // Transform text according to style
     const transformedText = this.applyTextTransform(text, style.textTransform);
-    
+
     // Handle multi-line text measurement using MultiLineTextRenderer
-    const lines = maxWidth ? 
-      this.multiLineTextRenderer.wrapText(transformedText, maxWidth, style) : 
+    const lines = maxWidth ?
+      this.multiLineTextRenderer.wrapText(transformedText, maxWidth, style) :
       [{ text: transformedText, width: ctx.measureText(transformedText).width, y: 0 }];
-    
+
     let totalWidth = 0;
     let totalHeight = 0;
     let actualBoundingBoxLeft = 0;
     let actualBoundingBoxRight = 0;
     let actualBoundingBoxAscent = 0;
     let actualBoundingBoxDescent = 0;
-    
+
     // Calculate proper line positions using MultiLineTextRenderer
     const positionedLines = this.multiLineTextRenderer.calculateLinePositions(lines, style);
 
     // Measure each line and accumulate bounds
     positionedLines.forEach((line, index) => {
       const metrics = ctx.measureText(line.text);
-      
+
       // Update line width in the lines array
       line.width = metrics.width;
-      
+
       // Track maximum width
       totalWidth = Math.max(totalWidth, metrics.width);
-      
+
       // Accumulate bounding box information
       if (index === 0) {
         actualBoundingBoxLeft = metrics.actualBoundingBoxLeft || 0;
         actualBoundingBoxAscent = metrics.actualBoundingBoxAscent || style.fontSize * 0.8;
       }
-      
+
       actualBoundingBoxRight = Math.max(actualBoundingBoxRight, metrics.actualBoundingBoxRight || metrics.width);
       actualBoundingBoxDescent = Math.max(actualBoundingBoxDescent, metrics.actualBoundingBoxDescent || style.fontSize * 0.2);
     });
-    
+
     // Calculate total height based on positioned lines
-    totalHeight = positionedLines.length > 0 ? 
-      (positionedLines[positionedLines.length - 1].y + style.fontSize * 0.2) : 
+    totalHeight = positionedLines.length > 0 ?
+      (positionedLines[positionedLines.length - 1].y + style.fontSize * 0.2) :
       style.fontSize * style.lineHeight;
-    
+
     // Get font bounding box information
     const fontBoundingBoxAscent = style.fontSize; // Approximate ascent
     const fontBoundingBoxDescent = style.fontSize; // Approximate descent
-    
+
     return {
       width: totalWidth,
       height: totalHeight,
@@ -345,9 +376,9 @@ export class TextCanvasRendererService {
    * @returns Modified text lines with overflow handling applied
    */
   handleTextOverflow(
-    text: string, 
-    style: TextStyleProperties, 
-    maxWidth: number, 
+    text: string,
+    style: TextStyleProperties,
+    maxWidth: number,
     maxHeight: number
   ): TextLine[] {
     const lines = this.multiLineTextRenderer.wrapText(text, maxWidth, style);
@@ -371,7 +402,7 @@ export class TextCanvasRendererService {
     if (effects.shadows && effects.shadows.length > 0) {
       this.applyTextShadows(ctx, effects.shadows, text, style);
     }
-    
+
     // Apply text decorations (underline, overline, line-through)
     if (effects.decorations) {
       this.applyTextDecorations(ctx, effects.decorations, text, style);
@@ -386,12 +417,12 @@ export class TextCanvasRendererService {
   private applyTextStylingToContext(ctx: CanvasRenderingContext2D, style: TextStyleProperties): void {
     // Set font properties
     ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`;
-    
+
     // Set text appearance
     ctx.fillStyle = style.color;
     ctx.textAlign = this.mapTextAlign(style.textAlign);
     ctx.textBaseline = this.mapVerticalAlign(style.verticalAlign);
-    
+
     // Note: Text antialiasing is handled automatically by the browser
   }
 
@@ -496,18 +527,18 @@ export class TextCanvasRendererService {
   private applyTextShadows(ctx: CanvasRenderingContext2D, shadows: TextShadowEffect[], text: string, style: TextStyleProperties): void {
     // Save the current context state
     ctx.save();
-    
+
     // Apply each shadow effect
     shadows.forEach(shadow => {
       ctx.shadowOffsetX = shadow.offsetX;
       ctx.shadowOffsetY = shadow.offsetY;
       ctx.shadowBlur = shadow.blurRadius;
       ctx.shadowColor = shadow.color;
-      
+
       // Render the text with shadow
       ctx.fillText(text, 0, style.fontSize);
     });
-    
+
     // Restore the context state
     ctx.restore();
   }
@@ -520,9 +551,9 @@ export class TextCanvasRendererService {
    * @param style - Text styling properties
    */
   private applyTextDecorations(
-    ctx: CanvasRenderingContext2D, 
-    decorations: NonNullable<TextEffects['decorations']>, 
-    text: string, 
+    ctx: CanvasRenderingContext2D,
+    decorations: NonNullable<TextEffects['decorations']>,
+    text: string,
     style: TextStyleProperties
   ): void {
     const metrics = ctx.measureText(text);
@@ -530,14 +561,14 @@ export class TextCanvasRendererService {
     const fontSize = style.fontSize;
     const thickness = decorations.thickness || 1;
     const color = decorations.color || style.color;
-    
+
     // Save current context state
     ctx.save();
-    
+
     // Set decoration styling
     ctx.strokeStyle = color;
     ctx.lineWidth = thickness;
-    
+
     // Draw underline
     if (decorations.underline) {
       const underlineY = fontSize + (fontSize * 0.1); // Slightly below baseline
@@ -546,7 +577,7 @@ export class TextCanvasRendererService {
       ctx.lineTo(textWidth, underlineY);
       ctx.stroke();
     }
-    
+
     // Draw overline
     if (decorations.overline) {
       const overlineY = fontSize * 0.1; // Above the text
@@ -555,7 +586,7 @@ export class TextCanvasRendererService {
       ctx.lineTo(textWidth, overlineY);
       ctx.stroke();
     }
-    
+
     // Draw line-through
     if (decorations.lineThrough) {
       const lineThroughY = fontSize * 0.5; // Middle of the text
@@ -564,7 +595,7 @@ export class TextCanvasRendererService {
       ctx.lineTo(textWidth, lineThroughY);
       ctx.stroke();
     }
-    
+
     // Restore context state
     ctx.restore();
   }

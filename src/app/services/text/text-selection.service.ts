@@ -11,8 +11,13 @@ import { BabylonMeshService } from '../babylon-mesh.service';
   providedIn: 'root'
 })
 export class TextSelectionService {
-  
-  constructor(private babylonMeshService: BabylonMeshService) {}
+
+  // Scaling factor for cursor movement. Ideally 1.0, but kept for adjustment if needed.
+  private readonly CURSOR_WIDTH_SCALE = 1.0;
+
+
+
+  constructor(private babylonMeshService: BabylonMeshService) { }
 
   /**
    * Creates selection highlight meshes for a text range
@@ -38,12 +43,12 @@ export class TextSelectionService {
 
     const start = Math.min(selectionStart, selectionEnd);
     const end = Math.max(selectionStart, selectionEnd);
-    
+
     // Group characters by line for multi-line selections
     const selectionRanges = this.calculateSelectionRanges(start, end, layoutMetrics);
-    
+
     const selectionMeshes: BABYLON.Mesh[] = [];
-    
+
     selectionRanges.forEach((range, index) => {
       const mesh = this.createSelectionMeshForRange(
         range,
@@ -56,7 +61,7 @@ export class TextSelectionService {
         selectionMeshes.push(mesh);
       }
     });
-    
+
     return selectionMeshes;
   }
 
@@ -82,7 +87,7 @@ export class TextSelectionService {
   ): BABYLON.Mesh[] {
     // Dispose existing meshes
     this.disposeSelectionMeshes(existingMeshes);
-    
+
     // Create new selection
     return this.createSelectionHighlight(
       selectionStart,
@@ -111,30 +116,31 @@ export class TextSelectionService {
     scene: BABYLON.Scene,
     scale: number,
     style: TextStyleProperties,
-    textureWidth: number = 0
+    textureWidth?: number,
+    widthCorrectionRatio: number = 1.0
   ): BABYLON.Mesh {
-    console.log('[TextSelectionService] Creating cursor at position:', cursorPosition);
+    console.log('[TextSelectionService] Creating cursor with ratio:', widthCorrectionRatio);
     console.log('[TextSelectionService] Layout metrics:', layoutMetrics);
     console.log('[TextSelectionService] Scale:', scale);
-    
+
     const cursorX = this.calculateCursorPosition(cursorPosition, layoutMetrics);
     const cursorLine = this.findLineForPosition(cursorPosition, layoutMetrics);
-    
+
     console.log('[TextSelectionService] Calculated cursor X:', cursorX);
     console.log('[TextSelectionService] Found cursor line:', cursorLine);
-    
+
     const cursorHeight = style.fontSize * scale * 1.2; // Slightly taller than font
     const cursorWidth = 2 * scale; // 2px cursor width
-    
-    console.log('[TextSelectionService] Final cursor dimensions:', { 
-      width: cursorWidth, 
+
+    console.log('[TextSelectionService] Final cursor dimensions:', {
+      width: cursorWidth,
       height: cursorHeight,
       fontSize: style.fontSize,
-      scale: scale 
+      scale: scale
     });
-    
+
     console.log('[TextSelectionService] Cursor dimensions:', { width: cursorWidth, height: cursorHeight });
-    
+
     const cursor = BABYLON.MeshBuilder.CreateBox(`cursor_${parentMesh.name}`, {
       width: cursorWidth,
       height: cursorHeight,
@@ -150,31 +156,39 @@ export class TextSelectionService {
 
     // Position cursor relative to parent mesh (input field)
     cursor.parent = parentMesh;
-    
+
     // Calculate input field dimensions for proper positioning
     const inputBounds = parentMesh.getBoundingInfo().boundingBox;
     const inputWidth = (inputBounds.maximumWorld.x - inputBounds.minimumWorld.x);
     const inputHeight = (inputBounds.maximumWorld.y - inputBounds.minimumWorld.y);
-    
+
     // Apply same positioning logic as text in input fields
     // Text mesh is positioned at: (inputWidth / 2) - (textureWidth / 2) - padding
-    // So the text's left edge is at: (inputWidth / 2) - (textureWidth / 2) - padding
     // Cursor position is measured from the left edge of text in CSS pixels, so convert to world
+    // Use the actual texture width if available, otherwise fall back to layout metrics
+    const textWidth = textureWidth !== undefined ? textureWidth : layoutMetrics.totalWidth * scale;
+    // With accurate metrics, we just need standard padding if any, but the metrics should be 1:1
     const padding = 1.5 * scale; // Match text padding from text-input.manager.ts
-    const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2) - padding;
-    
+    const textMeshPosition = (inputWidth / 2) - (textWidth / 2) - padding;
+    // Calculate the starting X (Left Edge) in local coordinates.
+    // Since rotation is 180 (PI), Local +X is World Left.
+    // Start (Left) is at Center + Width/2.
+    const textLeftEdgeX = textMeshPosition + (textWidth / 2);
+
     // Position cursor at the correct location
     // The cursorX is in CSS pixels, so we need to convert it to world units using the scale
-    // With the text mesh rotated 180 degrees around Z axis, we need to invert the positioning
-    cursor.position.x = textLeftEdgeX - (cursorX * scale);
+    // Account for text mesh rotation (180 degrees) which flips the text horizontally
+    // Apply correction ratio to align metrics with actual texture width
+    // Subtracting from LeftEdgeX moves towards Local -X (World Right)
+    cursor.position.x = textLeftEdgeX - (cursorX * widthCorrectionRatio * scale / this.CURSOR_WIDTH_SCALE);
     cursor.position.y = 0; // Center vertically in input field
     cursor.position.z = 0.1 * scale; // In front of text
-    
-    console.log('[TextSelectionService] Final cursor position:', cursor.position);
-    
+
+    console.log('[TextSelectionService] Final cursor position:', cursor.position, 'Edge:', textLeftEdgeX, 'Offset:', cursorX * scale);
+
     cursor.isPickable = false;
     cursor.renderingGroupId = 3; // Highest priority for UI elements
-    
+
     console.log('[TextSelectionService] Cursor created successfully');
     return cursor;
   }
@@ -191,28 +205,28 @@ export class TextSelectionService {
     cursorPosition: number,
     layoutMetrics: TextLayoutMetrics,
     scale: number,
-    textureWidth: number = 0
+    textureWidth?: number,
+    widthCorrectionRatio: number = 1.0
   ): void {
     const cursorX = this.calculateCursorPosition(cursorPosition, layoutMetrics);
-    
+
     // Apply same positioning logic as in createTextCursor
     if (cursor.parent && cursor.parent instanceof BABYLON.Mesh) {
       const parentMesh = cursor.parent as BABYLON.Mesh;
       const inputBounds = parentMesh.getBoundingInfo().boundingBox;
       const inputWidth = (inputBounds.maximumWorld.x - inputBounds.minimumWorld.x);
-      
-      const padding = 1.5 * scale; // Match text padding
-      const textLeftEdgeX = (inputWidth / 2) - (textureWidth / 2) - padding;
 
-      // Position cursor at the correct location
-      // The cursorX is in CSS pixels, so we need to convert it to world units using the scale
-      // With the text mesh rotated 180 degrees around Z axis, we need to invert the positioning
-      cursor.position.x = textLeftEdgeX - (cursorX * scale);
+      const padding = 1.5 * scale;
+      // Use the actual texture width if available, otherwise fall back to layout metrics
+      const textWidth = textureWidth !== undefined ? textureWidth : layoutMetrics.totalWidth * scale;
+      const textMeshPosition = (inputWidth / 2) - (textWidth / 2) - padding;
+      const textLeftEdgeX = textMeshPosition + (textWidth / 2);
+
+      // Position cursor at the correct location (Subtracting offset because of 180 rotation)
+      cursor.position.x = textLeftEdgeX - (cursorX * widthCorrectionRatio * scale / this.CURSOR_WIDTH_SCALE);
     } else {
-      cursor.position.x = cursorX * scale;
+      cursor.position.x = (cursorX * widthCorrectionRatio * scale / this.CURSOR_WIDTH_SCALE);
     }
-    
-    console.log('[TextSelectionService] Updated cursor position:', cursor.position);
   }
 
   /**
@@ -241,7 +255,7 @@ export class TextSelectionService {
     layoutMetrics: TextLayoutMetrics
   ): Array<{ startX: number; endX: number; line: number; y: number; height: number }> {
     const ranges: Array<{ startX: number; endX: number; line: number; y: number; height: number }> = [];
-    
+
     // Group characters by line
     const lineGroups = new Map<number, TextCharacterMetrics[]>();
     layoutMetrics.characters.forEach(char => {
@@ -252,20 +266,20 @@ export class TextSelectionService {
         lineGroups.get(char.lineIndex)!.push(char);
       }
     });
-    
+
     // Create selection range for each line
     lineGroups.forEach((chars, lineIndex) => {
       if (chars.length === 0) return;
-      
+
       const line = layoutMetrics.lines[lineIndex];
       if (!line) return;
-      
+
       const firstChar = chars[0];
       const lastChar = chars[chars.length - 1];
-      
+
       const startX = firstChar.x;
       const endX = lastChar.x + lastChar.width;
-      
+
       ranges.push({
         startX,
         endX,
@@ -274,7 +288,7 @@ export class TextSelectionService {
         height: line.height
       });
     });
-    
+
     return ranges;
   }
 
@@ -296,7 +310,7 @@ export class TextSelectionService {
   ): BABYLON.Mesh | null {
     const width = range.endX - range.startX;
     if (width <= 0) return null;
-    
+
     const selectionMesh = BABYLON.MeshBuilder.CreatePlane(meshName, {
       width: width * scale,
       height: range.height * scale,
@@ -319,7 +333,7 @@ export class TextSelectionService {
 
     selectionMesh.isPickable = false;
     selectionMesh.renderingGroupId = 2;
-    
+
     return selectionMesh;
   }
 
@@ -332,12 +346,12 @@ export class TextSelectionService {
   private calculateCursorPosition(position: number, layoutMetrics: TextLayoutMetrics): number {
     console.log('[TextSelectionService] Calculating cursor position for index:', position);
     console.log('[TextSelectionService] Available characters:', layoutMetrics.characters.length);
-    
+
     if (position <= 0) {
       console.log('[TextSelectionService] Position 0, returning 0');
       return 0;
     }
-    
+
     if (position >= layoutMetrics.characters.length) {
       // Position at end of text
       const lastChar = layoutMetrics.characters[layoutMetrics.characters.length - 1];
@@ -345,7 +359,7 @@ export class TextSelectionService {
       console.log('[TextSelectionService] End position:', endPos);
       return endPos;
     }
-    
+
     // Position before the character at the given index
     const char = layoutMetrics.characters[position];
     const charPos = char ? char.x : 0;
@@ -362,7 +376,7 @@ export class TextSelectionService {
   private findLineForPosition(position: number, layoutMetrics: TextLayoutMetrics) {
     const char = layoutMetrics.characters[position] || layoutMetrics.characters[layoutMetrics.characters.length - 1];
     if (!char) return layoutMetrics.lines[0] || null;
-    
+
     return layoutMetrics.lines[char.lineIndex] || null;
   }
 }

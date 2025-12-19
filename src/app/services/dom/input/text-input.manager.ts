@@ -83,11 +83,18 @@ export class TextInputManager {
             // Use placeholder or a single space for layout calculation if no content
             const layoutText = textInput.textContent || textInput.placeholder || ' ';
             const textStyleProps = this.parseTextStyle(style);
+            const pixelScale = render.actions.camera.getPixelToWorldScale();
             console.log('[TextInputManager] Creating initial layout metrics for:', layoutText);
-            textInput.textLayoutMetrics = this.textCanvasRenderer.calculateLayoutMetrics(
+
+            // Use text rendering service to create consistent layout metrics
+            const storedLayoutMetrics = this.textRenderingService.createStoredLayoutMetrics(
                 layoutText,
-                textStyleProps
+                textStyleProps,
+                pixelScale
             );
+
+            // Extract CSS metrics for cursor positioning (these are in CSS pixels)
+            textInput.textLayoutMetrics = storedLayoutMetrics.css;
             console.log('[TextInputManager] Initial layout metrics:', textInput.textLayoutMetrics);
         }
 
@@ -104,7 +111,7 @@ export class TextInputManager {
      */
     handleFocus(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
         console.log('[TextInputManager] handleFocus called for:', textInput.element.id);
-        
+
         // If showing placeholder (no actual value), hide the text mesh
         if (!textInput.textContent && textInput.placeholder && textInput.textMesh) {
             textInput.textMesh.isVisible = false;
@@ -114,7 +121,13 @@ export class TextInputManager {
         // metrics for an empty string so the cursor starts at the left (0)
         if (!textInput.textContent && textInput.placeholder && render.scene) {
             const textStyleProps = this.parseTextStyle(style);
-            textInput.textLayoutMetrics = this.textCanvasRenderer.calculateLayoutMetrics('', textStyleProps);
+            const pixelScale = render.actions.camera.getPixelToWorldScale();
+
+            // Use text rendering service to create consistent layout metrics
+            const storedLayoutMetrics = this.textRenderingService.createStoredLayoutMetrics('', textStyleProps, pixelScale);
+
+            // Extract CSS metrics for cursor positioning (these are in CSS pixels)
+            textInput.textLayoutMetrics = storedLayoutMetrics.css;
             console.log('[TextInputManager] Recalculated empty layout metrics for focus');
             // Also compute a texture width that matches the empty layout so cursor
             // positioning uses consistent units (avoid using the placeholder texture width)
@@ -126,7 +139,8 @@ export class TextInputManager {
                 );
                 const size = emptyTexture.getSize();
                 const scale = render.actions.camera.getPixelToWorldScale();
-                textInput.textureWidth = size.width * scale;
+                const devicePixelRatio = window.devicePixelRatio || 1;
+                textInput.textureWidth = (size.width / devicePixelRatio) * scale;
                 // We intentionally do not create a visible text mesh for empty content
                 console.log('[TextInputManager] Computed empty texture width for cursor positioning:', textInput.textureWidth);
             } catch (err) {
@@ -147,7 +161,10 @@ export class TextInputManager {
                 render.scene,
                 render.actions.camera.getPixelToWorldScale(),
                 textStyle,
-                textInput.textureWidth || 0
+                textInput.textureWidth,
+                // Pass width correction ratio to calibrate cursor position to actual texture width
+                textInput.textLayoutMetrics.totalWidth > 0 ?
+                    (textInput.textureWidth / render.actions.camera.getPixelToWorldScale()) / textInput.textLayoutMetrics.totalWidth : 1.0
             );
         }
 
@@ -201,13 +218,21 @@ export class TextInputManager {
 
         try {
             // Calculate layout metrics for cursor and selection positioning
+            // Use the same service method as text rendering to ensure consistency
             const textStyleProps = this.parseTextStyle(textStyle);
+            const pixelScale = render.actions.camera.getPixelToWorldScale();
             console.log('[TextInputManager] Calculating layout metrics for text:', textToRender);
             console.log('[TextInputManager] Text style props:', textStyleProps);
-            textInput.textLayoutMetrics = this.textCanvasRenderer.calculateLayoutMetrics(
+
+            // Use text rendering service to create consistent layout metrics
+            const storedLayoutMetrics = this.textRenderingService.createStoredLayoutMetrics(
                 textToRender,
-                textStyleProps
+                textStyleProps,
+                pixelScale
             );
+
+            // Extract CSS metrics for cursor positioning (these are in CSS pixels)
+            textInput.textLayoutMetrics = storedLayoutMetrics.css;
             console.log('[TextInputManager] Layout metrics calculated:', textInput.textLayoutMetrics);
 
             // Get texture from service
@@ -224,8 +249,10 @@ export class TextInputManager {
 
             // Convert to world units using camera's pixel-to-world scale
             const scale = render.actions.camera.getPixelToWorldScale();
-            const textureWidth = textureWidthPx * scale;
-            const textureHeight = textureHeightPx * scale;
+            const devicePixelRatio = window.devicePixelRatio || 1;
+            // Normalize by DPR to ensure we use logical CSS pixels for world sizing
+            const textureWidth = (textureWidthPx / devicePixelRatio) * scale;
+            const textureHeight = (textureHeightPx / devicePixelRatio) * scale;
 
             // Create text mesh using BabylonMeshService
             const textMesh = this.babylonMeshService.createTextMesh(
@@ -381,7 +408,7 @@ export class TextInputManager {
         }
 
         // Only create selection if there's an active selection and we have layout metrics
-        if (!textInput.cursorState.selectionActive || 
+        if (!textInput.cursorState.selectionActive ||
             textInput.selectionStart === textInput.selectionEnd ||
             !textInput.textLayoutMetrics) {
             return;
@@ -438,7 +465,7 @@ export class TextInputManager {
 
         // Update display
         this.updateTextDisplay(textInput, render, style);
-        
+
         // Update cursor position and selection
         this.updateCursorPosition(textInput, render, style);
         this.updateSelectionHighlight(textInput, render, style);
@@ -488,7 +515,7 @@ export class TextInputManager {
 
         // Update display
         this.updateTextDisplay(textInput, render, style);
-        
+
         // Update cursor position and selection
         this.updateCursorPosition(textInput, render, style);
         this.updateSelectionHighlight(textInput, render, style);
@@ -500,29 +527,42 @@ export class TextInputManager {
     updateCursorPosition(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
         if (!textInput.textLayoutMetrics) return;
 
+        const pixelScale = render.actions.camera.getPixelToWorldScale();
+        // Calculate width correction ratio
+        // textureWidth is in world units (already scaled by pixelToWorldScale)
+        // totalWidth is in CSS pixels (unscaled)
+        // We need to compare them in the same unit (logical CSS pixels) to find any discrepancy
+        const widthCorrectionRatio = (textInput.textLayoutMetrics.totalWidth > 0 && textInput.textureWidth !== undefined)
+            ? (textInput.textureWidth / pixelScale) / textInput.textLayoutMetrics.totalWidth
+            : 1.0;
+
         // Create cursor if it doesn't exist yet and textureWidth is available
-        if (!textInput.cursorMesh && render.scene && textInput.textureWidth !== undefined) {
+        if (!textInput.cursorMesh && render.scene && textInput.textLayoutMetrics) {
             const textStyle = this.parseTextStyle(style);
             textInput.cursorMesh = this.textSelectionService.createTextCursor(
                 textInput.cursorPosition,
                 textInput.textLayoutMetrics,
                 textInput.mesh,
                 render.scene,
-                render.actions.camera.getPixelToWorldScale(),
+                pixelScale,
                 textStyle,
-                textInput.textureWidth
+                textInput.textureWidth,
+                widthCorrectionRatio
             );
         }
 
         if (!textInput.cursorMesh) return;
+
+        console.log('[TextInputManager] Width correction ratio:', widthCorrectionRatio);
 
         // Use text selection service for accurate cursor positioning
         this.textSelectionService.updateCursorPosition(
             textInput.cursorMesh,
             textInput.cursorPosition,
             textInput.textLayoutMetrics,
-            render.actions.camera.getPixelToWorldScale(),
-            textInput.textureWidth || 0
+            pixelScale,
+            textInput.textureWidth,
+            widthCorrectionRatio
         );
     }
 
