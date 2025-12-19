@@ -56,11 +56,6 @@ This plan describes how to refactor the codebase to ensure all layout and sizing
 - Document the pattern for future contributors.
 - **Check the separation of concerns plan for any relevant refactors and apply them as you go.**
 
-### 8. Add Unit Tests (Optional but Recommended)
-- Add tests to verify that layout logic produces correct pixel values.
-- Add tests to verify that world unit conversion is correct and consistent.
-- **Check the separation of concerns plan for any relevant refactors and apply them as you go.**
-
 ---
 
 ## Order of Audit and Refactor

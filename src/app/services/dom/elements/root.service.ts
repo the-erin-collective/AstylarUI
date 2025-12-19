@@ -44,6 +44,20 @@ export class RootService {
     });
 
     dom.context.elements.set('root-body', rootBody);
+
+    // Store root-body dimensions in elementDimensions in PIXELS (not world units)
+    const scene = render.scene;
+    const canvas = scene?.getEngine().getRenderingCanvas();
+    if (!canvas) {
+      throw new Error('Canvas not found when setting root-body elementDimensions');
+    }
+    dom.context.elementDimensions.set('root-body', {
+      width: canvas.width, // pixels
+      height: canvas.height, // pixels
+      padding: { top: 0, right: 0, bottom: 0, left: 0 }
+    });
+    console.log('[ELEMENT DIM DEBUG] Stored elementDimensions for root-body:', { width: canvas.width, height: canvas.height });
+
     return rootBody;
   }
 } 

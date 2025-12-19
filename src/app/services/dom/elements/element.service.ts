@@ -21,7 +21,7 @@ export class ElementService {
     const isListContainer = parentElement?.type === 'ul' || parentElement?.type === 'ol';
 
     // Check if parent is a flex container
-   // const isFlexContainer = parentElement ? dom.actions.isFlexContainer(render, parentElement, styles) : false;
+    const isFlexContainer = parentElement ? dom.actions.isFlexContainer(render, parentElement, styles) : false;
 
     console.log(`🔍 Parent element type: ${parentElement?.type}, isListContainer: ${isListContainer}`);
 
@@ -34,7 +34,7 @@ export class ElementService {
         console.error(`❌ Error in processListChildren for ${parentElement?.type}:`, error);
         throw error;
       }
-    }/* else if (isFlexContainer && parentElement) {
+    } else if (isFlexContainer && parentElement) {
       console.log(`🔀 Parent is flex container, applying flexbox layout to ${children.length} items`);
       try {
         dom.actions.processFlexChildren(dom, render, children, parent, styles, parentElement);
@@ -43,7 +43,7 @@ export class ElementService {
         console.error(`❌ Error in processFlexChildren for ${parentElement?.id}:`, error);
         throw error;
       }
-    } */else {
+    } else {
       console.log(`📄 Parent is NOT a list or flex container, using standard processing`);
       // Standard processing for non-list, non-flex elements
       children.forEach((child, index) => {
@@ -75,20 +75,18 @@ export class ElementService {
 
     // Get default styles for this element type
     const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
-    console.log(`🎨 Type defaults for ${element.type}:`, typeDefaults);
+    console.log(`[ELEMENT DEBUG] 🎨 Type defaults for ${element.type}: ${JSON.stringify(typeDefaults)}`);
 
-    // Merge defaults with explicit styles (explicit styles override defaults)
-    // Only use explicit style properties if they exist
-    const style: StyleRule = {
-      selector: element.id ? `#${element.id}` : element.type,
-      ...typeDefaults,
-      ...explicitStyle
-    };
+    // Use centralized CSS-correct merging
+    const style: StyleRule = StyleDefaultsService.mergeStyles(
+      { selector: element.id ? `#${element.id}` : element.type, ...typeDefaults },
+      explicitStyle || {}
+    ) as StyleRule;
 
-    console.log(`🏗️ Creating ${element.type} element${element.id ? ` #${element.id}` : ''}`);
-    console.log(`📋 Explicit style was:`, explicitStyle);
-    console.log(`🎨 Type defaults were:`, typeDefaults);
-    console.log(`🔀 Final merged style:`, style);
+    console.log(`[ELEMENT DEBUG] 🏗️ Creating ${element.type} element${element.id ? ` #${element.id}` : ''}`);
+    console.log(`[ELEMENT DEBUG] 📋 Explicit style was: ${JSON.stringify(explicitStyle)}`);
+    console.log(`[ELEMENT DEBUG] 🎨 Type defaults were: ${JSON.stringify(typeDefaults)}`);
+    console.log(`[ELEMENT DEBUG] 🔀 Final merged style: ${JSON.stringify(style)}`);
 
     // Calculate dimensions and position relative to parent
     const dimensions = flexSize ?
@@ -96,7 +94,7 @@ export class ElementService {
       this.calculateDimensions(dom, render, style, parent);
 
     if (flexSize) {
-      console.log(`🔀 Using flex dimensions for ${element.id}: ${flexSize.width.toFixed(2)}x${flexSize.height.toFixed(2)} (overriding calculated: ${dimensions.width.toFixed(2)}x${dimensions.height.toFixed(2)})`);
+      console.log(`[ELEMENT DEBUG] 🔀 Using flex dimensions for ${element.id}: ${flexSize.width.toFixed(2)}x${flexSize.height.toFixed(2)} (overriding calculated: ${dimensions.width.toFixed(2)}x${dimensions.height.toFixed(2)})`);
     }
 
     // Parse border radius and scale it to world coordinates
@@ -114,21 +112,32 @@ export class ElementService {
     // Create the mesh based on element type
     let mesh: any;
 
-    console.log(`🧩 Processing element with type: '${element.type}' and id: '${element.id}'`);
+    // Convert pixel dimensions to world units for mesh creation
+    const worldWidth = dimensions.width * scaleFactor;
+    const worldHeight = dimensions.height * scaleFactor;
+
+    // Add debug log for list items
+    if (element.type === 'li') {
+      console.log(`[LIST ITEM DEBUG] Creating list item mesh for ${element.id}:` +
+        ` pixel size: ${dimensions.width}x${dimensions.height},` +
+        ` world size: ${worldWidth}x${worldHeight}`);
+    }
+
+    console.log(`[ELEMENT DEBUG] 🧩 Processing element with type: '${element.type}' and id: '${element.id}'`);
 
     if (element.type === 'img') {
       // Create image element with texture support
-      mesh = this.createImageElement(render, element, style, dimensions, borderRadius);
+      mesh = this.createImageElement(render, element, style, { ...dimensions, width: worldWidth, height: worldHeight }, borderRadius);
     } else if (element.type === 'a') {
       // Create anchor element (button-like for now)
-      mesh = this.createAnchorElement(render, element, style, dimensions, borderRadius);
+      mesh = this.createAnchorElement(render, element, style, { ...dimensions, width: worldWidth, height: worldHeight }, borderRadius);
     } else if (polygonType === 'rectangle') {
       // Use polygon system for rectangles too to unify border handling
       mesh = render.actions.mesh.createPolygon(
         element.id || `element-${Date.now()}`,
         'rectangle',
-        dimensions.width,
-        dimensions.height,
+        worldWidth, // world units
+        worldHeight, // world units
         borderRadius
       );
     } else {
@@ -136,12 +145,12 @@ export class ElementService {
       mesh = render.actions.mesh.createPolygon(
         element.id || `element-${Date.now()}`,
         polygonType,
-        dimensions.width,
-        dimensions.height,
+        worldWidth, // world units
+        worldHeight, // world units
         borderRadius
       );
     }
-    console.log(`[BABYLON MESH DEBUG] Created mesh for ${element.id} (type: ${element.type}, polygon: ${polygonType}) with dimensions: width=${dimensions.width}, height=${dimensions.height}, borderRadius=${borderRadius}`);
+    console.log(`[ELEMENT DEBUG] [BABYLON MESH DEBUG] Created mesh for ${element.id} (type: ${element.type}, polygon: ${polygonType}) with dimensions: width=${worldWidth}, height=${worldHeight}, borderRadius=${borderRadius}`);
 
     // Calculate Z position based on z-index, but prefer flex position Z if available
     const zIndex = this.parseZIndex(style?.zIndex);
@@ -150,13 +159,7 @@ export class ElementService {
     // Use flex position Z if provided (it includes index-based layering), otherwise use calculated Z
     const zPosition = flexPosition ? flexPosition.z : baseZPosition;
 
-    console.log(`🎯 Z-positioning for ${element.id}:`, {
-      zIndex: zIndex,
-      baseZPosition: baseZPosition,
-      flexZPosition: flexPosition?.z,
-      finalZPosition: zPosition,
-      hasZIndexStyle: !!(style?.zIndex)
-    });
+    console.log(`🎯 Z-positioning for ${element.id}: ${JSON.stringify({ zIndex, baseZPosition, flexZPosition: flexPosition?.z, finalZPosition: zPosition, hasZIndexStyle: !!(style?.zIndex) })}`);
 
     // Position relative to parent (parent's coordinate system)
     // Calculate actual Z position that will be used for the element
@@ -169,10 +172,21 @@ export class ElementService {
       const worldY = flexPosition.y * scaleFactor;
       render.actions.mesh.positionMesh(mesh, worldX, worldY, zPosition);
       render.actions.mesh.parentMesh(mesh, parent);
+      if (element.type === 'li') {
+        console.log(`[LIST ITEM DEBUG] Positioned list item mesh for ${element.id}: world position: (${worldX}, ${worldY}, ${zPosition})`);
+      }
       console.log(`🔀 Using flex positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from flex: ${flexPosition.x}, ${flexPosition.y}) scaleFactor: ${scaleFactor}`);
     } else {
-      render.actions.mesh.positionMesh(mesh, dimensions.x, dimensions.y, zPosition);
+      // Convert pixel position to world units for mesh positioning
+      const scaleFactor = render.actions.camera.getPixelToWorldScale();
+      const worldX = dimensions.x * scaleFactor;
+      const worldY = dimensions.y * scaleFactor;
+      render.actions.mesh.positionMesh(mesh, worldX, worldY, zPosition);
       render.actions.mesh.parentMesh(mesh, parent);
+      if (element.type === 'li') {
+        console.log(`[LIST ITEM DEBUG] Positioned list item mesh for ${element.id}: world position: (${worldX}, ${worldY}, ${zPosition})`);
+      }
+      console.log(`[ELEMENT DEBUG] Using normal positioning for ${element.id}: (${worldX.toFixed(2)}, ${worldY.toFixed(2)}, ${zPosition.toFixed(6)}) world units (from dimensions.x: ${dimensions.x}, dimensions.y}) scaleFactor: ${scaleFactor}`);
     }
 
     // Apply material (start with normal state) - pass merged style that includes type defaults
@@ -182,36 +196,20 @@ export class ElementService {
     const transform = this.parseTransform(style?.transform);
     if (transform) {
       this.applyTransforms(mesh, transform);
+      // Also apply to all border meshes and parent them to the main mesh
+      for (let i = 0; i < 4; i++) {
+        const borderMesh = dom.context.elements.get(`${element.id}-border-${i}`);
+        if (borderMesh) {
+          this.applyTransforms(borderMesh, transform);
+          // Parent border mesh to main mesh for transform inheritance
+          render.actions.mesh.parentMesh(borderMesh, mesh);
+        }
+      }
     }
 
-    // Add box shadow if specified
-    const boxShadow = this.parseBoxShadow(style?.boxShadow);
-    if (boxShadow) {
-      // Scale box shadow values from pixels to world coordinates
-      const scaledOffsetX = boxShadow.offsetX * scaleFactor;
-      const scaledOffsetY = boxShadow.offsetY * scaleFactor;
-      const scaledBlur = boxShadow.blur * scaleFactor;
-
-      console.log(`🎭 Box shadow scaling for ${element.id}: offset (${boxShadow.offsetX}px, ${boxShadow.offsetY}px) → (${scaledOffsetX.toFixed(3)}, ${scaledOffsetY.toFixed(3)}) world units, blur ${boxShadow.blur}px → ${scaledBlur.toFixed(3)} world units`);
-
-      const shadowMesh = render.actions.mesh.createShadow(
-        `${element.id}-shadow`,
-        dimensions.width,
-        dimensions.height,
-        scaledOffsetX,
-        scaledOffsetY,
-        scaledBlur,
-        boxShadow.color,
-        polygonType,
-        borderRadius
-      );
-
-      // Position shadow behind the element with offset
-      const shadowZ = zPosition - 0.001; // Place slightly behind
-      const shadowX = flexPosition ? flexPosition.x + scaledOffsetX : dimensions.x + scaledOffsetX;
-      const shadowY = flexPosition ? flexPosition.y - scaledOffsetY : dimensions.y - scaledOffsetY;
-      render.actions.mesh.positionMesh(shadowMesh, shadowX, shadowY, shadowZ);
-      render.actions.mesh.parentMesh(shadowMesh, parent);
+    // Add or update box shadow mesh
+    if (element.id && parent instanceof Mesh) {
+      this.updateShadowMesh(dom, render, element.id, style, parent, dimensions, zPosition, borderRadius, polygonType, transform || undefined);
     }
 
     // Add borders if specified
@@ -225,9 +223,9 @@ export class ElementService {
       const borderMeshes = render.actions.mesh.createPolygonBorder(
         `${element.id}-border`,
         polygonType,
-        dimensions.width,
-        dimensions.height,
-        borderProperties.width,
+        worldWidth,
+        worldHeight,
+        borderProperties.width * scaleFactor, // border width in world units
         borderRadius
       );
 
@@ -237,23 +235,25 @@ export class ElementService {
 
       // Position border frames around the element
       // Use flex positioning if provided, otherwise use normal positioning
-      const borderX = flexPosition ? flexPosition.x : dimensions.x;
-      const borderY = flexPosition ? flexPosition.y : dimensions.y;
+      // Convert to world units
+      const borderX = flexPosition ? flexPosition.x * scaleFactor : dimensions.x * scaleFactor;
+      const borderY = flexPosition ? flexPosition.y * scaleFactor : dimensions.y * scaleFactor;
 
+      // Parent all border frames to main mesh BEFORE positioning for correct transform inheritance
+      borderMeshes.forEach(borderMesh => {
+        render.actions.mesh.parentMesh(borderMesh, mesh);
+      });
+
+      // Position border frames at (0,0) relative to main mesh
       render.actions.mesh.positionBorderFrames(
         borderMeshes,
-        borderX,
-        borderY,
+        0, // x relative to main mesh
+        0, // y relative to main mesh
         borderZPosition,
-        dimensions.width,
-        dimensions.height,
-        borderProperties.width
+        worldWidth,
+        worldHeight,
+        borderProperties.width * scaleFactor
       );
-
-      // Parent all border frames (skip if parent is undefined)
-      // borderMeshes.forEach(borderMesh => {
-      //   if (parent) dom.actions.parentMesh(borderMesh, parent);
-      // });
 
       // Apply border material to all frames with consistent rendering
       const borderOpacity = render.actions.style.parseOpacity(elementStyles?.normal?.opacity);
@@ -269,11 +269,6 @@ export class ElementService {
 
       borderMeshes.forEach(borderMesh => {
         borderMesh.material = borderMaterial;
-
-        // Apply same parenting as main element for consistent coordinate system
-        if (parent && dom.actions) {
-          render.actions.mesh.parentMesh(borderMesh, parent);
-        }
       });
 
       // Store border references for cleanup
@@ -295,11 +290,7 @@ export class ElementService {
       this.setupMouseEvents(dom, render, mesh, element.id);
     }
 
-    console.log(`Created element ${element.id}:`, {
-      position: mesh.position,
-      dimensions,
-      parentId: parent.name,
-    });
+    console.log(`Created element ${element.id}: ${JSON.stringify({ position: mesh.position, dimensions, parentId: parent.name })}`);
 
     // Store reference
     if (element.id) {
@@ -307,12 +298,22 @@ export class ElementService {
       dom.context.hoverStates.set(element.id, false); // Start in normal state
       dom.context.elementTypes.set(element.id, element.type); // Store element type for hover handling
 
+      // Convert padding from world units to pixels for storage
+      const pixelPadding = this.convertPaddingToPixels(dimensions.padding, render);
+
       // Store element dimensions and padding info for child calculations
+      // All values are in PIXELS
+      // Debug: Warn if suspiciously small for top-level containers
+      const isTopLevel = parent && parent.name === 'root-body';
+      if (isTopLevel && (dimensions.width < 100 || dimensions.height < 100)) {
+        console.warn(`[ELEMENT DIM DEBUG] SUSPICIOUS: Storing small dimensions for top-level element: ${element.id} (parent: ${parent.name}) width: ${dimensions.width}, height: ${dimensions.height}, style: ${JSON.stringify(style)}, stack: ${JSON.stringify((new Error()).stack)}`);
+      }
       dom.context.elementDimensions.set(element.id, {
-        width: dimensions.width,
-        height: dimensions.height,
-        padding: dimensions.padding
+        width: dimensions.width, // pixels
+        height: dimensions.height, // pixels
+        padding: pixelPadding // pixels
       });
+      console.log(`[ELEMENT DIM DEBUG] Stored elementDimensions for ${element.id}: ${JSON.stringify({ width: dimensions.width, height: dimensions.height, padding: pixelPadding })}`);
     }
 
     return mesh;
@@ -388,24 +389,28 @@ export class ElementService {
     padding: { top: number; right: number; bottom: number; left: number };
     margin: { top: number; right: number; bottom: number; left: number };
   } {
-    // Get parent dimensions from the mesh creation parameters
-    // For our standard world space, root body is 20x15
-    const parentBounds = parent.getBoundingInfo().boundingBox;
-    let parentWidth = Math.abs(parentBounds.maximum.x - parentBounds.minimum.x);
-    let parentHeight = Math.abs(parentBounds.maximum.y - parentBounds.minimum.y);
+    // Always use parent dimensions from elementDimensions (in pixels)
+    // Never use mesh bounding box fallbacks
+    const parentDims = dom.context.elementDimensions.get(parent.name);
+    if (!parentDims) {
+      throw new Error(`[ELEMENT DIM ERROR] Parent dimensions not found in elementDimensions for parent: ${parent.name}`);
+    }
+    let parentWidth = parentDims.width;
+    let parentHeight = parentDims.height;
+    console.log('[ELEMENT DIM DEBUG] Using elementDimensions for parent:', parent.name, { parentWidth, parentHeight });
 
     // If parent has padding, reduce available space for this child
     const parentInfo = this.getElementInfo(dom, parent.name);
     if (parentInfo && parentInfo.padding) {
       parentWidth -= (parentInfo.padding.left + parentInfo.padding.right);
       parentHeight -= (parentInfo.padding.top + parentInfo.padding.bottom);
-      console.log(`Applied parent padding - reduced dimensions from ${Math.abs(parentBounds.maximum.x - parentBounds.minimum.x)}x${Math.abs(parentBounds.maximum.y - parentBounds.minimum.y)} to ${parentWidth}x${parentHeight}`);
+      console.log(`Applied parent padding - reduced dimensions from original to ${parentWidth}x${parentHeight}`);
     }
 
     console.log('Parent dimensions:', { parentWidth, parentHeight });
 
     // Parse padding and margin
-    const padding = this.parsePadding(render, style);
+    const padding = this.parsePadding(render, style, undefined);
     const margin = this.parseMargin(style);
 
     // Available space after accounting for parent's padding
@@ -420,63 +425,77 @@ export class ElementService {
     let y = 0;
 
     if (style) {
+      if (style.selector && style.selector.startsWith('#ul-item-') || style.selector && style.selector.startsWith('#ol-item-') || style.selector && style.selector.startsWith('li')) {
+        console.log(`[LIST ITEM DIM DEBUG] For ${style.selector}: incoming style.height = ${style.height}`);
+      }
       console.log(`STYLE CHECK - Element: ${style.selector || 'unknown'}, left: ${style.left}, top: ${style.top}`);
 
       // Calculate width as percentage of available space (after margins)
       if (style.width) {
-        const widthPercent = this.parsePercentageValue(style.width);
-        width = (widthPercent / 100) * availableWidth;
+        if (typeof style.width === 'string' && style.width.endsWith('px')) {
+          width = parseFloat(style.width);
+          if (style.selector && (style.selector.startsWith('#ul-item-') || style.selector.startsWith('#ol-item-') || style.selector.startsWith('li'))) {
+            console.log(`[LIST ITEM DIM DEBUG] For ${style.selector}: using pixel width directly: ${width}`);
+          }
+        } else if (typeof style.width === 'string' && style.width.endsWith('%')) {
+          const percent = parseFloat(style.width);
+          width = (percent / 100) * availableWidth;
+        } else {
+          width = parseFloat(style.width);
+        }
       }
 
       // Calculate height as percentage of available space (after margins)
       if (style.height) {
-        const heightPercent = this.parsePercentageValue(style.height);
-        height = (heightPercent / 100) * availableHeight;
+        if (typeof style.height === 'string' && style.height.endsWith('px')) {
+          height = parseFloat(style.height);
+          if (style.selector && (style.selector.startsWith('#ul-item-') || style.selector.startsWith('#ol-item-') || style.selector.startsWith('li'))) {
+            console.log(`[LIST ITEM DIM DEBUG] For ${style.selector}: using pixel height directly: ${height}`);
+          }
+        } else if (typeof style.height === 'string' && style.height.endsWith('%')) {
+          const percent = parseFloat(style.height);
+          height = (percent / 100) * availableHeight;
+        } else {
+          height = parseFloat(style.height);
+        }
       }
 
       // Calculate position - CSS uses top-left origin, BabylonJS uses center origin
       if (style.left !== undefined) {
-        const leftPercent = this.parsePercentageValue(style.left);
-        // Convert from CSS left (0% = left edge) to BabylonJS center-based X
-        // Account for margin-left in positioning - apply scaling factor here
-        // left edge of parent is at -parentWidth/2
-        // element's left edge should be at: -parentWidth/2 + (margin.left * scale) + (leftPercent/100 * availableWidth)
-        // element's center should be at: element's left edge + width/2
-
-        const scaledMarginLeft = margin.left * (render.actions.camera.getPixelToWorldScale()); // Use camera-calculated scale factor
-
-        x = (-parentWidth / 2) + scaledMarginLeft + ((leftPercent / 100) * availableWidth) + (width / 2);
-        
-        // FIX: Flip X coordinate to correct the coordinate system issue
-        // The coordinate calculation is correct, but the visual output is flipped
-        // This suggests a fundamental coordinate system mismatch
+        if (typeof style.left === 'string' && style.left.endsWith('px')) {
+          // Use pixel value directly
+          x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
+        } else if (typeof style.left === 'string' && style.left.endsWith('%')) {
+          const leftPercent = parseFloat(style.left);
+          x = (-parentWidth / 2) + ((leftPercent / 100) * availableWidth) + (width / 2);
+        } else {
+          x = (-parentWidth / 2) + parseFloat(style.left) + (width / 2);
+        }
+        // Flip X coordinate if needed (existing logic)
         x = -x;
       }
 
       if (style.top !== undefined) {
-        const topPercent = this.parsePercentageValue(style.top);
-        // Convert from CSS top (0% = top edge) to BabylonJS center-based Y
-        // Account for margin-top in positioning - apply scaling factor here
-        // Note: CSS Y grows downward, BabylonJS Y grows upward
-        // top edge of parent is at +parentHeight/2
-        // element's top edge should be at: +parentHeight/2 - (margin.top * scale) - (topPercent/100 * availableHeight)
-        // element's center should be at: element's top edge - height/2
-        const scaledMarginTop = margin.top * (render.actions.camera.getPixelToWorldScale()); // Use camera-calculated scale factor
-
-        y = (parentHeight / 2) - scaledMarginTop - ((topPercent / 100) * availableHeight) - (height / 2);
+        if (typeof style.top === 'string' && style.top.endsWith('px')) {
+          // Use pixel value directly
+          y = (parentHeight / 2) - parseFloat(style.top) - (height / 2);
+        } else if (typeof style.top === 'string' && style.top.endsWith('%')) {
+          const topPercent = parseFloat(style.top);
+          y = (parentHeight / 2) - ((topPercent / 100) * availableHeight) - (height / 2);
+        } else {
+          y = (parentHeight / 2) - parseFloat(style.top) - (height / 2);
+        }
+      }
+      if (style && (style.selector && (style.selector.startsWith('#ul-item-') || style.selector.startsWith('#ol-item-') || style.selector.startsWith('li')))) {
+        console.log(`[LIST ITEM DIM DEBUG] For ${style.selector}: final calculated y = ${y}, x = ${x}`);
       }
     }
 
-    console.log('Calculated dimensions for element:', {
-      width,
-      height,
-      x,
-      y,
-      style,
-      padding,
-      margin,
-      parentDimensions: { parentWidth, parentHeight }
-    });
+    if (style && (style.selector && style.selector.startsWith('#ul-item-') || style.selector && style.selector.startsWith('#ol-item-') || style.selector && style.selector.startsWith('li'))) {
+      console.log(`[LIST ITEM DIM DEBUG] For ${style.selector}: final calculated height = ${height}`);
+    }
+
+    console.log(`[ELEMENT DIM DEBUG] Calculated dimensions for element: ${JSON.stringify({ width, height, x, y, style, padding, margin, parentDimensions: { parentWidth, parentHeight } })}`);
 
     return { width, height, x, y, padding, margin };
   }
@@ -779,29 +798,67 @@ export class ElementService {
   }
 
 
-  private parsePadding(render: BabylonRender, style: StyleRule | undefined) {
-    if (!style) {
+  private parsePadding(render: BabylonRender, mergedStyle: StyleRule | undefined, explicitStyle?: StyleRule) {
+    const selector = mergedStyle?.selector;
+    if (selector && (selector.startsWith('#unordered-list') || selector.startsWith('#ordered-list') || selector === 'ul' || selector === 'ol')) {
+      console.log(`[LIST CONTAINER PADDING DEBUG] Incoming merged style for ${selector}:`, JSON.stringify(mergedStyle));
+      if (explicitStyle) {
+        console.log(`[LIST CONTAINER PADDING DEBUG] Incoming explicit style for ${selector}:`, JSON.stringify(explicitStyle));
+      }
+    }
+    if (!mergedStyle) {
       return { top: 0, right: 0, bottom: 0, left: 0 };
     }
 
-    // Check for individual padding properties first
-    const paddingTop = this.parsePaddingValue(render, style.paddingTop);
-    const paddingRight = this.parsePaddingValue(render, style.paddingRight);
-    const paddingBottom = this.parsePaddingValue(render, style.paddingBottom);
-    const paddingLeft = this.parsePaddingValue(render, style.paddingLeft);
+    // Parse the shorthand padding property from the explicit style (if present)
+    const explicitShorthand = this.parseBoxValues(render, explicitStyle?.padding);
+    // Parse the shorthand padding property from the merged style (if present)
+    const mergedShorthand = this.parseBoxValues(render, mergedStyle.padding);
 
-    // If individual properties are set, use them
-    if (paddingTop !== null || paddingRight !== null || paddingBottom !== null || paddingLeft !== null) {
+    // Arrow function to capture 'this' context
+    const pickPadding = (side: 'Top' | 'Right' | 'Bottom' | 'Left') => {
+      const sideKey = `padding${side}` as keyof StyleRule;
+      const explicitSide = explicitStyle ? explicitStyle[sideKey] : undefined;
+      const mergedSide = mergedStyle[sideKey];
+      const explicitSideValue = explicitSide !== undefined ? (typeof explicitSide === 'string' ? parseFloat(explicitSide) : 0) : null;
+      const mergedSideValue = mergedSide !== undefined ? (typeof mergedSide === 'string' ? parseFloat(mergedSide) : 0) : null;
+      const explicitShorthandValue = explicitShorthand[side.toLowerCase() as 'top' | 'right' | 'bottom' | 'left'];
+      const mergedShorthandValue = mergedShorthand[side.toLowerCase() as 'top' | 'right' | 'bottom' | 'left'];
+      let result: number;
+      if (explicitSideValue !== null) {
+        result = this.parsePaddingValue(render, explicitSide as string) ?? 0;
+        if (selector && (selector.startsWith('#unordered-list') || selector.startsWith('#ordered-list') || selector === 'ul' || selector === 'ol')) {
+          console.log(`[LIST CONTAINER PADDING DEBUG] ${selector}: using explicit side ${side}: ${result}`);
+        }
+      } else if (explicitStyle && explicitStyle.padding) {
+        result = explicitShorthandValue;
+        if (selector && (selector.startsWith('#unordered-list') || selector.startsWith('#ordered-list') || selector === 'ul' || selector === 'ol')) {
+          console.log(`[LIST CONTAINER PADDING DEBUG] ${selector}: using explicit shorthand for ${side}: ${result}`);
+        }
+      } else if (!explicitStyle || !explicitStyle.padding) {
+        if (mergedSideValue !== null) {
+          result = this.parsePaddingValue(render, mergedSide as string) ?? 0;
+          if (selector && (selector.startsWith('#unordered-list') || selector.startsWith('#ordered-list') || selector === 'ul' || selector === 'ol')) {
+            console.log(`[LIST CONTAINER PADDING DEBUG] ${selector}: using merged side ${side}: ${result}`);
+          }
+        } else {
+          result = mergedShorthandValue;
+          if (selector && (selector.startsWith('#unordered-list') || selector.startsWith('#ordered-list') || selector === 'ul' || selector === 'ol')) {
+            console.log(`[LIST CONTAINER PADDING DEBUG] ${selector}: using merged shorthand for ${side}: ${result}`);
+          }
+        }
+      } else {
+        result = 0;
+      }
+      return result;
+    };
+
       return {
-        top: paddingTop ?? 0,
-        right: paddingRight ?? 0,
-        bottom: paddingBottom ?? 0,
-        left: paddingLeft ?? 0
-      };
-    }
-
-    // Otherwise, parse the shorthand padding property
-    return this.parseBoxValues(render, style.padding);
+      top: pickPadding('Top'),
+      right: pickPadding('Right'),
+      bottom: pickPadding('Bottom'),
+      left: pickPadding('Left')
+    };
   }
 
   private parseBoxValues(render: BabylonRender, value?: string) {
@@ -895,6 +952,11 @@ export class ElementService {
     }
 
     mesh.material = material;
+    // Log mesh rotation and transform after material and transform application
+    if (activeStyle?.transform) {
+      console.log(`[MATERIAL DEBUG] ${element.id} transform string:`, activeStyle.transform);
+    }
+    console.log(`[MATERIAL DEBUG] ${element.id} mesh.rotation after material:`, mesh.rotation);
   }
 
   private applyImageMaterialUpdate(dom: BabylonDOM, render: BabylonRender, mesh: Mesh, element: DOMElement, isHovered: boolean, mergedStyle?: StyleRule): void {
@@ -960,6 +1022,9 @@ export class ElementService {
         mesh.rotation.z = 0;
       }
     }
+    // After applying transform, log mesh rotation and transform string
+    console.log(`[IMAGE MATERIAL DEBUG] ${element.id} transform string:`, activeStyle?.transform);
+    console.log(`[IMAGE MATERIAL DEBUG] ${element.id} mesh.rotation after material:`, mesh.rotation);
   }
 
 
@@ -1365,135 +1430,109 @@ export class ElementService {
       const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle, ...hoverStyle, selector: `#${elementId}` };
 
       const normalRadius = this.parseBorderRadius(normalStyle?.borderRadius);
+      const safeNormalRadius = isNaN(normalRadius) ? 0 : normalRadius;
       const hoverRadius = this.parseBorderRadius(hoverStyle?.borderRadius);
-
-      if (hoverStyle?.borderRadius !== undefined && hoverRadius !== normalRadius) {
-        const dimensions = dom.context.elementDimensions.get(elementId);
-        if (dimensions) {
-          console.log(`🔄 Updating mesh border radius for hover state: ${elementId}, changing from ${normalRadius} to ${hoverRadius}`);
-          
-          try {
-            // Store the original border radius for restoration
-            dom.context.originalBorderRadius = dom.context.originalBorderRadius || new Map();
-            dom.context.originalBorderRadius.set(elementId, normalRadius);
-            
-            // Get the polygon type
-            const polygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
-            
-            // Calculate the border radius in world units
-            const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
-            const worldBorderRadius = hoverRadius * pixelToWorldScale;
-            
-            // Create a new vertex data with the updated border radius
-            const vertexData = render.actions.mesh.generatePolygonVertexData(
-              polygonType,
-              dimensions.width,
-              dimensions.height,
-              worldBorderRadius
-            );
-            
-            // Apply the new vertex data to the mesh
-            vertexData.applyToMesh(mainMesh, true);
-            
-            // Update border meshes with the new border radius
-            // First, check if there are any border meshes
-            let hasBorders = false;
-            for (let i = 0; i < 4; i++) {
-              if (dom.context.elements.get(`${elementId}-border-${i}`)) {
-                hasBorders = true;
-                break;
-              }
-            }
-            
-            if (hasBorders) {
-              // Get border properties from normal style
-              const borderWidth = this.parseBorderWidth(render, normalStyle.borderWidth);
-              const borderColor = render.actions.style.parseBackgroundColor(normalStyle.borderColor);
-              
-              // Update each border mesh
-              for (let i = 0; i < 4; i++) {
-                const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
-                if (borderMesh) {
-                  // Remove old border mesh
-                  borderMesh.dispose();
-                  dom.context.elements.delete(`${elementId}-border-${i}`);
-                }
-              }
-              
-              // Create new border meshes with updated border radius
-              const borderMeshes = render.actions.mesh.createPolygonBorder(
-                `${elementId}-border`,
-                polygonType,
-                dimensions.width,
-                dimensions.height,
-                borderWidth,
-                worldBorderRadius
-              );
-              
-              // Position and style the new border meshes
-              const borderZPosition = mainMesh.position.z + 0.001;
-              render.actions.mesh.positionBorderFrames(
-                borderMeshes,
-                mainMesh.position.x,
-                mainMesh.position.y,
-                borderZPosition,
-                dimensions.width,
-                dimensions.height,
-                borderWidth
-              );
-              
-              // Apply border material
-              const borderOpacity = render.actions.style.parseOpacity(normalStyle.opacity);
-              const borderMaterial = render.actions.mesh.createMaterial(
-                `${elementId}-border-material`,
-                borderColor,
-                undefined,
-                borderOpacity
-              );
-              
-              // Apply material and parent to all border meshes
-              borderMeshes.forEach((borderMesh, index) => {
-                borderMesh.material = borderMaterial;
-                
-                // Apply same parenting as main element
-                if (mainMesh.parent && mainMesh.parent instanceof Mesh) {
-                  render.actions.mesh.parentMesh(borderMesh, mainMesh.parent);
-                }
-                
-                // Store border references
-                dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
-              });
-            }
-            
-            console.log(`✅ Updated mesh and border radius for hover state: ${elementId}`);
-          } catch (error) {
-            console.error(`❌ Error updating border radius for hover state: ${elementId}`, error);
+      const dimensions = dom.context.elementDimensions.get(elementId);
+      const pixelToWorldScale = render.actions.camera.getPixelToWorldScale(); // <-- moved here
+      if (dimensions) {
+        const worldBorderRadius = (hoverStyle?.borderRadius !== undefined ? hoverRadius : safeNormalRadius) * pixelToWorldScale;
+        const worldWidth = dimensions.width * pixelToWorldScale;
+        const worldHeight = dimensions.height * pixelToWorldScale;
+        const polygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+        // Update mesh geometry for hover border radius
+        const vertexData = render.actions.mesh.generatePolygonVertexData(
+          polygonType,
+          worldWidth,
+          worldHeight,
+          worldBorderRadius
+        );
+        vertexData.applyToMesh(mainMesh, true);
+        // Remove old border meshes
+        for (let i = 0; i < 4; i++) {
+          const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
+          if (borderMesh) {
+            borderMesh.dispose();
+            dom.context.elements.delete(`${elementId}-border-${i}`);
+            console.log(`[ELEMENT HOVER DEBUG] Disposed old border mesh for hover: ${elementId}-border-${i}`);
           }
         }
+        // Create new border meshes for hover
+        const borderWidth = this.parseBorderWidth(render, hoverStyle?.borderWidth ?? normalStyle.borderWidth);
+        const borderColor = render.actions.style.parseBackgroundColor(hoverStyle?.borderColor ?? normalStyle.borderColor);
+        const borderMeshes = render.actions.mesh.createPolygonBorder(
+          `${elementId}-border`,
+          polygonType,
+          worldWidth,
+          worldHeight,
+          borderWidth,
+          worldBorderRadius
+        );
+        const borderZPosition = mainMesh.position.z + 0.001;
+        render.actions.mesh.positionBorderFrames(
+          borderMeshes,
+          mainMesh.position.x,
+          mainMesh.position.y,
+          borderZPosition,
+          worldWidth,
+          worldHeight,
+          borderWidth
+        );
+        const borderOpacity = render.actions.style.parseOpacity(hoverStyle?.opacity ?? normalStyle.opacity);
+        const borderMaterial = render.actions.mesh.createMaterial(
+          `${elementId}-border-material`,
+          borderColor,
+          undefined,
+          borderOpacity
+        );
+        borderMeshes.forEach((borderMesh, index) => {
+          borderMesh.material = borderMaterial;
+          if (mainMesh.parent && mainMesh.parent instanceof Mesh) {
+            render.actions.mesh.parentMesh(borderMesh, mainMesh.parent);
+          }
+          dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
+          console.log(`[ELEMENT HOVER DEBUG] Created hover border mesh: ${elementId}-border-${index}`);
+        });
+        // Calculate worldBorderRadius and polygonType for shadow
+        const shadowBorderRadius = (hoverStyle?.borderRadius !== undefined ? hoverRadius : safeNormalRadius) * pixelToWorldScale;
+        const shadowPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+        // Ensure parent is a Mesh
+        const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
+        // Add or update shadow mesh for hover
+        this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
       }
-
       dom.context.hoverStates.set(elementId, true);
       this.applyElementMaterial(dom, render, mainMesh, element, true, mergedStyle);
       const transform = this.parseTransform(mergedStyle?.transform);
       if (transform) {
         this.applyTransforms(mainMesh, transform);
-      }
-      for (let i = 0; i < 4; i++) {
-        const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
-        if (borderMesh) {
-          if (transform) {
+        // Also apply to all border meshes and parent them to the main mesh
+        for (let i = 0; i < 4; i++) {
+          const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
+          if (borderMesh) {
             this.applyTransforms(borderMesh, transform);
-          } else {
-            borderMesh.scaling.x = 1;
-            borderMesh.scaling.y = 1;
-            borderMesh.scaling.z = 1;
-            borderMesh.rotation.x = 0;
-            borderMesh.rotation.y = 0;
-            borderMesh.rotation.z = 0;
+            // Parent border mesh to main mesh for transform inheritance
+            render.actions.mesh.parentMesh(borderMesh, mainMesh);
           }
-          this.applyBorderMaterial(dom, render, borderMesh, elementId, true);
         }
       }
+      // After all style/geometry updates, log the mesh rotation and transform
+      if (mergedStyle.transform) {
+        console.log(`[HOVER DEBUG] ${elementId} transform string:`, mergedStyle.transform);
+      }
+      console.log(`[HOVER DEBUG] ${elementId} mesh.rotation after hover:`, mainMesh.rotation);
+      // Remove old shadow mesh
+      const oldShadow = dom.context.elements.get(`${elementId}-shadow`);
+      if (oldShadow) {
+        oldShadow.dispose();
+        dom.context.elements.delete(`${elementId}-shadow`);
+      }
+      // Calculate worldBorderRadius and polygonType for shadow
+      const shadowBorderRadius = (hoverStyle?.borderRadius !== undefined ? hoverRadius : safeNormalRadius) * pixelToWorldScale;
+      const shadowPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+      // Ensure parent is a Mesh
+      const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
+      // Add or update shadow mesh for hover
+      this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
     }));
 
     mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
@@ -1505,132 +1544,91 @@ export class ElementService {
       const elementStyles = dom.context.elementStyles.get(elementId);
       const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
       const normalStyle = (elementStyles?.normal || {}) as StyleRule;
-      const hoverStyle = (elementStyles?.hover || {}) as StyleRule;
-      
-      // Check if we need to recreate the element for border radius changes
+      const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle, selector: `#${elementId}` };
       const normalRadius = this.parseBorderRadius(normalStyle?.borderRadius);
-      const hoverRadius = this.parseBorderRadius(hoverStyle?.borderRadius);
-
-      if (hoverStyle?.borderRadius !== undefined && hoverRadius !== normalRadius) {
-        const dimensions = dom.context.elementDimensions.get(elementId);
-        if (dimensions) {
-          console.log(`🔄 Updating mesh border radius for normal state: ${elementId}, changing from ${hoverRadius} to ${normalRadius}`);
-          
-          try {
-            // Create merged style for normal state
-            const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle };
-            mergedStyle.selector = `#${elementId}`;
-            
-            // Get the polygon type
-            const polygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
-            
-            // Calculate the border radius in world units
-            const pixelToWorldScale = render.actions.camera.getPixelToWorldScale();
-            const worldBorderRadius = normalRadius * pixelToWorldScale;
-            
-            // Create a new vertex data with the updated border radius
-            const vertexData = render.actions.mesh.generatePolygonVertexData(
-              polygonType,
-              dimensions.width,
-              dimensions.height,
-              worldBorderRadius
-            );
-            
-            // Apply the new vertex data to the mesh
-            vertexData.applyToMesh(mainMesh, true);
-            
-            // Update border meshes with the original border radius
-            // First, check if there are any border meshes
-            let hasBorders = false;
-            for (let i = 0; i < 4; i++) {
-              if (dom.context.elements.get(`${elementId}-border-${i}`)) {
-                hasBorders = true;
-                break;
-              }
-            }
-            
-            if (hasBorders) {
-              // Get border properties from normal style
-              const borderWidth = this.parseBorderWidth(render, normalStyle.borderWidth);
-              const borderColor = render.actions.style.parseBackgroundColor(normalStyle.borderColor);
-              
-              // Update each border mesh
-              for (let i = 0; i < 4; i++) {
-                const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
-                if (borderMesh) {
-                  // Remove old border mesh
-                  borderMesh.dispose();
-                  dom.context.elements.delete(`${elementId}-border-${i}`);
-                }
-              }
-              
-              // Create new border meshes with original border radius
-              const borderMeshes = render.actions.mesh.createPolygonBorder(
-                `${elementId}-border`,
-                polygonType,
-                dimensions.width,
-                dimensions.height,
-                borderWidth,
-                worldBorderRadius
-              );
-              
-              // Position and style the new border meshes
-              const borderZPosition = mainMesh.position.z + 0.001;
-              render.actions.mesh.positionBorderFrames(
-                borderMeshes,
-                mainMesh.position.x,
-                mainMesh.position.y,
-                borderZPosition,
-                dimensions.width,
-                dimensions.height,
-                borderWidth
-              );
-              
-              // Apply border material
-              const borderOpacity = render.actions.style.parseOpacity(normalStyle.opacity);
-              const borderMaterial = render.actions.mesh.createMaterial(
-                `${elementId}-border-material`,
-                borderColor,
-                undefined,
-                borderOpacity
-              );
-              
-              // Apply material and parent to all border meshes
-              borderMeshes.forEach((borderMesh, index) => {
-                borderMesh.material = borderMaterial;
-                
-                // Apply same parenting as main element
-                if (mainMesh.parent && mainMesh.parent instanceof Mesh) {
-                  render.actions.mesh.parentMesh(borderMesh, mainMesh.parent);
-                }
-                
-                // Store border references
-                dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
-              });
-            }
-            
-            // Clean up the stored original border radius
-            if (dom.context.originalBorderRadius) {
-              dom.context.originalBorderRadius.delete(elementId);
-            }
-            
-            console.log(`✅ Updated mesh and border radius for normal state: ${elementId}`);
-          } catch (error) {
-            console.error(`❌ Error updating border radius for normal state: ${elementId}`, error);
+      const safeNormalRadius = isNaN(normalRadius) ? 0 : normalRadius;
+      const dimensions = dom.context.elementDimensions.get(elementId);
+      const pixelToWorldScale = render.actions.camera.getPixelToWorldScale(); // <-- moved here
+      if (dimensions) {
+        const worldBorderRadius = safeNormalRadius * pixelToWorldScale;
+        const worldWidth = dimensions.width * pixelToWorldScale;
+        const worldHeight = dimensions.height * pixelToWorldScale;
+        const polygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+        // Update mesh geometry for normal border radius
+        const vertexData = render.actions.mesh.generatePolygonVertexData(
+          polygonType,
+          worldWidth,
+          worldHeight,
+          worldBorderRadius
+        );
+        vertexData.applyToMesh(mainMesh, true);
+        // Remove old border meshes
+        for (let i = 0; i < 4; i++) {
+          const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
+          if (borderMesh) {
+            borderMesh.dispose();
+            dom.context.elements.delete(`${elementId}-border-${i}`);
+            console.log(`[ELEMENT HOVER DEBUG] Disposed old border mesh for normal: ${elementId}-border-${i}`);
           }
         }
+        // Create new border meshes for normal
+        const borderWidth = this.parseBorderWidth(render, normalStyle.borderWidth);
+        const borderColor = render.actions.style.parseBackgroundColor(normalStyle.borderColor);
+        const borderMeshes = render.actions.mesh.createPolygonBorder(
+          `${elementId}-border`,
+          polygonType,
+          worldWidth,
+          worldHeight,
+          borderWidth,
+          worldBorderRadius
+        );
+        const borderZPosition = mainMesh.position.z + 0.001;
+        render.actions.mesh.positionBorderFrames(
+          borderMeshes,
+          mainMesh.position.x,
+          mainMesh.position.y,
+          borderZPosition,
+          worldWidth,
+          worldHeight,
+          borderWidth
+        );
+        const borderOpacity = render.actions.style.parseOpacity(normalStyle.opacity);
+        const borderMaterial = render.actions.mesh.createMaterial(
+          `${elementId}-border-material`,
+          borderColor,
+          undefined,
+          borderOpacity
+        );
+        borderMeshes.forEach((borderMesh, index) => {
+          borderMesh.material = borderMaterial;
+          if (mainMesh.parent && mainMesh.parent instanceof Mesh) {
+            render.actions.mesh.parentMesh(borderMesh, mainMesh.parent);
+          }
+          dom.context.elements.set(`${elementId}-border-${index}`, borderMesh);
+          console.log(`[ELEMENT HOVER DEBUG] Created normal border mesh: ${elementId}-border-${index}`);
+        });
+        // Calculate worldBorderRadius and polygonType for shadow
+        const shadowBorderRadius = safeNormalRadius * pixelToWorldScale;
+        const shadowPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+        // Ensure parent is a Mesh
+        const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
+        // Add or update shadow mesh for normal
+        this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
       }
-      
-      // If we didn't need to recreate the element, just update the material
-      const mergedStyle: StyleRule = { ...typeDefaults, ...normalStyle };
-      mergedStyle.selector = `#${elementId}`;
-      
       dom.context.hoverStates.set(elementId, false);
       this.applyElementMaterial(dom, render, mainMesh, element, false, mergedStyle);
-
       const transform = this.parseTransform(mergedStyle?.transform);
       if (transform) {
         this.applyTransforms(mainMesh, transform);
+        // Also apply to all border meshes and parent them to the main mesh
+        for (let i = 0; i < 4; i++) {
+          const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
+          if (borderMesh) {
+            this.applyTransforms(borderMesh, transform);
+            // Parent border mesh to main mesh for transform inheritance
+            render.actions.mesh.parentMesh(borderMesh, mainMesh);
+          }
+        }
       } else {
         mainMesh.scaling.x = 1;
         mainMesh.scaling.y = 1;
@@ -1638,13 +1636,9 @@ export class ElementService {
         mainMesh.rotation.x = 0;
         mainMesh.rotation.y = 0;
         mainMesh.rotation.z = 0;
-      }
-      for (let i = 0; i < 4; i++) {
-        const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
-        if (borderMesh) {
-          if (transform) {
-            this.applyTransforms(borderMesh, transform);
-          } else {
+        for (let i = 0; i < 4; i++) {
+          const borderMesh = dom.context.elements.get(`${elementId}-border-${i}`);
+          if (borderMesh) {
             borderMesh.scaling.x = 1;
             borderMesh.scaling.y = 1;
             borderMesh.scaling.z = 1;
@@ -1652,9 +1646,100 @@ export class ElementService {
             borderMesh.rotation.y = 0;
             borderMesh.rotation.z = 0;
           }
-          this.applyBorderMaterial(dom, render, borderMesh, elementId, false);
         }
       }
+      // Remove old shadow mesh
+      const oldShadow = dom.context.elements.get(`${elementId}-shadow`);
+      if (oldShadow) {
+        oldShadow.dispose();
+        dom.context.elements.delete(`${elementId}-shadow`);
+      }
+      // Calculate worldBorderRadius and polygonType for shadow
+      const shadowBorderRadius = safeNormalRadius * pixelToWorldScale;
+      const shadowPolygonType = this.parsePolygonType(mergedStyle?.polygonType) || 'rectangle';
+      // Ensure parent is a Mesh
+      const shadowParent = (mainMesh.parent && mainMesh.parent instanceof Mesh) ? mainMesh.parent : mesh;
+      // Add or update shadow mesh for normal
+      this.updateShadowMesh(dom, render, elementId, mergedStyle, shadowParent, dimensions, mainMesh.position.z, shadowBorderRadius, shadowPolygonType, this.parseTransform(mergedStyle.transform) || undefined);
     }));
+  }
+
+  /**
+   * Converts a padding object from world units to pixels using the camera scale factor.
+   * @param padding The padding object with top/right/bottom/left in world units.
+   * @param render The BabylonRender object to get the scale factor.
+   * @returns The padding object in pixels.
+   */
+  private convertPaddingToPixels(padding: { top: number; right: number; bottom: number; left: number }, render: BabylonRender): { top: number; right: number; bottom: number; left: number } {
+    const scale = render.actions.camera.getPixelToWorldScale();
+    if (!scale || scale === 0) return { ...padding };
+    return {
+      top: Math.round(padding.top / scale),
+      right: Math.round(padding.right / scale),
+      bottom: Math.round(padding.bottom / scale),
+      left: Math.round(padding.left / scale)
+    };
+  }
+
+  // Helper to parse RGBA color and multiply alpha
+  private getBoxShadowColorWithOpacity(color: string, styleOpacity: number): string {
+    // Try to parse rgba/hsla or hex
+    const rgbaRegex = /rgba?\(([^)]+)\)/;
+    const match = color.match(rgbaRegex);
+    if (match) {
+      const parts = match[1].split(',').map(p => p.trim());
+      let r = parseFloat(parts[0]);
+      let g = parseFloat(parts[1]);
+      let b = parseFloat(parts[2]);
+      let a = parts[3] !== undefined ? parseFloat(parts[3]) : 1;
+      a = Math.max(0, Math.min(1, a * styleOpacity));
+      return `rgba(${r},${g},${b},${a})`;
+    }
+    // Hex or named color fallback: just return as is (no alpha multiplication)
+    return color;
+  }
+
+  // Helper to create or update the shadow mesh for an element
+  private updateShadowMesh(dom: BabylonDOM, render: BabylonRender, elementId: string, style: StyleRule, parent: Mesh, dimensions: any, zPosition: number, borderRadius: number, polygonType: string, transform?: TransformData) {
+    // Remove old shadow mesh if it exists
+    const oldShadow = dom.context.elements.get(`${elementId}-shadow`);
+    if (oldShadow) {
+      oldShadow.dispose();
+      dom.context.elements.delete(`${elementId}-shadow`);
+    }
+    const boxShadow = this.parseBoxShadow(style?.boxShadow);
+    if (!boxShadow) return;
+    const scaleFactor = render.actions.camera.getPixelToWorldScale();
+    const worldWidth = dimensions.width * scaleFactor;
+    const worldHeight = dimensions.height * scaleFactor;
+    const scaledOffsetX = boxShadow.offsetX * scaleFactor;
+    const scaledOffsetY = boxShadow.offsetY * scaleFactor;
+    const scaledBlur = boxShadow.blur * scaleFactor;
+    // Multiply color alpha by style opacity
+    const styleOpacity = render.actions.style.parseOpacity(style.opacity);
+    const shadowColor = this.getBoxShadowColorWithOpacity(boxShadow.color, styleOpacity);
+    const shadowMesh = render.actions.mesh.createShadow(
+      `${elementId}-shadow`,
+      worldWidth,
+      worldHeight,
+      scaledOffsetX,
+      scaledOffsetY,
+      scaledBlur,
+      shadowColor,
+      polygonType,
+      borderRadius
+    );
+    // Position shadow behind the element with offset
+    const shadowZ = zPosition - 0.001;
+    // Convert shadow position to world units
+    const shadowX = (dimensions.x + scaledOffsetX) * scaleFactor;
+    const shadowY = (dimensions.y - scaledOffsetY) * scaleFactor;
+    render.actions.mesh.positionMesh(shadowMesh, shadowX, shadowY, shadowZ);
+    render.actions.mesh.parentMesh(shadowMesh, parent);
+    // Apply transforms if present
+    if (transform) {
+      this.applyTransforms(shadowMesh, transform);
+    }
+    dom.context.elements.set(`${elementId}-shadow`, shadowMesh);
   }
 } 

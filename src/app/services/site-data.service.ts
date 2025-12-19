@@ -216,15 +216,18 @@ export class SiteDataService {
         // List items for unordered list (will be automatically positioned)
         {
           selector: '#ul-item-1',
+          height: '100px',
           background: '#f0f0f0', // Added default background for visibility
           // No positioning needed - automatic stacking
         },
         {
           selector: '#ul-item-2',
+          height: '100px',
           background: '#3498db', // Custom background for variety
         },
         {
           selector: '#ul-item-3',
+          height: '100px',
           borderColor: '#cccccc', // Added default border color
           borderWidth: '2px',
           background: '#f0f0f0', // Added default background for visibility
@@ -239,7 +242,6 @@ export class SiteDataService {
           height: '85%',
           background: 'rgba(142, 68, 173, 0.3)', // Purple semi-transparent background
           borderRadius: '8px',
-          padding: '20px',
           listItemSpacing: '4px' // Reduced spacing to fit more items
         },
 
@@ -247,21 +249,25 @@ export class SiteDataService {
         {
           selector: '#ol-item-1',
           background: '#e67e22', // Orange background
+          height: '65px'
         },
         {
           selector: '#ol-item-2',
           background: '#f0f0f0', // Added default background for visibility
+          height: '65px'
           // Default list item styling
         },
         {
           selector: '#ol-item-3',
           background: '#27ae60', // Green background
-          opacity: '0.8'
+          opacity: '0.8',
+          height: '65px'
         },
         {
           selector: '#ol-item-4',
           background: '#f39c12', // Yellow background
-          borderRadius: '12px'
+          borderRadius: '12px',
+          height: '65px'
         }
       ],
       root: {
@@ -330,7 +336,7 @@ export class SiteDataService {
       styles: [
         {
           selector: 'root',
-          background: '#1a1a2e' // Dark blue background to make images stand out
+          background: '#3a3a7e' // Dark blue background to make images stand out
         },
 
         // Portrait image (left side)
@@ -381,7 +387,7 @@ export class SiteDataService {
           width: '15%',
           height: '20%',
           borderRadius: '50%', // Make it circular
-          boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+          boxShadow: '0 4px 8px rgba(0,0,0,0.8)',
           opacity: '1.0',
           src: '/images/abstract-gray-oil-paint-textured-background.jpg'
         },
@@ -423,7 +429,7 @@ export class SiteDataService {
           selector: '#relative-link',
           background: '#196099',
           top: '15%',
-          left: '10%',
+          left: '6.25%',
           width: '25%',
           height: '12%',
           href: '/site/about', // Relative URL to another site
@@ -441,7 +447,7 @@ export class SiteDataService {
         {
           selector: '#absolute-link',
           top: '15%',
-          left: '40%',
+          left: '37.5%',
           width: '25%',
           height: '12%',
           background: '#609919',
@@ -463,7 +469,7 @@ export class SiteDataService {
         {
           selector: '#onclick-link',
           top: '15%',
-          left: '70%',
+          left: '68.75%',
           width: '25%',
           height: '12%',
           onclick: 'console.log("Custom button clicked!")',
@@ -483,7 +489,7 @@ export class SiteDataService {
         {
           selector: '#combined-link',
           top: '40%',
-          left: '10%',
+          left: '6.25%',
           width: '25%',
           height: '12%',
           href: '/site/images',
@@ -506,7 +512,7 @@ export class SiteDataService {
         {
           selector: '#external-link',
           top: '40%',
-          left: '40%',
+          left: '37.5%',
           width: '25%',
           height: '12%',
           href: 'https://babylonjs.com',
@@ -528,7 +534,7 @@ export class SiteDataService {
         {
           selector: '#same-window-absolute',
           top: '40%',
-          left: '70%',
+          left: '68.75%',
           width: '25%',
           height: '12%',
           href: 'https://developer.mozilla.org',

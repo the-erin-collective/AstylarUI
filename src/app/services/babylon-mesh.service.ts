@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Scene, MeshBuilder, StandardMaterial, Color3, Vector3, Vector2, Mesh, Material, VertexData, PolygonMeshBuilder, DynamicTexture } from '@babylonjs/core';
 import { BabylonCameraService } from './babylon-camera.service';
+import { CoordinateTransformService } from './coordinate-transform.service';
 import roundPolygon, { getSegments } from 'round-polygon';
 
 @Injectable({
@@ -9,8 +10,11 @@ import roundPolygon, { getSegments } from 'round-polygon';
 export class BabylonMeshService {
   private scene?: Scene;
   private cameraService?: BabylonCameraService;
+  private coordinateTransform: CoordinateTransformService;
 
-  constructor() { }
+  constructor() { 
+    this.coordinateTransform = new CoordinateTransformService();
+  }
 
   initialize(scene: Scene, cameraService?: BabylonCameraService): void {
     this.scene = scene;
@@ -1139,8 +1143,10 @@ export class BabylonMeshService {
   }
 
   positionMesh(mesh: Mesh, x: number, y: number, z: number): void {
-    console.log(`[BabylonMeshService] positionMesh called for mesh: ${mesh?.name || 'unknown'} with x=${x}, y=${y}, z=${z}`);
-    mesh.position = new Vector3(x, y, z);
+    // Use the coordinate transform service to convert from logical to render coordinates
+    const renderPosition = this.coordinateTransform.transformToRenderCoordinates(x, y, z);
+    
+    mesh.position = renderPosition;
     console.log(`[BabylonMeshService] mesh.position after set: (${mesh.position.x}, ${mesh.position.y}, ${mesh.position.z})`);
   }
 

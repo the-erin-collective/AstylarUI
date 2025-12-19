@@ -6,9 +6,9 @@ import { BabylonRender } from "./render.types";
 export interface BabylonDOMActions {
     processChildren: (dom: BabylonDOM, render: BabylonRender, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement?: DOMElement) => void;
     createElement(dom: BabylonDOM, render: BabylonRender, element: DOMElement, parent: Mesh, styles: StyleRule[], flexPosition?: { x: number; y: number; z: number }, flexSize?: { width: number; height: number }): Mesh;
-  //  isFlexContainer(render: BabylonRender, parentElement: DOMElement, styles: StyleRule[]): boolean;
+    isFlexContainer(render: BabylonRender, parentElement: DOMElement, styles: StyleRule[]): boolean;
     processListChildren(dom: BabylonDOM, render: BabylonRender, children: DOMElement[], parent: Mesh, styles: StyleRule[], listType: 'ul' | 'ol'): void;
-   // processFlexChildren(dom: BabylonDOM, render: BabylonRender, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement): void;
+    processFlexChildren(dom: BabylonDOM, render: BabylonRender, children: DOMElement[], parent: Mesh, styles: StyleRule[], parentElement: DOMElement): void;
     requestElementRecreation: (
         dom: BabylonDOM,
         render: BabylonRender,

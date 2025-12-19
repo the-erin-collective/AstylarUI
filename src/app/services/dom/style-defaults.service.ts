@@ -13,6 +13,17 @@ const globalDefaultStyle: Partial<StyleRule> = {
     background: 'transparent',
     boxShadow: undefined,
     opacity: '1.0',
+    // Flexbox defaults (match browser spec)
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    alignContent: 'stretch',
+    order: '0',
+    flexGrow: '0',
+    flexShrink: '1',
+    flexBasis: 'auto',
+    alignSelf: 'auto',
     // No default for width/height (auto)
     // No default for flex properties (handled by flex container)
 };
@@ -73,6 +84,27 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
     providedIn: 'root'
 })
 export class StyleDefaultsService {
+    static mergeStyles(base: Partial<StyleRule>, override: Partial<StyleRule>): Partial<StyleRule> {
+        const merged = { ...base, ...override };
+        // Handle padding
+        if (override?.padding) {
+            ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'].forEach(side => {
+                if (!(side in override)) {
+                    delete merged[side as keyof StyleRule];
+                }
+            });
+        }
+        // Handle margin
+        if (override?.margin) {
+            ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'].forEach(side => {
+                if (!(side in override)) {
+                    delete merged[side as keyof StyleRule];
+                }
+            });
+        }
+        return merged;
+    }
+
     getGlobalDefaultStyle(): Partial<StyleRule> {
         return globalDefaultStyle;
     }

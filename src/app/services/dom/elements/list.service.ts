@@ -19,6 +19,8 @@ export class ListService {
 
       // Calculate automatic item height based on container size and number of items
       const containerHeight = this.getContainerAvailableHeight(dom, render,parent);
+      const parentId = this.getElementIdFromMeshName(parent.name);
+      console.log(`[LIST CONTAINER DEBUG] Container: ${parentId}, height: ${containerHeight}, itemCount: ${children.length}, spacing: ${listItemSpacing}`);
       const automaticItemHeight = this.calculateAutomaticItemHeight(containerHeight, children.length, listItemSpacing);
       console.log(`📊 ${listType.toUpperCase()} Container "${parent.name}": height=${containerHeight}px, items=${children.length}, auto item height=${automaticItemHeight}px`);
 
@@ -30,13 +32,21 @@ export class ListService {
 
         try {
           // Create the list item with automatic positioning and height
-          const listItemMesh = this.createListItem(dom, render,child, parent, styles, currentY, index, listType, automaticItemHeight);
+          const listItemMesh = this.createListItem(dom, render,child, parent, styles, currentY, index, listType, automaticItemHeight, parentId || undefined);
           console.log(`✅ Created list item mesh:`, listItemMesh.name, `Position:`, listItemMesh.position);
           console.log(`📏 Item ${index + 1} final position: x=${listItemMesh.position.x}, y=${listItemMesh.position.y}, z=${listItemMesh.position.z}`);
 
+          // Determine the actual height for this item
+          const elementStyles = child.id ? dom.context.elementStyles.get(child.id) : undefined;
+          const explicitStyle = elementStyles?.normal;
+          let itemHeight = automaticItemHeight;
+          if (explicitStyle?.height && typeof explicitStyle.height === 'string' && explicitStyle.height.endsWith('px')) {
+            itemHeight = parseFloat(explicitStyle.height);
+          }
+
           // Move to next item position
-          console.log(`📐 Item ${index + 1} height: ${automaticItemHeight}, moving currentY from ${currentY} to ${currentY + automaticItemHeight + listItemSpacing}`);
-          currentY += automaticItemHeight + listItemSpacing;
+          console.log(`📐 Item ${index + 1} height: ${itemHeight}, moving currentY from ${currentY} to ${currentY + itemHeight + listItemSpacing}`);
+          currentY += itemHeight + listItemSpacing;
 
           // Process nested children if any
           if (child.children && child.children.length > 0) {
@@ -183,7 +193,7 @@ export class ListService {
     console.log(`✅ Added ${listType} indicator:`, indicatorMesh.name, `with material:`, indicatorMaterial.name);
   }
 
-  private createListItem(dom: BabylonDOM, render: BabylonRender, element: DOMElement, parent: Mesh, styles: StyleRule[], yOffset: number, index: number, listType: 'ul' | 'ol', automaticHeight?: number): Mesh {
+  private createListItem(dom: BabylonDOM, render: BabylonRender, element: DOMElement, parent: Mesh, styles: StyleRule[], yOffset: number, index: number, listType: 'ul' | 'ol', automaticHeight?: number, parentId?: string): Mesh {
     // Create modified element styles for automatic positioning
     const elementStyles = element.id ? dom.context.elementStyles.get(element.id) : undefined;
     const explicitStyle = elementStyles?.normal;
@@ -191,15 +201,19 @@ export class ListService {
     // Get default styles and merge
     const typeDefaults = render.actions.style.getElementTypeDefaults(element.type);
 
+    // Get the container's dimensions from our element dimensions cache
+    const containerDimensions = parentId ? dom.context.elementDimensions.get(parentId) : undefined;
+    const containerPadding = containerDimensions?.padding || { left: 0, right: 0, top: 0, bottom: 0 };
+
     // Create auto-positioned style - modify the explicit style to add automatic positioning
     const autoPositionedStyle: StyleRule = {
       selector: element.id ? `#${element.id}` : element.type,
       ...typeDefaults,
       ...explicitStyle,
       top: `${yOffset}px`,              // Automatic Y positioning
-      left: '10%',                      // Leave space for bullet/number
+      left: `${containerPadding.left}px`, // Offset by container's left padding
       width: '85%',                     // Use most of container width
-      ...(automaticHeight ? { height: `${automaticHeight}px` } : {}), // Add automatic height if provided
+      ...(explicitStyle?.height ? {} : (automaticHeight ? { height: `${automaticHeight}px` } : {})), // Only use automatic height if not explicitly set
     };
 
     // Temporarily store the auto-positioned style
