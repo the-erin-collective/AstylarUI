@@ -32,7 +32,7 @@ npm test                    # Run unit tests
 ### Production
 ```bash
 npm run build               # Production build
-npm run serve:ssr:bjsui     # Run SSR server
+npm run serve:ssr:astylarui     # Run SSR server
 ```
 
 ## Architecture Patterns

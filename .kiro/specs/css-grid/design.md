@@ -2,7 +2,7 @@
 
 ## Overview
 
-The CSS Grid (Subset) feature will implement core CSS Grid layout capabilities in BJSUI's 3D environment. This design focuses on the most essential grid properties while maintaining compatibility with existing layout systems. The implementation will create a grid-based positioning system that calculates track sizes, handles item placement, and manages responsive behavior through a dedicated GridLayoutService.
+The CSS Grid (Subset) feature will implement core CSS Grid layout capabilities in ASTYLARUI's 3D environment. This design focuses on the most essential grid properties while maintaining compatibility with existing layout systems. The implementation will create a grid-based positioning system that calculates track sizes, handles item placement, and manages responsive behavior through a dedicated GridLayoutService.
 
 ## Architecture
 

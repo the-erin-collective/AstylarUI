@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Text Rendering Engine will provide comprehensive text display capabilities for BJSUI by implementing a custom texture-based text rendering system. The design follows an off-screen canvas rendering approach where text is rendered using browser's native text capabilities to a canvas, then transferred as textures to BabylonJS mesh planes. This approach leverages all browser fonts and text features while maintaining full integration with the 3D environment.
+The Text Rendering Engine will provide comprehensive text display capabilities for ASTYLARUI by implementing a custom texture-based text rendering system. The design follows an off-screen canvas rendering approach where text is rendered using browser's native text capabilities to a canvas, then transferred as textures to BabylonJS mesh planes. This approach leverages all browser fonts and text features while maintaining full integration with the 3D environment.
 
 **Implementation Note:** During development, if we encounter complex text-related functional problems, we can reference the BabylonJS GUI extensions source code (which is open source) to understand how they solve similar challenges, while still maintaining our custom off-screen rendering approach.
 
@@ -376,7 +376,7 @@ Each test site will include documentation of expected visual behavior for valida
 - Material system for texture application
 - Mesh creation and positioning
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - BabylonDomService: DOM element integration
 - BabylonMeshService: Mesh creation and management
 - Style parsing services: CSS property processing

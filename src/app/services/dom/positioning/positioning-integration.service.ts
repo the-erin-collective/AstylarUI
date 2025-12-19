@@ -8,7 +8,7 @@ import { PositionMode } from '../../../types/positioning';
 import { ViewportService } from './viewport.service';
 
 /**
- * Integration service that connects positioning system with existing BJSUI patterns
+ * Integration service that connects positioning system with existing ASTYLARUI patterns
  * Follows the same coordinate transformation and mesh positioning patterns as existing code
  */
 @Injectable({

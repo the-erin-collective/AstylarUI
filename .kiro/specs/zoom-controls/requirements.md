@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Zoom Controls feature will add comprehensive zoom functionality to BJSUI, enabling users to zoom in and out of content using keyboard shortcuts, mouse wheel interactions, and programmatic zoom controls. This feature will implement smooth zoom animations, zoom constraints, container-specific zoom areas, and zoom reset functionality while maintaining proper coordinate scaling and element positioning during zoom operations.
+The Zoom Controls feature will add comprehensive zoom functionality to ASTYLARUI, enabling users to zoom in and out of content using keyboard shortcuts, mouse wheel interactions, and programmatic zoom controls. This feature will implement smooth zoom animations, zoom constraints, container-specific zoom areas, and zoom reset functionality while maintaining proper coordinate scaling and element positioning during zoom operations.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ The Zoom Controls feature will add comprehensive zoom functionality to BJSUI, en
 
 ### Requirement 6
 
-**User Story:** As a developer, I want zoom to integrate properly with existing BJSUI layout and positioning systems, so that elements maintain correct relative positions and sizes during zoom operations.
+**User Story:** As a developer, I want zoom to integrate properly with existing ASTYLARUI layout and positioning systems, so that elements maintain correct relative positions and sizes during zoom operations.
 
 #### Acceptance Criteria
 

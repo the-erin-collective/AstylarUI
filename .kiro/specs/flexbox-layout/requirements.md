@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document outlines the requirements for implementing the remaining advanced flexbox layout features in the BJSUI system. While the core flexbox functionality (display: flex, flex-direction, justify-content, align-items, flex-wrap) and gap properties have been implemented, several advanced features are still needed to provide a complete flexbox implementation that matches standard CSS capabilities. These advanced features will enhance the layout flexibility and control for developers using the BJSUI system.
+This document outlines the requirements for implementing the remaining advanced flexbox layout features in the ASTYLARUI system. While the core flexbox functionality (display: flex, flex-direction, justify-content, align-items, flex-wrap) and gap properties have been implemented, several advanced features are still needed to provide a complete flexbox implementation that matches standard CSS capabilities. These advanced features will enhance the layout flexibility and control for developers using the ASTYLARUI system.
 
 ## Requirements
 

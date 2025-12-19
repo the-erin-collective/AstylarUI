@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Zoom Controls feature will provide comprehensive zoom functionality for BJSUI by implementing smooth zoom operations with keyboard shortcuts, mouse wheel interactions, and programmatic controls. The design creates a layered zoom system with container-specific zoom areas, smooth animations, coordinate scaling, and proper integration with existing layout and positioning systems while maintaining 60fps performance during zoom operations.
+The Zoom Controls feature will provide comprehensive zoom functionality for ASTYLARUI by implementing smooth zoom operations with keyboard shortcuts, mouse wheel interactions, and programmatic controls. The design creates a layered zoom system with container-specific zoom areas, smooth animations, coordinate scaling, and proper integration with existing layout and positioning systems while maintaining 60fps performance during zoom operations.
 
 ## Architecture
 
@@ -487,7 +487,7 @@ Each test site will include documentation of expected zoom behavior, animation s
 - Scene coordinate system management
 - Animation system integration
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - BabylonDomService: DOM element integration
 - BabylonMeshService: Mesh transformation management
 - Event system: Input event handling and processing

@@ -54,7 +54,7 @@
   - Implement overflow handling for grids exceeding container bounds
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 8. Integrate grid with existing BJSUI interaction systems
+- [ ] 8. Integrate grid with existing ASTYLARUI interaction systems
   - Extend hover system to support grid item hover effects
   - Add z-index handling for overlapping grid items
   - Implement click event handling with grid position context

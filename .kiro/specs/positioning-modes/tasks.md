@@ -4,7 +4,7 @@
 1. **Foundation** (Tasks 1, 2, 3, 8) - Core types and services
 2. **Positioning Modes** (Tasks 4, 5, 6) - Individual positioning implementations
 3. **Stacking Context** (Task 7) - Z-index and layering support
-4. **Integration** (Tasks 9, 10) - Connect to existing BJSUI services
+4. **Integration** (Tasks 9, 10) - Connect to existing ASTYLARUI services
 5. **Advanced Features** (Tasks 11, 12) - Units and layout system integration
 6. **Visual Testing** (Task 13) - Comprehensive test sites for validation
 

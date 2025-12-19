@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document outlines the requirements for fixing several issues identified in the advanced flexbox implementation of the BJSUI system. While the core flexbox functionality and advanced features have been implemented, testing has revealed several discrepancies between the expected and actual behavior of various flexbox properties including align-content, align-self, flex-shrink, and order. These fixes are necessary to ensure that the flexbox implementation correctly follows the CSS flexbox specification.
+This document outlines the requirements for fixing several issues identified in the advanced flexbox implementation of the ASTYLARUI system. While the core flexbox functionality and advanced features have been implemented, testing has revealed several discrepancies between the expected and actual behavior of various flexbox properties including align-content, align-self, flex-shrink, and order. These fixes are necessary to ensure that the flexbox implementation correctly follows the CSS flexbox specification.
 
 ## Requirements
 

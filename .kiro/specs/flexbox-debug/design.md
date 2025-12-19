@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the design approach for debugging and fixing the flexbox align-content implementation in the BJSUI system. The current implementation has several critical issues that prevent proper rendering of flexbox layouts. This design focuses on systematic debugging and fixing of each component in the flexbox rendering pipeline.
+This document outlines the design approach for debugging and fixing the flexbox align-content implementation in the ASTYLARUI system. The current implementation has several critical issues that prevent proper rendering of flexbox layouts. This design focuses on systematic debugging and fixing of each component in the flexbox rendering pipeline.
 
 ## Architecture
 

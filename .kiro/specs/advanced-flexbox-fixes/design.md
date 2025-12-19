@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the approach for fixing the identified issues in the advanced flexbox implementation of the BJSUI system. Based on testing results, several key flexbox features are not working as expected, including align-content, flex-shrink, align-self, and order. The fixes will focus on correcting the implementation of these features to ensure they match standard CSS flexbox behavior.
+This design document outlines the approach for fixing the identified issues in the advanced flexbox implementation of the ASTYLARUI system. Based on testing results, several key flexbox features are not working as expected, including align-content, flex-shrink, align-self, and order. The fixes will focus on correcting the implementation of these features to ensure they match standard CSS flexbox behavior.
 
 ## Architecture
 

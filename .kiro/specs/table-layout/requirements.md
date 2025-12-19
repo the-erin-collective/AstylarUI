@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Table Layout feature will add comprehensive table element support to BJSUI, enabling structured data presentation in 3D space. This feature will implement HTML table elements (`table`, `tr`, `td`, `th`, etc.) with proper positioning, styling, and layout calculations. The implementation will build upon the existing container and styling systems while introducing table-specific layout algorithms for row and column management.
+The Table Layout feature will add comprehensive table element support to ASTYLARUI, enabling structured data presentation in 3D space. This feature will implement HTML table elements (`table`, `tr`, `td`, `th`, etc.) with proper positioning, styling, and layout calculations. The implementation will build upon the existing container and styling systems while introducing table-specific layout algorithms for row and column management.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ The Table Layout feature will add comprehensive table element support to BJSUI, 
 
 ### Requirement 6
 
-**User Story:** As a developer, I want tables to integrate seamlessly with existing BJSUI styling and interaction systems, so that tables support hover states, z-indexing, and other established features.
+**User Story:** As a developer, I want tables to integrate seamlessly with existing ASTYLARUI styling and interaction systems, so that tables support hover states, z-indexing, and other established features.
 
 #### Acceptance Criteria
 

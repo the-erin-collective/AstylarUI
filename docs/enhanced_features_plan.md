@@ -1,4 +1,4 @@
-# Enhanced Features Plan for BJSUI
+# Enhanced Features Plan for ASTYLARUI
 
 ## Overview
 This plan outlines the strategic development of DOM elements and styling capabilities, building from simple to complex features. The goal is to create a comprehensive HTML/CSS-like system in 3D space using BabylonJS, avoiding the standard BabylonJS GUI package due to its limitations for our use case.

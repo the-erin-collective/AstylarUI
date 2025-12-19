@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the design for standardizing Device Pixel Ratio (DPR) handling throughout the BJSUI application. The goal is to ensure consistent rendering of UI elements across different screen densities by implementing a clear approach to pixel unit conversions and calculations.
+This document outlines the design for standardizing Device Pixel Ratio (DPR) handling throughout the ASTYLARUI application. The goal is to ensure consistent rendering of UI elements across different screen densities by implementing a clear approach to pixel unit conversions and calculations.
 
 ## Architecture
 

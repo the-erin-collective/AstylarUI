@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "bjsui": {
+    "astylarui": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -66,10 +66,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "bjsui:build:production"
+              "buildTarget": "astylarui:build:production"
             },
             "development": {
-              "buildTarget": "bjsui:build:development"
+              "buildTarget": "astylarui:build:development"
             }
           },
           "defaultConfiguration": "development"

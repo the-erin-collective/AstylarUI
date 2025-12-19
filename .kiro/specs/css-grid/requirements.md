@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The CSS Grid feature will add comprehensive grid layout capabilities to BJSUI, enabling developers to create complex two-dimensional layouts in 3D space. This feature will implement a subset of the CSS Grid specification, focusing on the most commonly used grid properties and behaviors. The implementation will build upon the existing layout systems while introducing grid-specific positioning algorithms, track sizing, and item placement logic.
+The CSS Grid feature will add comprehensive grid layout capabilities to ASTYLARUI, enabling developers to create complex two-dimensional layouts in 3D space. This feature will implement a subset of the CSS Grid specification, focusing on the most commonly used grid properties and behaviors. The implementation will build upon the existing layout systems while introducing grid-specific positioning algorithms, track sizing, and item placement logic.
 
 ## Requirements
 
@@ -80,7 +80,7 @@ The CSS Grid feature will add comprehensive grid layout capabilities to BJSUI, e
 
 ### Requirement 7
 
-**User Story:** As a developer, I want the grid system to integrate seamlessly with existing BJSUI features, so that grid layouts support styling, interactions, and responsive behavior.
+**User Story:** As a developer, I want the grid system to integrate seamlessly with existing ASTYLARUI features, so that grid layouts support styling, interactions, and responsive behavior.
 
 #### Acceptance Criteria
 

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Positioning Modes feature will add comprehensive CSS positioning capabilities to BJSUI, enabling developers to control element positioning using `position: absolute`, `position: relative`, and `position: fixed`. This feature will implement different coordinate calculation strategies and positioning contexts, building upon the existing layout systems while introducing position-specific behavior for precise element placement in 3D space.
+The Positioning Modes feature will add comprehensive CSS positioning capabilities to ASTYLARUI, enabling developers to control element positioning using `position: absolute`, `position: relative`, and `position: fixed`. This feature will implement different coordinate calculation strategies and positioning contexts, building upon the existing layout systems while introducing position-specific behavior for precise element placement in 3D space.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ The Positioning Modes feature will add comprehensive CSS positioning capabilitie
 
 ### Requirement 6
 
-**User Story:** As a developer, I want positioned elements to integrate with existing BJSUI features like z-index, transforms, and interactions, so that positioning works seamlessly with other styling capabilities.
+**User Story:** As a developer, I want positioned elements to integrate with existing ASTYLARUI features like z-index, transforms, and interactions, so that positioning works seamlessly with other styling capabilities.
 
 #### Acceptance Criteria
 

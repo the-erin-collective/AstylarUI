@@ -5201,7 +5201,7 @@ export class SiteDataService {
               {
                 type: 'div',
                 id: 'subtitle',
-                textContent: 'Testing basic text display capabilities in BJSUI'
+                textContent: 'Testing basic text display capabilities in ASTYLARUI'
               },
               {
                 type: 'div',

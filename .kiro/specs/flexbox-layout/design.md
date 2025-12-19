@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the design approach for implementing the remaining advanced flexbox layout features in the BJSUI system. The implementation will build upon the existing flexbox functionality to provide a complete set of flexbox capabilities that match standard CSS behavior. The advanced features include align-content for multi-line flex containers, flex item growth and shrinking (flex-grow, flex-shrink, flex-basis), individual item alignment override (align-self), and visual ordering of flex items (order).
+This document outlines the design approach for implementing the remaining advanced flexbox layout features in the ASTYLARUI system. The implementation will build upon the existing flexbox functionality to provide a complete set of flexbox capabilities that match standard CSS behavior. The advanced features include align-content for multi-line flex containers, flex item growth and shrinking (flex-grow, flex-shrink, flex-basis), individual item alignment override (align-self), and visual ordering of flex items (order).
 
 ## Architecture
 

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Panning Controls feature will add comprehensive panning functionality to BJSUI, enabling users to pan (move) the view using Alt+drag interactions, keyboard shortcuts, and programmatic pan controls. This feature will implement smooth pan animations, pan constraints, container-specific pan areas, and pan reset functionality while maintaining proper coordinate translation and element positioning during pan operations.
+The Panning Controls feature will add comprehensive panning functionality to ASTYLARUI, enabling users to pan (move) the view using Alt+drag interactions, keyboard shortcuts, and programmatic pan controls. This feature will implement smooth pan animations, pan constraints, container-specific pan areas, and pan reset functionality while maintaining proper coordinate translation and element positioning during pan operations.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ The Panning Controls feature will add comprehensive panning functionality to BJS
 
 ### Requirement 6
 
-**User Story:** As a developer, I want panning to integrate properly with existing BJSUI layout and positioning systems, so that elements maintain correct relative positions during pan operations.
+**User Story:** As a developer, I want panning to integrate properly with existing ASTYLARUI layout and positioning systems, so that elements maintain correct relative positions during pan operations.
 
 #### Acceptance Criteria
 

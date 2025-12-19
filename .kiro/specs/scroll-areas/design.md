@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Scroll Areas feature will provide comprehensive scrolling capabilities for BJSUI by implementing scrollable containers with visual scrollbars, mouse wheel support, drag scrolling, and virtual scrolling for performance. The design creates a layered scrolling system with viewport management, content positioning, and interactive scrollbar controls rendered as 3D elements. The implementation focuses on maintaining 60fps performance while providing smooth, responsive scrolling experiences.
+The Scroll Areas feature will provide comprehensive scrolling capabilities for ASTYLARUI by implementing scrollable containers with visual scrollbars, mouse wheel support, drag scrolling, and virtual scrolling for performance. The design creates a layered scrolling system with viewport management, content positioning, and interactive scrollbar controls rendered as 3D elements. The implementation focuses on maintaining 60fps performance while providing smooth, responsive scrolling experiences.
 
 ## Architecture
 
@@ -486,7 +486,7 @@ Each test site will include documentation of expected scrolling behavior, perfor
 - Transform nodes for content container management
 - Material system for scrollbar styling
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - BabylonDomService: DOM element integration
 - BabylonMeshService: Mesh creation and management
 - Event system: Interaction and pointer event handling

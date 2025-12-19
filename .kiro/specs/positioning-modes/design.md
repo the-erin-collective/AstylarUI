@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Positioning Modes feature will extend BJSUI's layout system to support CSS positioning properties (`position: relative`, `position: absolute`, `position: fixed`) in 3D space. This design introduces different coordinate calculation strategies and positioning contexts while maintaining integration with existing layout systems. The implementation will create a hierarchical positioning system that respects containing blocks, stacking contexts, and coordinate transformations.
+The Positioning Modes feature will extend ASTYLARUI's layout system to support CSS positioning properties (`position: relative`, `position: absolute`, `position: fixed`) in 3D space. This design introduces different coordinate calculation strategies and positioning contexts while maintaining integration with existing layout systems. The implementation will create a hierarchical positioning system that respects containing blocks, stacking contexts, and coordinate transformations.
 
 ## Architecture
 
@@ -414,7 +414,7 @@ Each test site will include documentation of expected positioning behavior and v
 
 ## Dependencies
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - BabylonDomService: DOM element management
 - BabylonMeshService: Mesh positioning and updates
 - BabylonCameraService: Viewport information for fixed positioning

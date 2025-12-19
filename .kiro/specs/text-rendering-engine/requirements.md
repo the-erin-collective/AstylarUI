@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Text Rendering Engine feature will add comprehensive text display capabilities to BJSUI, enabling the rendering of text content within 3D DOM elements. This feature will implement a custom text rendering system that generates text as textures and applies them to mesh planes, avoiding the limitations of the standard BabylonJS GUI package. The implementation will support standard web fonts, text styling properties, and multi-line text with proper alignment and wrapping.
+The Text Rendering Engine feature will add comprehensive text display capabilities to ASTYLARUI, enabling the rendering of text content within 3D DOM elements. This feature will implement a custom text rendering system that generates text as textures and applies them to mesh planes, avoiding the limitations of the standard BabylonJS GUI package. The implementation will support standard web fonts, text styling properties, and multi-line text with proper alignment and wrapping.
 
 ## Requirements
 
@@ -56,7 +56,7 @@ The Text Rendering Engine feature will add comprehensive text display capabiliti
 
 ### Requirement 5
 
-**User Story:** As a developer, I want text rendering to integrate seamlessly with existing BJSUI features, so that text elements support hover states, interactions, and styling consistency.
+**User Story:** As a developer, I want text rendering to integrate seamlessly with existing ASTYLARUI features, so that text elements support hover states, interactions, and styling consistency.
 
 #### Acceptance Criteria
 

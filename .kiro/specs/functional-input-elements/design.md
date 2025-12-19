@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Functional Input Elements feature will provide comprehensive interactive input capabilities for BJSUI by implementing text fields, buttons, checkboxes, radio buttons, and select dropdowns as functional 3D elements. The design creates a layered input system with cursor management, text selection, keyboard navigation, and form validation while maintaining integration with existing styling and layout systems.
+The Functional Input Elements feature will provide comprehensive interactive input capabilities for ASTYLARUI by implementing text fields, buttons, checkboxes, radio buttons, and select dropdowns as functional 3D elements. The design creates a layered input system with cursor management, text selection, keyboard navigation, and form validation while maintaining integration with existing styling and layout systems.
 
 ## Architecture
 
@@ -524,7 +524,7 @@ Each test site will include documentation of expected input behavior, interactio
 - Material system for input styling and states
 - Text rendering integration for input content
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - TextRenderingService: Text display within input fields
 - BabylonDomService: DOM element integration
 - Event system: Keyboard and pointer event handling

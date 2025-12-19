@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Blend Mode feature will provide comprehensive CSS `mix-blend-mode` support for BJSUI by implementing shader-based compositing effects between overlapping elements in 3D space. The design creates a sophisticated blending system using custom fragment shaders and render target management, enabling multiply, screen, overlay, difference, and color component blend modes with configurable blend amounts while maintaining proper integration with z-index layering and existing rendering systems.
+The Blend Mode feature will provide comprehensive CSS `mix-blend-mode` support for ASTYLARUI by implementing shader-based compositing effects between overlapping elements in 3D space. The design creates a sophisticated blending system using custom fragment shaders and render target management, enabling multiply, screen, overlay, difference, and color component blend modes with configurable blend amounts while maintaining proper integration with z-index layering and existing rendering systems.
 
 ## Architecture
 
@@ -570,7 +570,7 @@ Each test site will include documentation of expected blend appearance and perfo
 - Multiple render target support
 - Efficient texture sampling and blending
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - BabylonDomService: DOM element integration
 - BabylonMeshService: Mesh and material management
 - Style parsing services: CSS blend mode property processing

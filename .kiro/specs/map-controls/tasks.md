@@ -84,7 +84,7 @@
   - Create ControlStylingManager class for control appearance management
   - Implement applyControlStyling method for custom control themes
   - Add control state styling for normal, hover, pressed, and disabled states
-  - Create consistent styling integration with BJSUI design system
+  - Create consistent styling integration with ASTYLARUI design system
   - Implement accessibility-compliant focus indicators and high contrast support
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document outlines the requirements for fixing two critical issues in the BJSUI flexbox implementation: missing gap property support and incorrect container alignment behavior. The current implementation lacks support for CSS gap properties (gap, row-gap, column-gap) which are essential for proper spacing between flex items, and containers are incorrectly centering horizontally instead of following the expected left-alignment behavior when no explicit alignment is specified.
+This document outlines the requirements for fixing two critical issues in the ASTYLARUI flexbox implementation: missing gap property support and incorrect container alignment behavior. The current implementation lacks support for CSS gap properties (gap, row-gap, column-gap) which are essential for proper spacing between flex items, and containers are incorrectly centering horizontally instead of following the expected left-alignment behavior when no explicit alignment is specified.
 
 ## Requirements
 
@@ -64,7 +64,7 @@ This document outlines the requirements for fixing two critical issues in the BJ
 
 ### Requirement 5: Performance and Compatibility
 
-**User Story:** As a developer, I want gap implementation to be performant and compatible with the existing BJSUI architecture, so that it doesn't negatively impact rendering performance or break existing functionality.
+**User Story:** As a developer, I want gap implementation to be performant and compatible with the existing ASTYLARUI architecture, so that it doesn't negatively impact rendering performance or break existing functionality.
 
 #### Acceptance Criteria
 

@@ -2,7 +2,7 @@ import { Vector3 } from '@babylonjs/core';
 import { DOMElement } from './dom-element';
 
 /**
- * CSS positioning modes supported by BJSUI
+ * CSS positioning modes supported by ASTYLARUI
  */
 export enum PositionMode {
   Static = 'static',      // Default - normal flow

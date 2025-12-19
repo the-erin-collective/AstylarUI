@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Map Controls feature will provide visual UI controls for zoom and pan operations within BJSUI containers, offering an alternative to keyboard and mouse shortcuts through clickable 3D interface elements. The design creates a modular control system with configurable positioning, styling, and functionality that integrates seamlessly with existing zoom and pan systems while maintaining consistent visual design and accessibility standards.
+The Map Controls feature will provide visual UI controls for zoom and pan operations within ASTYLARUI containers, offering an alternative to keyboard and mouse shortcuts through clickable 3D interface elements. The design creates a modular control system with configurable positioning, styling, and functionality that integrates seamlessly with existing zoom and pan systems while maintaining consistent visual design and accessibility standards.
 
 ## Architecture
 
@@ -584,7 +584,7 @@ Each test site will include documentation of expected control appearance, intera
 
 ## Dependencies
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - ZoomControlService: Integration with zoom operations
 - PanControlService: Integration with pan operations
 - TextRenderingService: Text display for indicators and labels

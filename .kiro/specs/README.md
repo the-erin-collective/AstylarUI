@@ -1,6 +1,6 @@
-# BJSUI Feature Specs
+# ASTYLARUI Feature Specs
 
-This directory contains specifications for BJSUI features, organized by development phases.
+This directory contains specifications for ASTYLARUI features, organized by development phases.
 
 ## Spec Status Overview
 

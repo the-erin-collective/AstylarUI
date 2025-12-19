@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Filter Effects feature will provide comprehensive CSS filter support for BJSUI by implementing shader-based visual effects that can be applied to DOM elements in 3D space. The design creates a modular filter system using BabylonJS post-processing effects and custom shaders, enabling blur, brightness, contrast, color manipulation, and combination effects while maintaining real-time performance and proper integration with existing material and rendering systems.
+The Filter Effects feature will provide comprehensive CSS filter support for ASTYLARUI by implementing shader-based visual effects that can be applied to DOM elements in 3D space. The design creates a modular filter system using BabylonJS post-processing effects and custom shaders, enabling blur, brightness, contrast, color manipulation, and combination effects while maintaining real-time performance and proper integration with existing material and rendering systems.
 
 ## Architecture
 
@@ -568,7 +568,7 @@ Each test site will include documentation of expected filter appearance and perf
 - Texture sampling and manipulation
 - Efficient GPU-based image processing
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - BabylonDomService: DOM element integration
 - BabylonMeshService: Mesh and material management
 - Style parsing services: CSS filter property processing

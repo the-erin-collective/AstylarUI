@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document outlines the requirements for debugging and fixing the flexbox align-content implementation in the BJSUI system. While the advanced flexbox features have been implemented according to the previous spec, the actual rendering is not working correctly. The align-content test page shows uniform purple containers with blue lines instead of the expected varied layouts with different colored containers, properly spaced items, and correct align-content positioning.
+This document outlines the requirements for debugging and fixing the flexbox align-content implementation in the ASTYLARUI system. While the advanced flexbox features have been implemented according to the previous spec, the actual rendering is not working correctly. The align-content test page shows uniform purple containers with blue lines instead of the expected varied layouts with different colored containers, properly spaced items, and correct align-content positioning.
 
 ## Requirements
 

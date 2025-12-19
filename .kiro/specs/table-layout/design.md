@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Table Layout feature will extend BJSUI's element system to support comprehensive HTML table structures in 3D space. This design builds upon the existing container element architecture while introducing specialized table-specific layout algorithms, positioning systems, and styling capabilities. The implementation will create a hierarchical table structure using BabylonJS meshes with automatic row and column calculations, border management, and content alignment.
+The Table Layout feature will extend ASTYLARUI's element system to support comprehensive HTML table structures in 3D space. This design builds upon the existing container element architecture while introducing specialized table-specific layout algorithms, positioning systems, and styling capabilities. The implementation will create a hierarchical table structure using BabylonJS meshes with automatic row and column calculations, border management, and content alignment.
 
 ## Architecture
 
@@ -248,7 +248,7 @@ const tableTestSites = {
 ```
 
 ### Visual Validation Process
-1. Load test site in BJSUI application
+1. Load test site in ASTYLARUI application
 2. Compare rendered output against documented expected behavior
 3. Verify interaction states (hover, click) work correctly
 4. Confirm responsive behavior with container size changes
@@ -299,7 +299,7 @@ const tableTestSites = {
 
 ## Dependencies
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - BabylonDomService: Core DOM element handling
 - BabylonMeshService: Mesh creation and management
 - BabylonStyleService: Style parsing and application

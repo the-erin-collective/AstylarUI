@@ -1,6 +1,6 @@
 # Product Overview
 
-BJSUI is a modern Angular 20 application that creates a comprehensive HTML/CSS-like system in 3D space using BabylonJS. The project aims to render DOM elements and styling capabilities in a 3D environment, avoiding the standard BabylonJS GUI package due to its limitations.
+ASTYLARUI is a modern Angular 20 application that creates a comprehensive HTML/CSS-like system in 3D space using BabylonJS. The project aims to render DOM elements and styling capabilities in a 3D environment, avoiding the standard BabylonJS GUI package due to its limitations.
 
 ## Core Concept
 - Render HTML-like elements (div, img, a, ul, li, etc.) as 3D meshes in BabylonJS

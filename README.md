@@ -100,7 +100,7 @@ protected componentStatus = computed(() =>
 
 4. **Run SSR server**:
    ```bash
-   npm run serve:ssr:bjsui
+   npm run serve:ssr:astylarui
    ```
 
 ## 🏗 Project Structure

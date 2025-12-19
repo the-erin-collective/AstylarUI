@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Filter Effects feature will add comprehensive CSS filter support to BJSUI, enabling visual effects like blur, brightness, contrast, grayscale, hue rotation, inversion, saturation, and sepia on DOM elements in 3D space. This feature will implement shader-based filter effects that can be applied individually or combined, with proper integration into the existing material and rendering systems while maintaining performance for real-time 3D rendering.
+The Filter Effects feature will add comprehensive CSS filter support to ASTYLARUI, enabling visual effects like blur, brightness, contrast, grayscale, hue rotation, inversion, saturation, and sepia on DOM elements in 3D space. This feature will implement shader-based filter effects that can be applied individually or combined, with proper integration into the existing material and rendering systems while maintaining performance for real-time 3D rendering.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ The Filter Effects feature will add comprehensive CSS filter support to BJSUI, e
 
 ### Requirement 6
 
-**User Story:** As a developer, I want filter effects to integrate properly with existing BJSUI features, so that filters work correctly with animations, interactions, and other styling properties.
+**User Story:** As a developer, I want filter effects to integrate properly with existing ASTYLARUI features, so that filters work correctly with animations, interactions, and other styling properties.
 
 #### Acceptance Criteria
 

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Blend Mode feature will add comprehensive CSS `mix-blend-mode` support to BJSUI, enabling advanced compositing effects between overlapping elements in 3D space. This feature will implement shader-based blend modes including multiply, screen, overlay, darken, lighten, color-dodge, color-burn, hard-light, soft-light, difference, exclusion, hue, saturation, color, and luminosity, with configurable blend amounts and proper integration with existing rendering and layering systems.
+The Blend Mode feature will add comprehensive CSS `mix-blend-mode` support to ASTYLARUI, enabling advanced compositing effects between overlapping elements in 3D space. This feature will implement shader-based blend modes including multiply, screen, overlay, darken, lighten, color-dodge, color-burn, hard-light, soft-light, difference, exclusion, hue, saturation, color, and luminosity, with configurable blend amounts and proper integration with existing rendering and layering systems.
 
 ## Requirements
 
@@ -80,7 +80,7 @@ The Blend Mode feature will add comprehensive CSS `mix-blend-mode` support to BJ
 
 ### Requirement 7
 
-**User Story:** As a developer, I want blend modes to integrate properly with existing BJSUI features, so that blending works correctly with z-index layering, transforms, and other styling properties.
+**User Story:** As a developer, I want blend modes to integrate properly with existing ASTYLARUI features, so that blending works correctly with z-index layering, transforms, and other styling properties.
 
 #### Acceptance Criteria
 

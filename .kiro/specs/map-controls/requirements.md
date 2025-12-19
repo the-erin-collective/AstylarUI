@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Map Controls feature will add visual UI controls for panning and zooming within BJSUI containers, providing an alternative to keyboard/mouse shortcuts through clickable interface elements. This feature will implement zoom in/out buttons, directional pan buttons, zoom level indicators, and minimap-style navigation controls that can be enabled per container. The controls will be rendered as 3D UI elements positioned relative to their target containers.
+The Map Controls feature will add visual UI controls for panning and zooming within ASTYLARUI containers, providing an alternative to keyboard/mouse shortcuts through clickable interface elements. This feature will implement zoom in/out buttons, directional pan buttons, zoom level indicators, and minimap-style navigation controls that can be enabled per container. The controls will be rendered as 3D UI elements positioned relative to their target containers.
 
 ## Requirements
 
@@ -80,11 +80,11 @@ The Map Controls feature will add visual UI controls for panning and zooming wit
 
 ### Requirement 7
 
-**User Story:** As a developer, I want map controls to be styled consistently with the BJSUI design system, so that controls integrate visually with the rest of the interface.
+**User Story:** As a developer, I want map controls to be styled consistently with the ASTYLARUI design system, so that controls integrate visually with the rest of the interface.
 
 #### Acceptance Criteria
 
-1. WHEN map controls are displayed THEN they SHALL use consistent styling with other BJSUI interactive elements
+1. WHEN map controls are displayed THEN they SHALL use consistent styling with other ASTYLARUI interactive elements
 2. WHEN map controls have hover states THEN they SHALL provide visual feedback consistent with button hover behavior
 3. WHEN map controls are disabled THEN they SHALL display disabled state styling consistent with other disabled elements
 4. WHEN map controls are focused THEN they SHALL show focus indicators consistent with accessibility standards

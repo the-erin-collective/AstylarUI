@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Functional Input Elements feature will add comprehensive interactive input capabilities to BJSUI, enabling text input, button interactions, form controls, and input validation in 3D space. This feature will implement functional input elements like text fields, buttons, checkboxes, radio buttons, and select dropdowns with proper cursor positioning, text selection, keyboard navigation, and form submission capabilities.
+The Functional Input Elements feature will add comprehensive interactive input capabilities to ASTYLARUI, enabling text input, button interactions, form controls, and input validation in 3D space. This feature will implement functional input elements like text fields, buttons, checkboxes, radio buttons, and select dropdowns with proper cursor positioning, text selection, keyboard navigation, and form submission capabilities.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ The Functional Input Elements feature will add comprehensive interactive input c
 
 ### Requirement 6
 
-**User Story:** As a developer, I want input elements to integrate with existing BJSUI styling and layout systems, so that form controls maintain visual consistency and proper positioning.
+**User Story:** As a developer, I want input elements to integrate with existing ASTYLARUI styling and layout systems, so that form controls maintain visual consistency and proper positioning.
 
 #### Acceptance Criteria
 
@@ -76,7 +76,7 @@ The Functional Input Elements feature will add comprehensive interactive input c
 2. WHEN input elements are positioned within layout containers THEN the system SHALL respect flexbox, grid, and positioning rules
 3. WHEN input elements have focus states THEN the system SHALL apply focus styling while maintaining other style properties
 4. WHEN input elements are transformed or have z-index values THEN the system SHALL maintain proper layering and positioning
-5. IF input elements conflict with other BJSUI features THEN the system SHALL provide configuration options for resolution
+5. IF input elements conflict with other ASTYLARUI features THEN the system SHALL provide configuration options for resolution
 
 ### Requirement 7
 

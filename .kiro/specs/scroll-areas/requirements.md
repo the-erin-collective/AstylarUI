@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Scroll Areas feature will add comprehensive scrolling capabilities to BJSUI, enabling content overflow management through scrollable containers. This feature will implement `overflow: scroll`, `overflow: auto`, and related properties with visual scrollbar representations, mouse wheel scrolling, drag scrolling, and virtual scrolling for performance. The implementation will create interactive scroll areas that maintain smooth 60fps performance even with large content.
+The Scroll Areas feature will add comprehensive scrolling capabilities to ASTYLARUI, enabling content overflow management through scrollable containers. This feature will implement `overflow: scroll`, `overflow: auto`, and related properties with visual scrollbar representations, mouse wheel scrolling, drag scrolling, and virtual scrolling for performance. The implementation will create interactive scroll areas that maintain smooth 60fps performance even with large content.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ The Scroll Areas feature will add comprehensive scrolling capabilities to BJSUI,
 
 ### Requirement 6
 
-**User Story:** As a developer, I want scroll areas to integrate seamlessly with existing BJSUI features, so that scrolling works correctly with styling, interactions, and layout systems.
+**User Story:** As a developer, I want scroll areas to integrate seamlessly with existing ASTYLARUI features, so that scrolling works correctly with styling, interactions, and layout systems.
 
 #### Acceptance Criteria
 
@@ -76,7 +76,7 @@ The Scroll Areas feature will add comprehensive scrolling capabilities to BJSUI,
 2. WHEN scrollable elements have hover states THEN the system SHALL maintain hover functionality during scrolling
 3. WHEN scrollable containers are positioned or transformed THEN the system SHALL maintain correct scroll behavior and coordinate calculations
 4. WHEN scrollable content includes interactive elements THEN the system SHALL preserve element interactions while enabling scrolling
-5. IF scrolling interferes with other BJSUI features THEN the system SHALL provide configuration options to resolve conflicts
+5. IF scrolling interferes with other ASTYLARUI features THEN the system SHALL provide configuration options to resolve conflicts
 
 ### Requirement 7
 

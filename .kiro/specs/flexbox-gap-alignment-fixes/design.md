@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the implementation approach for adding CSS gap property support and fixing container alignment issues in the BJSUI flexbox system. The solution will extend the existing FlexService and FlexLayoutService to handle gap spacing calculations and correct the default alignment behavior to match CSS flexbox specifications.
+This design document outlines the implementation approach for adding CSS gap property support and fixing container alignment issues in the ASTYLARUI flexbox system. The solution will extend the existing FlexService and FlexLayoutService to handle gap spacing calculations and correct the default alignment behavior to match CSS flexbox specifications.
 
 ## Architecture
 
@@ -190,7 +190,7 @@ interface FlexItemLayout {
 - **StyleRule** - Already contains gap properties
 
 ### No New Dependencies
-- Solution uses existing BJSUI architecture
+- Solution uses existing ASTYLARUI architecture
 - No additional libraries required
 - Leverages current pixel-to-world conversion system
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Panning Controls feature will provide comprehensive panning functionality for BJSUI by implementing smooth pan operations with Alt+drag interactions, keyboard shortcuts, and programmatic controls. The design creates a layered panning system with container-specific pan areas, smooth animations, coordinate translation, and proper integration with existing layout and positioning systems while maintaining 60fps performance during pan operations.
+The Panning Controls feature will provide comprehensive panning functionality for ASTYLARUI by implementing smooth pan operations with Alt+drag interactions, keyboard shortcuts, and programmatic controls. The design creates a layered panning system with container-specific pan areas, smooth animations, coordinate translation, and proper integration with existing layout and positioning systems while maintaining 60fps performance during pan operations.
 
 ## Architecture
 
@@ -540,7 +540,7 @@ Each test site will include documentation of expected pan behavior, animation sm
 - Scene coordinate system management
 - Animation system integration
 
-### Existing BJSUI Services
+### Existing ASTYLARUI Services
 - BabylonDomService: DOM element integration
 - BabylonMeshService: Mesh transformation management
 - Event system: Input event handling and processing
