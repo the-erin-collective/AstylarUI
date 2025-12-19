@@ -48,7 +48,28 @@ export class FlexService {
       console.log(`🔀 Child ${child.id} layout position: (${childLayout.position.x.toFixed(2)}, ${childLayout.position.y.toFixed(2)}, ${childLayout.position.z.toFixed(6)}) size: (${childLayout.size.width.toFixed(2)}x${childLayout.size.height.toFixed(2)})`);
       
       try {
-        const childMesh = dom.actions.createElement(dom, render,child, parent, styles, childLayout.position, childLayout.size);
+        // Check for explicit dimensions and pass them as flexSize instead of flex-calculated size
+        let flexSize = childLayout.size;
+        if (child.style?.width || child.style?.height) {
+          const scaleFactor = render.actions.camera.getPixelToWorldScale();
+          let explicitWidth = childLayout.size.width;
+          let explicitHeight = childLayout.size.height;
+          
+          if (child.style?.width) {
+            const widthPixels = parseFloat(child.style.width.replace('px', ''));
+            explicitWidth = widthPixels * scaleFactor;
+          }
+          
+          if (child.style?.height) {
+            const heightPixels = parseFloat(child.style.height.replace('px', ''));
+            explicitHeight = heightPixels * scaleFactor;
+          }
+          
+          flexSize = { width: explicitWidth, height: explicitHeight };
+          console.log(`🔀 Using explicit dimensions for ${child.id}: ${explicitWidth.toFixed(2)}x${explicitHeight.toFixed(2)} (flex-calculated: ${childLayout.size.width.toFixed(2)}x${childLayout.size.height.toFixed(2)})`);
+        }
+        
+        const childMesh = dom.actions.createElement(dom, render,child, parent, styles, childLayout.position, flexSize);
         console.log(`✅ Created flex child mesh:`, childMesh.name, `Position:`, childMesh.position);
         console.log(`🎯 VERIFICATION: ${child.id} -> X position ${childMesh.position.x.toFixed(2)} (expected ${childLayout.position.x.toFixed(2)})`);
         
@@ -110,6 +131,9 @@ export class FlexService {
       const flexBasis = childStyle?.flexBasis || childStyle?.flexBasis || 'auto';
       const order = render.actions.style.parseOrder(childStyle?.order);
       
+      // Parse margins for this child
+      const margins = this.parseMargins(childStyle);
+      
       // Calculate base size
       let baseWidth, baseHeight;
       if (isRow) {
@@ -138,6 +162,7 @@ export class FlexService {
         flexBasis,
         baseWidth,
         baseHeight,
+        margins,
         order,
         originalIndex: children.indexOf(child) // Store original index for stable sorting
       };
@@ -250,7 +275,18 @@ export class FlexService {
       const containerSize = isRow ? parentDimensions.width : parentDimensions.height;
       const totalBaseSize = line.reduce((sum, child) => sum + (isRow ? child.baseWidth : child.baseHeight), 0);
       const totalMainAxisGaps = line.length > 1 ? (line.length - 1) * mainAxisGap : 0;
-      const totalContentSize = totalBaseSize + totalMainAxisGaps;
+      
+      // Calculate total margins on main axis (convert to world units)
+      const totalMainAxisMargins = line.reduce((sum, child) => {
+        const scaleFactor = render.actions.camera.getPixelToWorldScale();
+        if (isRow) {
+          return sum + (child.margins.left * scaleFactor) + (child.margins.right * scaleFactor);
+        } else {
+          return sum + (child.margins.top * scaleFactor) + (child.margins.bottom * scaleFactor);
+        }
+      }, 0);
+      
+      const totalContentSize = totalBaseSize + totalMainAxisGaps + totalMainAxisMargins;
       const availableSpace = containerSize - totalContentSize;
       // Calculate total grow/shrink factors
       const totalGrow = line.reduce((sum, child) => sum + (child.flexGrow || 0), 0);
@@ -324,15 +360,26 @@ export class FlexService {
         // Use itemSizes for main axis size
         const mainSize = itemSizes[indexInLine];
         
+        // Get margins for this child
+        const childMargins = child.margins;
+        
         // Calculate main axis position
         if (isRow) {
-          x = -(currentOffset - parentDimensions.width / 2 + mainSize / 2);
+          // For row direction, account for left margin in positioning
+          const scaleFactor = render.actions.camera.getPixelToWorldScale();
+          const leftMargin = childMargins.left * scaleFactor; // Convert to world units
+          x = -(currentOffset - parentDimensions.width / 2 + mainSize / 2) + leftMargin;
           const gapToAdd = indexInLine < line.length - 1 ? mainAxisGap : 0;
-          currentOffset += mainSize + spacing + gapToAdd;
+          const marginToAdd = childMargins.right * scaleFactor; // Convert to world units
+          currentOffset += mainSize + spacing + gapToAdd + marginToAdd;
         } else {
-          y = parentDimensions.height / 2 - currentOffset - mainSize / 2;
+          // For column direction, account for top margin in positioning
+          const scaleFactor = render.actions.camera.getPixelToWorldScale();
+          const topMargin = childMargins.top * scaleFactor; // Convert to world units
+          y = parentDimensions.height / 2 - currentOffset - mainSize / 2 - topMargin;
           const gapToAdd = indexInLine < line.length - 1 ? mainAxisGap : 0;
-          currentOffset += mainSize + spacing + gapToAdd;
+          const marginToAdd = childMargins.bottom * scaleFactor; // Convert to world units
+          currentOffset += mainSize + spacing + gapToAdd + marginToAdd;
         }
         
         // Calculate cross axis position using align-self or align-items
@@ -354,6 +401,9 @@ export class FlexService {
             // For single line, just use align-self position
             y = crossAxisPosition;
           }
+          // Account for top/bottom margins in cross-axis positioning
+          const scaleFactor = render.actions.camera.getPixelToWorldScale();
+          y += childMargins.top * scaleFactor; // Convert to world units
         } else {
           // For column direction, cross axis is X
           if (canWrap && lines.length > 1) {
@@ -363,6 +413,9 @@ export class FlexService {
             // For single line, just use align-self position
             x = crossAxisPosition;
           }
+          // Account for left/right margins in cross-axis positioning
+          const scaleFactor = render.actions.camera.getPixelToWorldScale();
+          x += childMargins.left * scaleFactor; // Convert to world units
         }
         
         const zPosition = 0.01 + (layout.length * 0.01);
@@ -693,5 +746,60 @@ export class FlexService {
     
     console.log(`🧮 Final line positions:`, linePositions.map(p => p.toFixed(3)));
     return linePositions;
+  }
+
+  private parseMargins(style?: StyleRule): { top: number; right: number; bottom: number; left: number } {
+    if (!style) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+
+    // Check for individual margin properties first
+    const marginTop = this.parseMarginValue(style.marginTop);
+    const marginRight = this.parseMarginValue(style.marginRight);
+    const marginBottom = this.parseMarginValue(style.marginBottom);
+    const marginLeft = this.parseMarginValue(style.marginLeft);
+
+    // If individual properties are set, use them
+    if (marginTop !== null || marginRight !== null || marginBottom !== null || marginLeft !== null) {
+      return {
+        top: marginTop ?? 0,
+        right: marginRight ?? 0,
+        bottom: marginBottom ?? 0,
+        left: marginLeft ?? 0
+      };
+    }
+
+    // Otherwise, parse the shorthand margin property
+    return this.parseMarginBoxValues(style.margin);
+  }
+
+  private parseMarginValue(value?: string): number | null {
+    if (!value) return null;
+    // Handle "10px", "0.5", etc. - return raw pixel values without scaling
+    // Scaling will be applied later in positioning calculations
+    const numericValue = parseFloat(value.replace('px', ''));
+    return isNaN(numericValue) ? null : numericValue; // Return raw pixel value
+  }
+
+  private parseMarginBoxValues(value?: string): { top: number; right: number; bottom: number; left: number } {
+    if (!value) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+
+    const values = value.split(/\s+/).map(v => this.parseMarginValue(v) ?? 0);
+
+    switch (values.length) {
+      case 1:
+        // margin: 10px (all sides)
+        return { top: values[0], right: values[0], bottom: values[0], left: values[0] };
+      case 2:
+        // margin: 10px 20px (vertical horizontal)
+        return { top: values[0], right: values[1], bottom: values[0], left: values[1] };
+      case 4:
+        // margin: 10px 20px 30px 40px (top right bottom left)
+        return { top: values[0], right: values[1], bottom: values[2], left: values[3] };
+      default:
+        return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
   }
 }

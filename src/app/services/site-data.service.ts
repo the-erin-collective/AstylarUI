@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { SiteData } from '../types/site-data';
-import { flexboxTests } from '../tests/flexbox';
 
 @Injectable({
   providedIn: 'root'
@@ -8,12 +7,6 @@ import { flexboxTests } from '../tests/flexbox';
 export class SiteDataService {
 
   private siteData: { [key: string]: SiteData } = {
-    // Flexbox test scenes
-    'flexbox-align-content': flexboxTests.alignContent,
-    'flexbox-flex-item-sizing': flexboxTests.flexItemSizing,
-    'flexbox-align-self': flexboxTests.alignSelf,
-    'flexbox-order': flexboxTests.order,
-
     dashboard: {
       styles: [
         {
@@ -2082,7 +2075,851 @@ export class SiteDataService {
           }
         ]
       }
-    }
+    },
+    // Flexbox test scenes
+    'flexbox-align-content': {
+      styles: [
+        {
+          selector: 'root',
+          background: '#f0f0f0'
+        },
+        // Flex-start container
+        {
+          selector: '#align-content-flex-start',
+          top: '5%',
+          left: '5%',
+          width: '90%',
+          height: '12%',
+          background: 'lightblue',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignContent: 'flex-start',
+          padding: '10px',
+          borderRadius: '5px'
+        },
+        // Flex-end container
+        {
+          selector: '#align-content-flex-end',
+          top: '20%',
+          left: '5%',
+          width: '90%',
+          height: '12%',
+          background: 'mistyrose',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignContent: 'flex-end',
+          padding: '10px',
+          borderRadius: '5px'
+        },
+        // Center container
+        {
+          selector: '#align-content-center',
+          top: '35%',
+          left: '5%',
+          width: '90%',
+          height: '12%',
+          background: 'lightgreen',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignContent: 'center',
+          padding: '10px',
+          borderRadius: '5px'
+        },
+        // Space-between container
+        {
+          selector: '#align-content-space-between',
+          top: '50%',
+          left: '5%',
+          width: '90%',
+          height: '12%',
+          background: 'lightsalmon',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignContent: 'space-between',
+          padding: '10px',
+          borderRadius: '5px'
+        },
+        // Space-around container
+        {
+          selector: '#align-content-space-around',
+          top: '65%',
+          left: '5%',
+          width: '90%',
+          height: '12%',
+          background: 'lightcyan',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignContent: 'space-around',
+          padding: '10px',
+          borderRadius: '5px'
+        },
+        // Space-evenly container
+        {
+          selector: '#align-content-space-evenly',
+          top: '80%',
+          left: '5%',
+          width: '90%',
+          height: '12%',
+          background: 'lavender',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignContent: 'space-evenly',
+          padding: '10px',
+          borderRadius: '5px'
+        },
+        // Stretch container
+        {
+          selector: '#align-content-stretch',
+          top: '95%',
+          left: '5%',
+          width: '90%',
+          height: '12%',
+          background: 'lightblue',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignContent: 'stretch',
+          padding: '10px',
+          borderRadius: '5px'
+        },
+        // Flex-start items
+        {
+          selector: '#flex-start-item-1, #flex-start-item-2, #flex-start-item-3, #flex-start-item-4, #flex-start-item-5, #flex-start-item-6, #flex-start-item-7, #flex-start-item-8, #flex-start-item-9, #flex-start-item-10, #flex-start-item-11, #flex-start-item-12',
+          width: '60px',
+          height: '40px',
+          margin: '5px',
+          borderRadius: '3px',
+          background: '#0066cc'
+        },
+        // Flex-end items
+        {
+          selector: '#flex-end-item-1, #flex-end-item-2, #flex-end-item-3, #flex-end-item-4, #flex-end-item-5, #flex-end-item-6, #flex-end-item-7, #flex-end-item-8, #flex-end-item-9, #flex-end-item-10, #flex-end-item-11, #flex-end-item-12',
+          width: '60px',
+          height: '40px',
+          margin: '5px',
+          borderRadius: '3px',
+          background: '#cc3300'
+        },
+        // Center items
+        {
+          selector: '#center-item-1, #center-item-2, #center-item-3, #center-item-4, #center-item-5, #center-item-6, #center-item-7, #center-item-8, #center-item-9, #center-item-10, #center-item-11, #center-item-12',
+          width: '60px',
+          height: '40px',
+          margin: '5px',
+          borderRadius: '3px',
+          background: '#009933'
+        },
+        // Space-between items
+        {
+          selector: '#space-between-item-1, #space-between-item-2, #space-between-item-3, #space-between-item-4, #space-between-item-5, #space-between-item-6, #space-between-item-7, #space-between-item-8, #space-between-item-9, #space-between-item-10, #space-between-item-11, #space-between-item-12',
+          width: '60px',
+          height: '40px',
+          margin: '5px',
+          borderRadius: '3px',
+          background: '#cc6600'
+        },
+        // Space-around items
+        {
+          selector: '#space-around-item-1, #space-around-item-2, #space-around-item-3, #space-around-item-4, #space-around-item-5, #space-around-item-6, #space-around-item-7, #space-around-item-8, #space-around-item-9, #space-around-item-10, #space-around-item-11, #space-around-item-12',
+          width: '60px',
+          height: '40px',
+          margin: '5px',
+          borderRadius: '3px',
+          background: '#008080'
+        },
+        // Space-evenly items
+        {
+          selector: '#space-evenly-item-1, #space-evenly-item-2, #space-evenly-item-3, #space-evenly-item-4, #space-evenly-item-5, #space-evenly-item-6, #space-evenly-item-7, #space-evenly-item-8, #space-evenly-item-9, #space-evenly-item-10, #space-evenly-item-11, #space-evenly-item-12',
+          width: '60px',
+          height: '40px',
+          margin: '5px',
+          borderRadius: '3px',
+          background: '#6600cc'
+        },
+        // Stretch items
+        {
+          selector: '#stretch-item-1, #stretch-item-2, #stretch-item-3, #stretch-item-4, #stretch-item-5, #stretch-item-6, #stretch-item-7, #stretch-item-8, #stretch-item-9, #stretch-item-10, #stretch-item-11, #stretch-item-12',
+          width: '60px',
+          height: '40px',
+          margin: '5px',
+          borderRadius: '3px',
+          background: '#0066cc'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'align-content-flex-start',
+            children: Array.from({ length: 12 }, (_, i) => ({
+              type: 'div',
+              id: `flex-start-item-${i + 1}`
+            }))
+          },
+          {
+            type: 'div',
+            id: 'align-content-flex-end',
+            children: Array.from({ length: 12 }, (_, i) => ({
+              type: 'div',
+              id: `flex-end-item-${i + 1}`
+            }))
+          },
+          {
+            type: 'div',
+            id: 'align-content-center',
+            children: Array.from({ length: 12 }, (_, i) => ({
+              type: 'div',
+              id: `center-item-${i + 1}`
+            }))
+          },
+          {
+            type: 'div',
+            id: 'align-content-space-between',
+            children: Array.from({ length: 12 }, (_, i) => ({
+              type: 'div',
+              id: `space-between-item-${i + 1}`
+            }))
+          },
+          {
+            type: 'div',
+            id: 'align-content-space-around',
+            children: Array.from({ length: 12 }, (_, i) => ({
+              type: 'div',
+              id: `space-around-item-${i + 1}`
+            }))
+          },
+          {
+            type: 'div',
+            id: 'align-content-space-evenly',
+            children: Array.from({ length: 12 }, (_, i) => ({
+              type: 'div',
+              id: `space-evenly-item-${i + 1}`
+            }))
+          },
+          {
+            type: 'div',
+            id: 'align-content-stretch',
+            children: Array.from({ length: 12 }, (_, i) => ({
+              type: 'div',
+              id: `stretch-item-${i + 1}`
+            }))
+          }
+        ]
+      }
+    },
+
+    'flexbox-flex-item-sizing': {
+      styles: [
+        {
+          selector: 'root',
+          background: '#f0f0f0'
+        },
+        {
+          selector: '#flex-grow-container',
+          top: '10%',
+          left: '5%',
+          width: '90%',
+          height: '20%',
+          display: 'flex',
+          padding: '10px',
+          background: 'rgba(240, 240, 240, 0.5)',
+          borderRadius: '5px',
+          gap: '10px'
+        },
+        {
+          selector: '#flex-grow-item-1',
+          width: '100px',
+          height: '60px',
+          flexGrow: '0',
+          background: '#0066cc',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-grow-item-2',
+          width: '100px',
+          height: '60px',
+          flexGrow: '1',
+          background: '#0077dd',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-grow-item-3',
+          width: '100px',
+          height: '60px',
+          flexGrow: '2',
+          background: '#0088ee',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-grow-item-4',
+          width: '100px',
+          height: '60px',
+          flexGrow: '3',
+          background: '#0099ff',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-shrink-container',
+          top: '40%',
+          left: '5%',
+          width: '90%',
+          height: '20%',
+          display: 'flex',
+          padding: '10px',
+          background: 'rgba(240, 240, 240, 0.5)',
+          borderRadius: '5px',
+          gap: '10px'
+        },
+        {
+          selector: '#flex-shrink-item-1',
+          width: '200px',
+          height: '60px',
+          flexShrink: '0',
+          background: '#cc3300',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-shrink-item-2',
+          width: '200px',
+          height: '60px',
+          flexShrink: '1',
+          background: '#dd4411',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-shrink-item-3',
+          width: '200px',
+          height: '60px',
+          flexShrink: '2',
+          background: '#ee5522',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-shrink-item-4',
+          width: '200px',
+          height: '60px',
+          flexShrink: '3',
+          background: '#ff6633',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-basis-container',
+          top: '70%',
+          left: '5%',
+          width: '90%',
+          height: '20%',
+          display: 'flex',
+          padding: '10px',
+          background: 'rgba(240, 240, 240, 0.5)',
+          borderRadius: '5px',
+          gap: '10px'
+        },
+        {
+          selector: '#flex-basis-item-1',
+          width: '50px',
+          height: '60px',
+          background: '#009933',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-basis-item-2',
+          flexBasis: '100px',
+          height: '60px',
+          background: '#00aa44',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-basis-item-3',
+          flexBasis: '20%',
+          height: '60px',
+          background: '#00bb55',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#flex-basis-item-4',
+          flex: '1 0 0',
+          height: '60px',
+          background: '#00cc66',
+          borderRadius: '3px'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'flex-grow-container',
+            children: [
+              { type: 'div', id: 'flex-grow-item-1' },
+              { type: 'div', id: 'flex-grow-item-2' },
+              { type: 'div', id: 'flex-grow-item-3' },
+              { type: 'div', id: 'flex-grow-item-4' }
+            ]
+          },
+          {
+            type: 'div',
+            id: 'flex-shrink-container',
+            children: [
+              { type: 'div', id: 'flex-shrink-item-1' },
+              { type: 'div', id: 'flex-shrink-item-2' },
+              { type: 'div', id: 'flex-shrink-item-3' },
+              { type: 'div', id: 'flex-shrink-item-4' }
+            ]
+          },
+          {
+            type: 'div',
+            id: 'flex-basis-container',
+            children: [
+              { type: 'div', id: 'flex-basis-item-1' },
+              { type: 'div', id: 'flex-basis-item-2' },
+              { type: 'div', id: 'flex-basis-item-3' },
+              { type: 'div', id: 'flex-basis-item-4' }
+            ]
+          }
+        ]
+      }
+    },
+
+    'flexbox-align-self': {
+      styles: [
+        {
+          selector: 'root',
+          background: '#f0f0f0'
+        },
+        {
+          selector: '#align-self-stretch',
+          top: '5%',
+          left: '5%',
+          width: '90%',
+          height: '25%',
+          background: 'lightblue',
+          display: 'flex',
+          alignItems: 'stretch',
+          padding: '10px',
+          borderRadius: '5px',
+          gap: '10px'
+        },
+        {
+          selector: '#stretch-auto',
+          alignSelf: 'auto',
+          width: '120px',
+          height: '60px',
+          background: '#0066cc',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#stretch-flex-start',
+          alignSelf: 'flex-start',
+          width: '120px',
+          height: '60px',
+          background: '#0077dd',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#stretch-flex-end',
+          alignSelf: 'flex-end',
+          width: '120px',
+          height: '60px',
+          background: '#0088ee',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#stretch-center',
+          alignSelf: 'center',
+          width: '120px',
+          height: '60px',
+          background: '#0099ff',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#stretch-baseline',
+          alignSelf: 'baseline',
+          width: '120px',
+          height: '60px',
+          background: '#00aaff',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#stretch-stretch',
+          alignSelf: 'stretch',
+          width: '120px',
+          background: '#00bbff',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#align-self-flex-start',
+          top: '35%',
+          left: '5%',
+          width: '90%',
+          height: '25%',
+          background: 'mistyrose',
+          display: 'flex',
+          alignItems: 'flex-start',
+          padding: '10px',
+          borderRadius: '5px',
+          gap: '10px'
+        },
+        {
+          selector: '#start-auto',
+          alignSelf: 'auto',
+          width: '120px',
+          height: '60px',
+          background: '#cc3300',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#start-flex-start',
+          alignSelf: 'flex-start',
+          width: '120px',
+          height: '60px',
+          background: '#dd4411',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#start-flex-end',
+          alignSelf: 'flex-end',
+          width: '120px',
+          height: '60px',
+          background: '#ee5522',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#start-center',
+          alignSelf: 'center',
+          width: '120px',
+          height: '60px',
+          background: '#ff6633',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#start-baseline',
+          alignSelf: 'baseline',
+          width: '120px',
+          height: '60px',
+          background: '#ff7744',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#start-stretch',
+          alignSelf: 'stretch',
+          width: '120px',
+          background: '#ff8855',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#align-self-center',
+          top: '65%',
+          left: '5%',
+          width: '90%',
+          height: '25%',
+          background: 'lightgreen',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '10px',
+          borderRadius: '5px',
+          gap: '10px'
+        },
+        {
+          selector: '#center-auto',
+          alignSelf: 'auto',
+          width: '120px',
+          height: '60px',
+          background: '#009933',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#center-flex-start',
+          alignSelf: 'flex-start',
+          width: '120px',
+          height: '60px',
+          background: '#00aa44',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#center-flex-end',
+          alignSelf: 'flex-end',
+          width: '120px',
+          height: '60px',
+          background: '#00bb55',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#center-center',
+          alignSelf: 'center',
+          width: '120px',
+          height: '60px',
+          background: '#00cc66',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#center-baseline',
+          alignSelf: 'baseline',
+          width: '120px',
+          height: '60px',
+          background: '#00dd77',
+          borderRadius: '3px',
+          padding: '5px'
+        },
+        {
+          selector: '#center-stretch',
+          alignSelf: 'stretch',
+          width: '120px',
+          background: '#00ee88',
+          borderRadius: '3px',
+          padding: '5px'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'align-self-stretch',
+            children: [
+              { type: 'div', id: 'stretch-auto' },
+              { type: 'div', id: 'stretch-flex-start' },
+              { type: 'div', id: 'stretch-flex-end' },
+              { type: 'div', id: 'stretch-center' },
+              { type: 'div', id: 'stretch-baseline' },
+              { type: 'div', id: 'stretch-stretch' }
+            ]
+          },
+          {
+            type: 'div',
+            id: 'align-self-flex-start',
+            children: [
+              { type: 'div', id: 'start-auto' },
+              { type: 'div', id: 'start-flex-start' },
+              { type: 'div', id: 'start-flex-end' },
+              { type: 'div', id: 'start-center' },
+              { type: 'div', id: 'start-baseline' },
+              { type: 'div', id: 'start-stretch' }
+            ]
+          },
+          {
+            type: 'div',
+            id: 'align-self-center',
+            children: [
+              { type: 'div', id: 'center-auto' },
+              { type: 'div', id: 'center-flex-start' },
+              { type: 'div', id: 'center-flex-end' },
+              { type: 'div', id: 'center-center' },
+              { type: 'div', id: 'center-baseline' },
+              { type: 'div', id: 'center-stretch' }
+            ]
+          }
+        ]
+      }
+    },
+
+    'flexbox-order': {
+      styles: [
+        {
+          selector: 'root',
+          background: '#f0f0f0'
+        },
+        {
+          selector: '#row-order-container',
+          top: '10%',
+          left: '5%',
+          width: '90%',
+          height: '20%',
+          display: 'flex',
+          flexDirection: 'row',
+          padding: '10px',
+          background: 'rgba(240, 240, 240, 0.5)',
+          borderRadius: '5px',
+          gap: '10px'
+        },
+        {
+          selector: '#row-item-1',
+          order: '3',
+          width: '100px',
+          height: '60px',
+          background: '#0066cc',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#row-item-2',
+          order: '1',
+          width: '100px',
+          height: '60px',
+          background: '#0077dd',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#row-item-3',
+          order: '2',
+          width: '100px',
+          height: '60px',
+          background: '#0088ee',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#row-item-4',
+          order: '5',
+          width: '100px',
+          height: '60px',
+          background: '#0099ff',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#row-item-5',
+          order: '4',
+          width: '100px',
+          height: '60px',
+          background: '#00aaff',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#mixed-order-container',
+          top: '40%',
+          left: '5%',
+          width: '90%',
+          height: '20%',
+          display: 'flex',
+          flexDirection: 'row',
+          padding: '10px',
+          background: 'rgba(240, 240, 240, 0.5)',
+          borderRadius: '5px',
+          gap: '10px'
+        },
+        {
+          selector: '#mixed-item-1',
+          order: '0',
+          width: '100px',
+          height: '60px',
+          background: '#6600cc',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#mixed-item-2',
+          order: '-2',
+          width: '100px',
+          height: '60px',
+          background: '#7711dd',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#mixed-item-3',
+          order: '2',
+          width: '100px',
+          height: '60px',
+          background: '#8822ee',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#mixed-item-4',
+          order: '-1',
+          width: '100px',
+          height: '60px',
+          background: '#9933ff',
+          borderRadius: '3px'
+        },
+        {
+          selector: '#mixed-item-5',
+          order: '1',
+          width: '100px',
+          height: '60px',
+          background: '#aa44ff',
+          borderRadius: '3px'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'row-order-container',
+            children: [
+              { type: 'div', id: 'row-item-1' },
+              { type: 'div', id: 'row-item-2' },
+              { type: 'div', id: 'row-item-3' },
+              { type: 'div', id: 'row-item-4' },
+              { type: 'div', id: 'row-item-5' }
+            ]
+          },
+          {
+            type: 'div',
+            id: 'mixed-order-container',
+            children: [
+              { type: 'div', id: 'mixed-item-1' },
+              { type: 'div', id: 'mixed-item-2' },
+              { type: 'div', id: 'mixed-item-3' },
+              { type: 'div', id: 'mixed-item-4' },
+              { type: 'div', id: 'mixed-item-5' }
+            ]
+          }
+        ]
+      }
+    },
+
+    'flexbox-debug-simple': {
+      styles: [
+        {
+          selector: 'root',
+          background: '#f0f0f0'
+        },
+        {
+          selector: '#debug-container',
+          top: '10%',
+          left: '10%',
+          width: '80%',
+          height: '30%',
+          background: 'red', // Should be clearly visible
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignContent: 'flex-start',
+          padding: '10px'
+        },
+        {
+          selector: '#debug-item-1',
+          width: '200px',
+          height: '100px',
+          margin: '50px',
+          background: 'blue' // Should be clearly visible
+        },
+        {
+          selector: '#debug-item-2',
+          width: '200px',
+          height: '100px',
+          margin: '50px',
+          background: 'green' // Should be clearly visible
+        },
+        {
+          selector: '#debug-item-3',
+          width: '200px',
+          height: '100px',
+          margin: '50px',
+          background: 'yellow' // Should be clearly visible
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div',
+            id: 'debug-container',
+            children: [
+              { type: 'div', id: 'debug-item-1' },
+              { type: 'div', id: 'debug-item-2' },
+              { type: 'div', id: 'debug-item-3' }
+            ]
+          }
+        ]
+      }
+    },
   };
 
   getSiteData(siteName: string): SiteData | undefined {
