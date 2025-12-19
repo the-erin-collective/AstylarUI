@@ -52,39 +52,84 @@ export class SiteDataService {
           background: '#00ff00'  // Green for settings
         },
         {
-          selector: '#outerdiv',
-          top: '15%',
-          left: '15%',
-          height: '70%',
-          width: '70%',
+          selector: '#container',
+          top: '10%',
+          left: '10%',
+          height: '80%',
+          width: '80%',
+          background: 'lightgray',
+          padding: '20px'
+        },
+        {
+          selector: '#box1',
+          top: '0%',
+          left: '0%',
+          height: '30%',
+          width: '45%',
           background: 'blue',
-          borderWidth: '10px',
-          borderColor: 'white',
+          margin: '10px',
+          borderWidth: '2px',
+          borderColor: 'yellow',
           borderStyle: 'solid'
         },
         {
-          selector: '#outerdiv:hover',
-          background: 'pink',
-          borderColor: 'black'
+          selector: '#box1:hover',
+          background: 'lightblue',
+          borderColor: 'navy'
         },
         {
-          selector: '#innerdiv',
-          top: '25%',
-          left: '25%',
+          selector: '#box2',
+          top: '0%',
+          left: '50%',
+          height: '30%',
+          width: '45%',
+          background: 'red',
+          margin: '10px',
+          padding: '15px'
+        },
+        {
+          selector: '#box3',
+          top: '40%',
+          left: '0%',
+          height: '25%',
+          width: '100%',
+          background: 'orange',
+          margin: '5px 0px',
+          padding: '10px 20px'
+        },
+        {
+          selector: '#nested',
+          top: '0%',
+          left: '0%',
           height: '50%',
           width: '50%',
-          background: 'orange'
+          background: 'yellow',
+          margin: '5px'
         }
       ],
       root: {
         children: [
           {
             type: 'div',
-            id: 'outerdiv',
+            id: 'container',
             children: [
               {
                 type: 'div',
-                id: 'innerdiv'
+                id: 'box1'
+              },
+              {
+                type: 'div',
+                id: 'box2',
+                children: [
+                  {
+                    type: 'div',
+                    id: 'nested'
+                  }
+                ]
+              },
+              {
+                type: 'div',
+                id: 'box3'
               }
             ]
           }

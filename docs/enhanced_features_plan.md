@@ -9,18 +9,20 @@ This plan outlines the strategic development of DOM elements and styling capabil
 - ✅ Hover states with material switching
 - ✅ Parent-child element relationships
 - ✅ Clean service architecture (Camera, Mesh, DOM services)
+- ✅ Border support with frame-based rendering and hover states
 
 ## Development Phases
 
 ### Phase 1: Core Styling Enhancements (Simple)
 **Estimated Complexity: Low**
 
-1. **Border Support**
-   - `border-width`, `border-color`, `border-style` (solid initially)
-   - Implementation: Create outline meshes around existing element meshes
-   - Refactor: Abstract border creation into reusable service method
+1. **Border Support** ✅ **COMPLETED**
+   - ✅ `borderWidth`, `borderColor`, `borderStyle` (solid initially)  
+   - ✅ Implementation: Four-frame border system around element meshes
+   - ✅ Hover support with color changes
+   - ✅ CamelCase property support (borderWidth vs border-width)
 
-2. **Padding & Margin**
+2. **Padding & Margin** 🚧 **IN PROGRESS**
    - `padding` (all sides, individual sides)
    - `margin` (spacing between elements)
    - Implementation: Adjust positioning calculations in `calculateDimensions`

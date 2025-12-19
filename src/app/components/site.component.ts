@@ -1,7 +1,7 @@
 import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Engine, Scene, FreeCamera, HemisphericLight, DirectionalLight, Vector3, Color4, MeshBuilder, StandardMaterial, Color3 } from '@babylonjs/core';
+import { Engine, Scene, FreeCamera, HemisphericLight, DirectionalLight, Vector3, Color4, MeshBuilder, StandardMaterial, Color3, Texture, PassPostProcess, RenderTargetTexture, PostProcess, Effect } from '@babylonjs/core';
 import { BabylonDOMService } from '../services/babylon-dom.service';
 import { BabylonCameraService } from '../services/babylon-camera.service';
 import { BabylonMeshService } from '../services/babylon-mesh.service';
@@ -209,33 +209,27 @@ export class SiteComponent {
   private initializeBabylon(): void {
     const canvas = this.babylonCanvas().nativeElement;
     
-    // Create Babylon.js engine
+    // Create Babylon.js engine with optimized settings
     this.engine = new Engine(canvas, true, {
       preserveDrawingBuffer: true,
       stencil: true,
-      antialias: true
+      antialias: false
     });
     
     // Create scene
     this.babylonScene = new Scene(this.engine);
-    this.babylonScene.clearColor = new Color4(0.05, 0.05, 0.1, 1.0); // Restore original background
+    this.babylonScene.clearColor = new Color4(0.05, 0.05, 0.1, 1.0);
     
     // Create camera using camera service
     const camera = this.babylonCameraService.initialize(this.babylonScene, canvas);
     
     // Create improved lighting setup for better edge definition
     const hemisphericLight = new HemisphericLight('hemispheric', new Vector3(0, 1, 0), this.babylonScene);
-    hemisphericLight.intensity = 1.0; // Restore full intensity
-    hemisphericLight.diffuse = new Color3(1.0, 1.0, 1.0); // Pure white
+    hemisphericLight.intensity = 1.0;
+    hemisphericLight.diffuse = new Color3(1.0, 1.0, 1.0);
     
-    // Add directional light for better edge contrast
-    const directionalLight = new DirectionalLight('directional', new Vector3(-0.5, -0.5, -1), this.babylonScene);
-    directionalLight.intensity = 0.8; // Slightly higher for good contrast
-    directionalLight.diffuse = new Color3(1.0, 1.0, 1.0); // Pure white
-    directionalLight.specular = new Color3(0.0, 0.0, 0.0); // No specular highlights
-    
-    // Initialize mesh service
-    this.babylonMeshService.initialize(this.babylonScene);
+    // Initialize mesh service with camera service for pixel-perfect positioning
+    this.babylonMeshService.initialize(this.babylonScene, this.babylonCameraService);
     
     // Initialize the DOM service with services and proper viewport dimensions
     const viewportWidth = canvas.clientWidth || 1920;
@@ -252,8 +246,8 @@ export class SiteComponent {
 
     this.babylonScene.onReadyObservable.addOnce(() => {
         this.engine?.resize(true);
-        
-        // NOW create site content AFTER high-resolution resize
+
+        // Create site content after initialization
         this.createSiteSpecificContent();
     });
 

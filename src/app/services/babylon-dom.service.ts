@@ -29,6 +29,17 @@ export interface StyleRule {
   borderColor?: string;
   'border-style'?: string;
   borderStyle?: string;
+  // Padding and margin support
+  padding?: string;
+  margin?: string;
+  paddingTop?: string;
+  paddingRight?: string;
+  paddingBottom?: string;
+  paddingLeft?: string;
+  marginTop?: string;
+  marginRight?: string;
+  marginBottom?: string;
+  marginLeft?: string;
 }
 
 export interface SiteData {
@@ -50,6 +61,7 @@ export class BabylonDOMService {
   private elements: Map<string, Mesh> = new Map();
   private hoverStates: Map<string, boolean> = new Map();
   private elementStyles: Map<string, { normal: StyleRule, hover?: StyleRule }> = new Map();
+  private elementDimensions: Map<string, { width: number, height: number, padding: { top: number; right: number; bottom: number; left: number } }> = new Map();
 
   constructor() {}
 
@@ -180,7 +192,7 @@ export class BabylonDOMService {
     const mesh = this.meshService.createPlane(element.id || `element-${Date.now()}`, dimensions.width, dimensions.height);
 
     // Position relative to parent (parent's coordinate system)
-    this.meshService.positionMesh(mesh, dimensions.x, dimensions.y, 0.1);
+    this.meshService.positionMesh(mesh, dimensions.x, dimensions.y, 0.01);
 
     // Parent the mesh so it inherits parent's transformations
     this.meshService.parentMesh(mesh, parent);
@@ -203,12 +215,12 @@ export class BabylonDOMService {
         borderProperties.width
       );
       
-      // Position border frames around the element (same Z as element)
+      // Position border frames around the element (slightly above element for visibility)
       this.meshService.positionBorderFrames(
         borderMeshes,
         dimensions.x,
         dimensions.y,
-        0.1, // Same Z as main element
+        0.1, // Base Z position same as element - positioning logic will add offset
         dimensions.width,
         dimensions.height,
         borderProperties.width
@@ -219,13 +231,22 @@ export class BabylonDOMService {
       //   if (parent) this.meshService.parentMesh(borderMesh, parent);
       // });
       
-      // Apply border material to all frames
+      // Apply border material to all frames with consistent rendering
       const borderMaterial = this.meshService.createMaterial(
         `${element.id}-border-material`,
         borderProperties.color
       );
+      
+      // DO NOT override emissive color - keep materials consistent
+      // The createSharpEdgeMaterial already sets optimal values
+      
       borderMeshes.forEach(borderMesh => {
         borderMesh.material = borderMaterial;
+        
+        // Apply same parenting as main element for consistent coordinate system
+        if (parent && this.meshService) {
+          this.meshService.parentMesh(borderMesh, parent);
+        }
       });
       
       // Store border references for cleanup
@@ -258,6 +279,13 @@ export class BabylonDOMService {
     if (element.id) {
       this.elements.set(element.id, mesh);
       this.hoverStates.set(element.id, false); // Start in normal state
+      
+      // Store element dimensions and padding info for child calculations
+      this.elementDimensions.set(element.id, {
+        width: dimensions.width,
+        height: dimensions.height,
+        padding: dimensions.padding
+      });
     }
 
     return mesh;
@@ -464,60 +492,212 @@ export class BabylonDOMService {
     if (!width) return 0;
     // Handle "2px", "0.1", etc. - convert to world units
     const numericValue = parseFloat(width.replace('px', ''));
-    return numericValue * 0.01; // scale factor to convert to world units
+    // Use camera-calculated scaling factor for accurate conversion
+    if(!this.cameraService){
+      throw new Error('Services not initialized');
+    }
+    const scaleFactor = this.cameraService.getPixelToWorldScale();
+    return numericValue * scaleFactor;
+  }
+
+  private parsePadding(style: StyleRule | undefined) {
+    if (!style) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+
+    // Check for individual padding properties first
+    const paddingTop = this.parsePaddingValue(style.paddingTop);
+    const paddingRight = this.parsePaddingValue(style.paddingRight);
+    const paddingBottom = this.parsePaddingValue(style.paddingBottom);
+    const paddingLeft = this.parsePaddingValue(style.paddingLeft);
+
+    // If individual properties are set, use them
+    if (paddingTop !== null || paddingRight !== null || paddingBottom !== null || paddingLeft !== null) {
+      return {
+        top: paddingTop ?? 0,
+        right: paddingRight ?? 0,
+        bottom: paddingBottom ?? 0,
+        left: paddingLeft ?? 0
+      };
+    }
+
+    // Otherwise, parse the shorthand padding property
+    return this.parseBoxValues(style.padding);
+  }
+
+  private parseMargin(style: StyleRule | undefined) {
+    if (!style) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+
+    // Check for individual margin properties first
+    const marginTop = this.parseMarginValue(style.marginTop);
+    const marginRight = this.parseMarginValue(style.marginRight);
+    const marginBottom = this.parseMarginValue(style.marginBottom);
+    const marginLeft = this.parseMarginValue(style.marginLeft);
+
+    // If individual properties are set, use them
+    if (marginTop !== null || marginRight !== null || marginBottom !== null || marginLeft !== null) {
+      return {
+        top: marginTop ?? 0,
+        right: marginRight ?? 0,
+        bottom: marginBottom ?? 0,
+        left: marginLeft ?? 0
+      };
+    }
+
+    // Otherwise, parse the shorthand margin property
+    return this.parseMarginBoxValues(style.margin);
+  }
+
+  private parseBoxValues(value?: string) {
+    if (!value) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+
+    const values = value.split(/\s+/).map(v => this.parsePaddingValue(v) ?? 0);
+    
+    switch (values.length) {
+      case 1:
+        // padding: 10px (all sides)
+        return { top: values[0], right: values[0], bottom: values[0], left: values[0] };
+      case 2:
+        // padding: 10px 20px (vertical horizontal)
+        return { top: values[0], right: values[1], bottom: values[0], left: values[1] };
+      case 4:
+        // padding: 10px 20px 30px 40px (top right bottom left)
+        return { top: values[0], right: values[1], bottom: values[2], left: values[3] };
+      default:
+        return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+  }
+
+  private parsePaddingValue(value?: string): number | null {
+    if (!value) return null;
+    // Handle "10px", "0.5", etc. - convert to world units
+    const numericValue = parseFloat(value.replace('px', ''));
+    // Use camera-calculated scaling factor for accurate conversion
+    if(!this.cameraService){
+      throw new Error('Services not initialized');
+    }
+    const scaleFactor = this.cameraService?.getPixelToWorldScale();
+    return isNaN(numericValue) ? null : numericValue * scaleFactor;
+  }
+
+  private parseMarginValue(value?: string): number | null {
+    if (!value) return null;
+    // Handle "10px", "0.5", etc. - return raw pixel values without scaling
+    // Scaling will be applied later in positioning calculations
+    const numericValue = parseFloat(value.replace('px', ''));
+    return isNaN(numericValue) ? null : numericValue; // Return raw pixel value
+  }
+
+  private parseMarginBoxValues(value?: string) {
+    if (!value) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+
+    const values = value.split(/\s+/).map(v => this.parseMarginValue(v) ?? 0);
+    
+    switch (values.length) {
+      case 1:
+        // margin: 10px (all sides)
+        return { top: values[0], right: values[0], bottom: values[0], left: values[0] };
+      case 2:
+        // margin: 10px 20px (vertical horizontal)
+        return { top: values[0], right: values[1], bottom: values[0], left: values[1] };
+      case 4:
+        // margin: 10px 20px 30px 40px (top right bottom left)
+        return { top: values[0], right: values[1], bottom: values[2], left: values[3] };
+      default:
+        return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
   }
 
   private calculateDimensions(style: StyleRule | undefined, parent: Mesh): { 
     width: number; 
     height: number; 
     x: number; 
-    y: number; 
+    y: number;
+    padding: { top: number; right: number; bottom: number; left: number };
+    margin: { top: number; right: number; bottom: number; left: number };
   } {
     // Get parent dimensions from the mesh creation parameters
     // For our standard world space, root body is 20x15
     const parentBounds = parent.getBoundingInfo().boundingBox;
-    const parentWidth = Math.abs(parentBounds.maximum.x - parentBounds.minimum.x);
-    const parentHeight = Math.abs(parentBounds.maximum.y - parentBounds.minimum.y);
+    let parentWidth = Math.abs(parentBounds.maximum.x - parentBounds.minimum.x);
+    let parentHeight = Math.abs(parentBounds.maximum.y - parentBounds.minimum.y);
+
+    // If parent has padding, reduce available space for this child
+    const parentInfo = this.getElementInfo(parent.name);
+    if (parentInfo && parentInfo.padding) {
+      parentWidth -= (parentInfo.padding.left + parentInfo.padding.right);
+      parentHeight -= (parentInfo.padding.top + parentInfo.padding.bottom);
+      console.log(`Applied parent padding - reduced dimensions from ${Math.abs(parentBounds.maximum.x - parentBounds.minimum.x)}x${Math.abs(parentBounds.maximum.y - parentBounds.minimum.y)} to ${parentWidth}x${parentHeight}`);
+    }
 
     console.log('Parent dimensions:', { parentWidth, parentHeight });
 
+    // Parse padding and margin
+    const padding = this.parsePadding(style);
+    const margin = this.parseMargin(style);
+
+    // Available space after accounting for parent's padding
+    // (This assumes the parent has padding that affects this child's available space)
+    const availableWidth = parentWidth;
+    const availableHeight = parentHeight;
+
     // Default to small child elements if no style is provided
-    let width = parentWidth * 0.2; // 20% of parent by default
-    let height = parentHeight * 0.2;
+    let width = availableWidth * 0.2; // 20% of available space by default
+    let height = availableHeight * 0.2;
     let x = 0; // Centered by default
     let y = 0;
 
     if (style) {
-      // Calculate width as percentage of parent
+      console.log(`STYLE CHECK - Element: ${style.selector || 'unknown'}, left: ${style.left}, top: ${style.top}`);
+      
+      // Calculate width as percentage of available space (after margins)
       if (style.width) {
         const widthPercent = this.parsePercentageValue(style.width);
-        width = (widthPercent / 100) * parentWidth;
+        width = (widthPercent / 100) * availableWidth;
       }
       
-      // Calculate height as percentage of parent
+      // Calculate height as percentage of available space (after margins)
       if (style.height) {
         const heightPercent = this.parsePercentageValue(style.height);
-        height = (heightPercent / 100) * parentHeight;
+        height = (heightPercent / 100) * availableHeight;
       }
 
       // Calculate position - CSS uses top-left origin, BabylonJS uses center origin
       if (style.left !== undefined) {
         const leftPercent = this.parsePercentageValue(style.left);
         // Convert from CSS left (0% = left edge) to BabylonJS center-based X
+        // Account for margin-left in positioning - apply scaling factor here
         // left edge of parent is at -parentWidth/2
-        // element's left edge should be at: -parentWidth/2 + (leftPercent/100 * parentWidth)
+        // element's left edge should be at: -parentWidth/2 + (margin.left * scale) + (leftPercent/100 * availableWidth)
         // element's center should be at: element's left edge + width/2
-        x = (-parentWidth / 2) + ((leftPercent / 100) * parentWidth) + (width / 2);
+        if(!this.cameraService){
+          throw new Error('Services not initialized');
+        }
+        const scaledMarginLeft = margin.left * (this.cameraService?.getPixelToWorldScale()); // Use camera-calculated scale factor
+        
+        x = (-parentWidth / 2) + scaledMarginLeft + ((leftPercent / 100) * availableWidth) + (width / 2);
       }
 
       if (style.top !== undefined) {
         const topPercent = this.parsePercentageValue(style.top);
         // Convert from CSS top (0% = top edge) to BabylonJS center-based Y
+        // Account for margin-top in positioning - apply scaling factor here
         // Note: CSS Y grows downward, BabylonJS Y grows upward
         // top edge of parent is at +parentHeight/2
-        // element's top edge should be at: +parentHeight/2 - (topPercent/100 * parentHeight)
+        // element's top edge should be at: +parentHeight/2 - (margin.top * scale) - (topPercent/100 * availableHeight)
         // element's center should be at: element's top edge - height/2
-        y = (parentHeight / 2) - ((topPercent / 100) * parentHeight) - (height / 2);
+        if(!this.cameraService){
+          throw new Error('Services not initialized');
+        }
+        const scaledMarginTop = margin.top * (this.cameraService?.getPixelToWorldScale()); // Use camera-calculated scale factor
+        
+        y = (parentHeight / 2) - scaledMarginTop - ((topPercent / 100) * availableHeight) - (height / 2);
       }
     }
 
@@ -527,10 +707,20 @@ export class BabylonDOMService {
       x, 
       y, 
       style,
+      padding,
+      margin,
       parentDimensions: { parentWidth, parentHeight }
     });
 
-    return { width, height, x, y };
+    return { width, height, x, y, padding, margin };
+  }
+
+  private getElementInfo(elementId: string): { padding?: { top: number; right: number; bottom: number; left: number } } | null {
+    // Get element dimension info for padding calculations
+    const elementDimensions = this.elementDimensions.get(elementId);
+    if (!elementDimensions) return null;
+    
+    return { padding: elementDimensions.padding };
   }
 
   private parsePercentage(value: string, parentSize: number): number {
