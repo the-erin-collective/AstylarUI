@@ -361,15 +361,13 @@ export class InputElementService {
                             break;
 
                         case InputType.Checkbox:
-                            // Focus and toggle checkbox
+                            // Focus only - toggle handled by CheckboxManager
                             this.focusInputElement(inputElement);
-                            this.checkboxManager.toggleCheckbox(inputElement as CheckboxInput);
                             break;
 
                         case InputType.Radio:
-                            // Focus and select radio button
+                            // Focus only - selection handled by CheckboxManager
                             this.focusInputElement(inputElement);
-                            this.checkboxManager.selectRadioButton(inputElement as RadioInput);
                             break;
 
                         case InputType.Select:

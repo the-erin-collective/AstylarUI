@@ -54,24 +54,16 @@ export class CheckboxManager {
         checkbox.checkIndicatorMesh = this.createCheckIndicator(checkbox, render.scene);
         checkbox.labelMesh = this.createLabelMesh(checkbox, render, style);
 
-        // Attach interaction to the checkbox mesh directly
+        // Set cursor via metadata for global handler
         if (checkbox.mesh) {
-            checkbox.mesh.actionManager = new BABYLON.ActionManager(render.scene);
-
-            // Toggle on click
-            checkbox.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                BABYLON.ActionManager.OnPickTrigger,
-                () => this.toggleCheckbox(checkbox)
-            ));
-
-            // Toggle on click
-            checkbox.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                BABYLON.ActionManager.OnPickTrigger,
-                () => this.toggleCheckbox(checkbox)
-            ));
-
-            // Set cursor via metadata for global handler
             checkbox.mesh.metadata = { ...checkbox.mesh.metadata, cursor: 'pointer', isTextMesh: false };
+
+            // Attach interaction to the checkbox mesh directly to ensure robust picking
+            checkbox.mesh.actionManager = new BABYLON.ActionManager(render.scene);
+            checkbox.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => this.toggleCheckbox(checkbox)
+            ));
         }
 
         return checkbox;
@@ -112,24 +104,16 @@ export class CheckboxManager {
         radio.selectionIndicatorMesh = this.createSelectionIndicator(radio, render.scene);
         radio.labelMesh = this.createLabelMesh(radio, render, style);
 
-        // Attach interaction to the radio mesh directly
+        // Set cursor via metadata for global handler
         if (radio.mesh) {
-            radio.mesh.actionManager = new BABYLON.ActionManager(render.scene);
-
-            // Select on click
-            radio.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                BABYLON.ActionManager.OnPickTrigger,
-                () => this.selectRadioButton(radio)
-            ));
-
-            // Select on click
-            radio.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                BABYLON.ActionManager.OnPickTrigger,
-                () => this.selectRadioButton(radio)
-            ));
-
-            // Set cursor via metadata for global handler
             radio.mesh.metadata = { ...radio.mesh.metadata, cursor: 'pointer', isTextMesh: false };
+
+            // Attach interaction to the radio mesh directly
+            radio.mesh.actionManager = new BABYLON.ActionManager(render.scene);
+            radio.mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+                BABYLON.ActionManager.OnPickTrigger,
+                () => this.selectRadioButton(radio)
+            ));
         }
 
         this.registerRadioButton(radio);
@@ -217,21 +201,8 @@ export class CheckboxManager {
 
         checkboxMesh.isPickable = true;
 
-        // Add Interactions
-        checkboxMesh.actionManager = new BABYLON.ActionManager(render.scene);
+        // Return mesh
 
-        // Click to toggle
-        checkboxMesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-            BABYLON.ActionManager.OnPickTrigger,
-            () => {
-                // Find instance to toggle - we need a way to look up the CheckboxInput from the mesh
-                // Since this method creates it, we can't capture 'checkbox' variable here easily as it's not created yet.
-                // However, we are in 'createCheckboxMesh' called by 'createCheckbox'.
-                // We can't easily access the wrapper object here.
-
-                // Better approach: Return mesh, and attach action in createCheckbox where we have the object.
-            }
-        ));
 
         // We will move the interaction attachment to createCheckbox and createRadioButton to allow access to the wrapper object.
         // So for now, just return mesh.
@@ -287,11 +258,16 @@ export class CheckboxManager {
         material.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.1);
         checkMark.material = material;
 
-        checkMark.isPickable = false;
+        checkMark.isPickable = true;
         checkMark.isVisible = false;
         checkMark.renderingGroupId = 2; // Ensure visibility on top
 
-        checkMark.renderingGroupId = 2; // Ensure visibility on top
+        // Add interaction to checkMark to ensure it captures clicks
+        checkMark.actionManager = new BABYLON.ActionManager(scene);
+        checkMark.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPickTrigger,
+            () => this.toggleCheckbox(checkbox)
+        ));
 
         // Defensive: Force cursor pointer and disable text mesh inference
         checkMark.metadata = { cursor: 'pointer', isTextMesh: false };
@@ -330,11 +306,16 @@ export class CheckboxManager {
         material.emissiveColor = new BABYLON.Color3(0.1, 0.2, 0.4);
         indicator.material = material;
 
-        indicator.isPickable = false;
+        indicator.isPickable = true;
         indicator.isVisible = false;
         indicator.renderingGroupId = 2; // Ensure visibility on top
 
-        indicator.renderingGroupId = 2; // Ensure visibility on top
+        // Add interaction to indicator to ensure it captures clicks
+        indicator.actionManager = new BABYLON.ActionManager(scene);
+        indicator.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPickTrigger,
+            () => this.selectRadioButton(radio)
+        ));
 
         // Defensive: Force cursor pointer and disable text mesh inference
         indicator.metadata = { cursor: 'pointer', isTextMesh: false };
