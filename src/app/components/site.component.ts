@@ -173,11 +173,11 @@ import { SiteDataService } from '../services/site-data.service';
 export class SiteComponent {
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
-  private babylonDOMService = inject(BabylonDOMService);
+  private babylonDOMService: BabylonDOMService = inject(BabylonDOMService);
   private babylonCameraService = inject(BabylonCameraService);
   private babylonMeshService = inject(BabylonMeshService);
   private siteDataService = inject(SiteDataService);
-  
+
   // ViewChild for canvas element
   private babylonCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('babylonCanvas');
   
@@ -234,7 +234,7 @@ export class SiteComponent {
     // Initialize the DOM service with services and proper viewport dimensions
     const viewportWidth = canvas.clientWidth || 1920;
     const viewportHeight = canvas.clientHeight || 1080;
-    this.babylonDOMService.initialize(this.babylonScene, this.babylonCameraService, this.babylonMeshService, viewportWidth, viewportHeight);
+    this.babylonDOMService.initialize(this.babylonScene!, this.babylonCameraService!, this.babylonMeshService!, canvas.clientWidth || 1920, canvas.clientHeight || 1080);
     
     // Start render loop
     this.engine.runRenderLoop(() => {
@@ -259,9 +259,11 @@ export class SiteComponent {
   
   private createSiteSpecificContent(): void {
     if (!this.babylonScene) return;
-    
+
     const siteId = this.siteId();
-    
+    // Calculate scale factor using camera service and scene
+    const scaleFactor = this.babylonCameraService.getPixelToWorldScale();
+
     // Check if we have site data for this site ID
     if (this.siteDataService.hasSiteData(siteId)) {
       const siteData = this.siteDataService.getSiteData(siteId);

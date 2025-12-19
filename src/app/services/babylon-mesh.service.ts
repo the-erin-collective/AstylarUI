@@ -1139,7 +1139,9 @@ export class BabylonMeshService {
   }
 
   positionMesh(mesh: Mesh, x: number, y: number, z: number): void {
+    console.log(`[BabylonMeshService] positionMesh called for mesh: ${mesh?.name || 'unknown'} with x=${x}, y=${y}, z=${z}`);
     mesh.position = new Vector3(x, y, z);
+    console.log(`[BabylonMeshService] mesh.position after set: (${mesh.position.x}, ${mesh.position.y}, ${mesh.position.z})`);
   }
 
   parentMesh(child: Mesh, parent: Mesh): void {
