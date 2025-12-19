@@ -95,6 +95,8 @@
   - Check for color inheritance issues
 
 
+
+
   - Ensure items don't inherit container colors incorrectly
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
@@ -122,8 +124,12 @@
 
 
 
+
+
 - [ ] 4.1 Debug margin calculation and conversion
   - Add logging to margin parsing and conversion to world units
+
+
   - Verify margin values are being extracted from styles correctly
   - Check conversion from CSS units (px) to 3D world units
 
@@ -132,18 +138,39 @@
 
 
 
+
+
   - Test with large margins for visibility
+
+
+
+
+
 
   - _Requirements: 2.1, 2.3, 2.5_
 
 
 
-- [ ] 4.2 Debug margin application in layout calculations
+
+
+
+
+- [x] 4.2 Debug margin application in layout calculations
+
+
   - Add logging to flex layout calculations showing margin effects
   - Verify margins are added to item dimensions correctly
   - Check that margins affect item positioning
+
+
+
+
   - Ensure margins don't cause items to overlap
   - _Requirements: 2.3, 2.4, 2.5_
+
+
+
+
 
 
 - [ ] 4.3 Debug gap property handling
@@ -155,20 +182,30 @@
   - _Requirements: 2.2, 2.5_
 
 
+
+
+
 - [ ] 5. Debug and Fix Flex Wrapping Behavior
   - Investigate why items might not be wrapping correctly
   - Verify line creation and item distribution
   - Test wrapping logic with various container sizes
+
+
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
 - [ ] 5.1 Debug flex wrapping logic
   - Add detailed logging to wrapping calculations
+
+
+
   - Verify container width and item width calculations
   - Check line creation logic and item distribution
   - Test with items that should definitely wrap
   - _Requirements: 5.1, 5.3, 5.4_
 
-- [ ] 5.2 Debug line creation and positioning
+- [x] 5.2 Debug line creation and positioning
+
+
   - Add logging to show how many lines are created
   - Verify which items are assigned to which lines
 
