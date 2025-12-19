@@ -1,7 +1,9 @@
 import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder, Vector3, StandardMaterial, Color3, Color4 } from '@babylonjs/core';
+import { Engine, Scene, FreeCamera, HemisphericLight, Vector3, Color4, MeshBuilder, StandardMaterial, Color3 } from '@babylonjs/core';
+import { BabylonDOMService } from '../services/babylon-dom.service';
+import { SiteDataService } from '../services/site-data.service';
 
 @Component({
   selector: 'app-site',
@@ -169,6 +171,8 @@ import { Engine, Scene, ArcRotateCamera, HemisphericLight, MeshBuilder, Vector3,
 export class SiteComponent {
   private route = inject(ActivatedRoute);
   private platformId = inject(PLATFORM_ID);
+  private babylonDOMService = inject(BabylonDOMService);
+  private siteDataService = inject(SiteDataService);
   
   // ViewChild for canvas element
   private babylonCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('babylonCanvas');
@@ -210,24 +214,26 @@ export class SiteComponent {
     
     // Create scene
     this.babylonScene = new Scene(this.engine);
-    this.babylonScene.clearColor = new Color4(0.2, 0.2, 0.3, 1.0);
+    this.babylonScene.clearColor = new Color4(0.05, 0.05, 0.1, 1.0); // Dark background
     
-    // Create camera
-    const camera = new ArcRotateCamera(
-      'camera',
-      -Math.PI / 2,
-      Math.PI / 2.5,
-      10,
-      Vector3.Zero(),
-      this.babylonScene
-    );
+    // Create camera for true 2D viewing - looking straight at XY plane from positive Z
+    const camera = new FreeCamera('camera', new Vector3(0, 0, 30), this.babylonScene);
+    camera.setTarget(Vector3.Zero());
     camera.attachControl(canvas, true);
     
-    // Create light
-    const light = new HemisphericLight('light', new Vector3(0, 1, 0), this.babylonScene);
-    light.intensity = 0.7;
+    // Disable camera movement to keep it in 2D mode
+    camera.inputs.clear();
     
-    // Create scene content based on site ID
+    // Create light
+    const light = new HemisphericLight('light', new Vector3(0, 0, -1), this.babylonScene);
+    light.intensity = 1.0;
+    
+    // Initialize the DOM service with proper viewport dimensions
+    const viewportWidth = canvas.clientWidth || 1920;
+    const viewportHeight = canvas.clientHeight || 1080;
+    this.babylonDOMService.initialize(this.babylonScene, viewportWidth, viewportHeight);
+    
+    // Create site content using the abstraction layer
     this.createSiteSpecificContent();
     
     // Start render loop
@@ -249,101 +255,49 @@ export class SiteComponent {
     
     const siteId = this.siteId();
     
-    // Create different content based on site ID
-    switch (siteId) {
-      case 'dashboard':
-        this.createDashboardScene();
-        break;
-      case 'analytics':
-        this.createAnalyticsScene();
-        break;
-      case 'settings':
-        this.createSettingsScene();
-        break;
-      case 'profile':
-        this.createProfileScene();
-        break;
-      default:
-        this.createDefaultScene();
+    // Check if we have site data for this site ID
+    if (this.siteDataService.hasSiteData(siteId)) {
+      const siteData = this.siteDataService.getSiteData(siteId);
+      if (siteData) {
+        console.log(`Creating DOM structure for site: ${siteId}`, siteData);
+        this.babylonDOMService.createSiteFromData(siteData);
+      }
+    } else {
+      console.log(`No site data found for: ${siteId}, using fallback`);
+      // Fallback: create a simple default layout
+      this.createDefaultLayout();
     }
   }
   
-  private createDashboardScene(): void {
-    if (!this.babylonScene) return;
+  private createDefaultLayout(): void {
+    // Create a simple fallback layout for unknown sites
+    const defaultData = {
+      styles: [
+        {
+          selector: '#default-container',
+          top: '25%',
+          left: '25%',
+          height: '50%',
+          width: '50%'
+        }
+      ],
+      root: {
+        children: [
+          {
+            type: 'div' as const,
+            id: 'default-container'
+          }
+        ]
+      }
+    };
     
-    // Create multiple boxes for dashboard visualization
-    for (let i = 0; i < 5; i++) {
-      const box = MeshBuilder.CreateBox(`box${i}`, { size: 1 }, this.babylonScene);
-      box.position.x = (i - 2) * 2;
-      box.position.y = Math.sin(i) * 2;
-      
-      const material = new StandardMaterial(`boxMat${i}`, this.babylonScene);
-      material.diffuseColor = new Color3(0.2, 0.6, 1.0);
-      material.specularColor = new Color3(0.1, 0.1, 0.1);
-      box.material = material;
-    }
-  }
-  
-  private createAnalyticsScene(): void {
-    if (!this.babylonScene) return;
-    
-    // Create spheres for analytics data points
-    for (let i = 0; i < 8; i++) {
-      const sphere = MeshBuilder.CreateSphere(`sphere${i}`, { diameter: 0.5 + Math.random() }, this.babylonScene);
-      sphere.position = new Vector3(
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10
-      );
-      
-      const material = new StandardMaterial(`sphereMat${i}`, this.babylonScene);
-      material.diffuseColor = new Color3(1.0, 0.4, 0.2);
-      sphere.material = material;
-    }
-  }
-  
-  private createSettingsScene(): void {
-    if (!this.babylonScene) return;
-    
-    // Create torus for settings
-    const torus = MeshBuilder.CreateTorus('torus', { diameter: 4, thickness: 0.5 }, this.babylonScene);
-    const material = new StandardMaterial('torusMat', this.babylonScene);
-    material.diffuseColor = new Color3(0.8, 0.2, 0.8);
-    torus.material = material;
-    
-    // Rotate the torus
-    this.babylonScene.registerBeforeRender(() => {
-      torus.rotation.y += 0.01;
-      torus.rotation.x += 0.005;
-    });
-  }
-  
-  private createProfileScene(): void {
-    if (!this.babylonScene) return;
-    
-    // Create cylinder for profile
-    const cylinder = MeshBuilder.CreateCylinder('cylinder', { height: 3, diameter: 2 }, this.babylonScene);
-    const material = new StandardMaterial('cylinderMat', this.babylonScene);
-    material.diffuseColor = new Color3(0.2, 0.8, 0.2);
-    cylinder.material = material;
-  }
-  
-  private createDefaultScene(): void {
-    if (!this.babylonScene) return;
-    
-    // Create a simple box for unknown sites
-    const box = MeshBuilder.CreateBox('box', { size: 2 }, this.babylonScene);
-    const material = new StandardMaterial('boxMat', this.babylonScene);
-    material.diffuseColor = new Color3(0.5, 0.5, 0.5);
-    box.material = material;
-    
-    // Add rotation animation
-    this.babylonScene.registerBeforeRender(() => {
-      box.rotation.y += 0.02;
-    });
+    this.babylonDOMService.createSiteFromData(defaultData);
   }
   
   ngOnDestroy(): void {
+    // Clean up DOM service
+    this.babylonDOMService.cleanup();
+    
     // Clean up Babylon.js resources
     this.babylonScene?.dispose();
     this.engine?.dispose();
