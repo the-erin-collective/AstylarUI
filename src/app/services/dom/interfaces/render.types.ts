@@ -22,7 +22,7 @@ export interface MeshActions {
 export interface StyleActions {
     findStyleBySelector: (selector: string, styles: StyleRule[]) => StyleRule | undefined;
     findStyleForElement: (element: DOMElement, styles: StyleRule[], elementStyles?: Map<string, { normal: StyleRule, hover?: StyleRule }>) => StyleRule | undefined;
-    parseBackgroundColor: (background?: string) => Color3;
+    parseBackgroundColor: (background?: string) => { color: Color3, alpha?: number } | null;
     parseOpacity: (opacityValue: string | undefined) => number;
     getElementTypeDefaults: (elementType: string) => Partial<StyleRule>;
     parseAlignContent: (value: string | undefined) => string;

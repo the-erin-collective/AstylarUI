@@ -193,31 +193,24 @@ export class TableService {
   private createTableSectionContainer(dom: BabylonDOM, render: BabylonRender, sectionElement: DOMElement, tableMesh: Mesh, styles: StyleRule[], containerDimensions: { width: number; height: number }, tableId: string): Mesh {
     console.log(`[TABLE DEBUG] Creating section container for ${sectionElement.type}#${sectionElement.id} with dimensions: ${containerDimensions.width}x${containerDimensions.height}px`);
 
-    // tbody/thead/tfoot should inherit table dimensions unless explicitly styled
-    const elementStyles = sectionElement.id ? dom.context.elementStyles.get(sectionElement.id) : undefined;
-    const explicitStyle = elementStyles?.normal;
-    const typeDefaults = render.actions.style.getElementTypeDefaults(sectionElement.type);
-
-    // Create style that inherits from table dimensions
-    const inheritedStyle: StyleRule = {
+    // Create auto-positioned style for the section
+    // We only provide layout overrides here; createElement will resolve the full style cascade
+    const sectionLayoutOverride: StyleRule = {
       selector: sectionElement.id ? `#${sectionElement.id}` : sectionElement.type,
-      ...typeDefaults,
-      ...explicitStyle,
-      // Use the calculated section dimensions
-      width: explicitStyle?.width || `${containerDimensions.width}px`,
-      height: explicitStyle?.height || `${containerDimensions.height}px`,
-      top: explicitStyle?.top || '0px',
-      left: explicitStyle?.left || '0px'
+      width: `${containerDimensions.width}px`,
+      height: `${containerDimensions.height}px`,
+      top: '0px',
+      left: '0px'
     };
 
-    console.log(`[TABLE DEBUG] Section ${sectionElement.type} style height: ${inheritedStyle.height}`);
+    console.log(`[TABLE DEBUG] Section ${sectionElement.type} layout override height: ${sectionLayoutOverride.height}`);
 
-    // Temporarily store the inherited style
-    const tempStyles = sectionElement.id ? dom.context.elementStyles.get(sectionElement.id) : undefined;
+    // Store layout overrides in context temporarily
+    const storedStyles = sectionElement.id ? dom.context.elementStyles.get(sectionElement.id) : undefined;
     if (sectionElement.id) {
       dom.context.elementStyles.set(sectionElement.id, {
-        normal: inheritedStyle,
-        hover: tempStyles?.hover
+        normal: { ...(storedStyles?.normal || {}), ...sectionLayoutOverride },
+        hover: storedStyles?.hover
       });
     }
 
@@ -234,8 +227,8 @@ export class TableService {
     console.log(`📋 Stored section dimensions for ${sectionMesh.name}: ${containerDimensions.width}x${containerDimensions.height}px`);
 
     // Restore original styles
-    if (sectionElement.id && tempStyles) {
-      dom.context.elementStyles.set(sectionElement.id, tempStyles);
+    if (sectionElement.id && storedStyles) {
+      dom.context.elementStyles.set(sectionElement.id, storedStyles);
     }
 
     console.log(`📋 Created table section container: ${sectionElement.type}#${sectionElement.id}, inheriting dimensions: ${containerDimensions.width}x${containerDimensions.height}px`);
@@ -494,27 +487,21 @@ export class TableService {
 
     console.log(`[TABLE DEBUG] Calculated row width: ${rowWidth}, yOffset: ${yOffset}, rowHeight: ${rowHeight}`);
 
-    // Create auto-positioned style for the row
-    const elementStyles = rowElement.id ? dom.context.elementStyles.get(rowElement.id) : undefined;
-    const explicitStyle = elementStyles?.normal;
-    const typeDefaults = render.actions.style.getElementTypeDefaults(rowElement.type);
-
-    const autoPositionedStyle: StyleRule = {
+    // Create layout override for the row
+    const rowLayoutOverride: StyleRule = {
       selector: rowElement.id ? `#${rowElement.id}` : rowElement.type,
-      ...typeDefaults,
-      ...explicitStyle,
       top: `${yOffset}px`,
       left: `${containerPadding.left}px`,
       width: `${rowWidth}px`,
       height: `${rowHeight}px`
     };
 
-    // Temporarily store the auto-positioned style
-    const tempStyles = rowElement.id ? dom.context.elementStyles.get(rowElement.id) : undefined;
+    // Store layout overrides in context temporarily
+    const storedStyles = rowElement.id ? dom.context.elementStyles.get(rowElement.id) : undefined;
     if (rowElement.id) {
       dom.context.elementStyles.set(rowElement.id, {
-        normal: autoPositionedStyle,
-        hover: tempStyles?.hover
+        normal: { ...(storedStyles?.normal || {}), ...rowLayoutOverride },
+        hover: storedStyles?.hover
       });
     }
 
@@ -531,8 +518,8 @@ export class TableService {
     console.log(`� Stored drow dimensions for ${rowMesh.name}: ${rowWidth}x${rowHeight}px`);
 
     // Restore original styles
-    if (rowElement.id && tempStyles) {
-      dom.context.elementStyles.set(rowElement.id, tempStyles);
+    if (rowElement.id && storedStyles) {
+      dom.context.elementStyles.set(rowElement.id, storedStyles);
     }
 
     return rowMesh;
@@ -648,38 +635,23 @@ export class TableService {
     }
     console.log(`[TABLE DEBUG] Cell height: ${cellHeight} (spanning ${rowspan} rows)`);
 
-    // Create auto-positioned style for the cell
-    const elementStyles = cellElement.id ? dom.context.elementStyles.get(cellElement.id) : undefined;
-    const explicitStyle = elementStyles?.normal;
-    const typeDefaults = render.actions.style.getElementTypeDefaults(cellElement.type);
-
-    const autoPositionedStyle: StyleRule = {
+    // Create layout override for the cell
+    const cellLayoutOverride: StyleRule = {
       selector: cellElement.id ? `#${cellElement.id}` : cellElement.type,
-      ...typeDefaults,
-      ...explicitStyle,
       top: '0px',  // Relative to row
       left: `${xOffset}px`,
       width: `${cellWidth}px`,
-      height: `${cellHeight}px`,
-      // Add visual indication for spanning cells
-      ...(colspan > 1 || rowspan > 1 ? {
-        borderWidth: explicitStyle?.borderWidth || '2px',
-        borderColor: explicitStyle?.borderColor || '#007acc',
-        borderStyle: explicitStyle?.borderStyle || 'solid'
-      } : {})
+      height: `${cellHeight}px`
     };
 
-    // Temporarily store the auto-positioned style
-    const tempStyles = cellElement.id ? dom.context.elementStyles.get(cellElement.id) : undefined;
+    // Store layout overrides in context temporarily
+    const storedStyles = cellElement.id ? dom.context.elementStyles.get(cellElement.id) : undefined;
     if (cellElement.id) {
       dom.context.elementStyles.set(cellElement.id, {
-        normal: autoPositionedStyle,
-        hover: tempStyles?.hover
+        normal: { ...(storedStyles?.normal || {}), ...cellLayoutOverride },
+        hover: storedStyles?.hover
       });
     }
-
-    // Debug: Check what styles are being used for createElement
-    console.log(`[TABLE DEBUG] About to create cell mesh with autoPositionedStyle:`, JSON.stringify(autoPositionedStyle));
 
     // Create the cell element using existing createElement method
     const cellMesh = dom.actions.createElement(dom, render, cellElement, rowMesh, styles);
@@ -694,8 +666,8 @@ export class TableService {
     });
 
     // Restore original styles
-    if (cellElement.id && tempStyles) {
-      dom.context.elementStyles.set(cellElement.id, tempStyles);
+    if (cellElement.id && storedStyles) {
+      dom.context.elementStyles.set(cellElement.id, storedStyles);
     }
 
     return cellMesh;
@@ -919,29 +891,26 @@ export class TableService {
       return;
     }
 
-    // Create caption with auto-positioning
+    // Position caption above table by default (can be overridden by caption-side CSS property)
+    // Create layout override for the caption
     const elementStyles = captionElement.id ? dom.context.elementStyles.get(captionElement.id) : undefined;
     const explicitStyle = elementStyles?.normal;
     const typeDefaults = render.actions.style.getElementTypeDefaults(captionElement.type);
+    const captionHeight = explicitStyle?.height ? parseFloat(explicitStyle.height as string) : 30;
 
-    // Position caption above table by default (can be overridden by caption-side CSS property)
-    const captionHeight = explicitStyle?.height ? parseFloat(explicitStyle.height) : 30;
-    const captionStyle: StyleRule = {
+    const captionLayoutOverride: StyleRule = {
       selector: captionElement.id ? `#${captionElement.id}` : 'caption',
-      ...typeDefaults,
-      ...explicitStyle,
-      top: explicitStyle?.top || `-${captionHeight + 10}px`, // Position above table
-      left: explicitStyle?.left || '0px',
-      width: explicitStyle?.width || `${tableDimensions.width}px`,
-      height: explicitStyle?.height || `${captionHeight}px`
+      top: `-${captionHeight + 10}px`,
+      left: '0px',
+      width: `${tableDimensions.width}px`,
+      height: `${captionHeight}px`
     };
 
-    // Temporarily store the caption style
-    const tempStyles = captionElement.id ? dom.context.elementStyles.get(captionElement.id) : undefined;
+    // Store layout overrides in context temporarily
     if (captionElement.id) {
       dom.context.elementStyles.set(captionElement.id, {
-        normal: captionStyle,
-        hover: tempStyles?.hover
+        normal: { ...(explicitStyle || {}), ...captionLayoutOverride },
+        hover: elementStyles?.hover
       });
     }
 
@@ -949,14 +918,14 @@ export class TableService {
     const captionMesh = dom.actions.createElement(dom, render, captionElement, tableMesh, styles);
     console.log(`[TABLE DEBUG] Created caption mesh: ${captionMesh.name}`);
 
+    // Restore original styles
+    if (captionElement.id && elementStyles) {
+      dom.context.elementStyles.set(captionElement.id, elementStyles);
+    }
+
     // Process caption children if any
     if (captionElement.children && captionElement.children.length > 0) {
       dom.actions.processChildren(dom, render, captionElement.children, captionMesh, styles, captionElement);
-    }
-
-    // Restore original styles
-    if (captionElement.id && tempStyles) {
-      dom.context.elementStyles.set(captionElement.id, tempStyles);
     }
   }
 }

@@ -382,15 +382,14 @@ export class StyleService {
         // Default: no match
         return false;
     }
-
     public findStyleBySelector(selector: string, styles: StyleRule[]): StyleRule | undefined {
         return styles.find(style => style.selector === selector);
     }
 
-    public parseBackgroundColor(background?: string): Color3 {
+    public parseBackgroundColor(background?: string): { color: Color3, alpha?: number } | null {
         if (!background) {
             console.log('🎨 COLOR DEBUG: No background color provided, using default');
-            return new Color3(0.2, 0.2, 0.3); // Default color
+            return { color: new Color3(0.2, 0.2, 0.3) }; // Default color
         }
 
         console.log(`🎨 COLOR DEBUG: Parsing background color: "${background}"`);
@@ -399,7 +398,7 @@ export class StyleService {
         // Handle transparent backgrounds
         if (colorLower === 'transparent') {
             console.log('🎨 COLOR DEBUG: Transparent background detected, returning null');
-            return null as any; // Special case - will be handled in material creation
+            return null;
         }
 
         // Handle hex colors (#ff0000, #f00)
@@ -407,7 +406,7 @@ export class StyleService {
             console.log(`🎨 COLOR DEBUG: Parsing hex color: ${background}`);
             const result = this.parseHexColor(colorLower);
             console.log(`🎨 COLOR DEBUG: Hex color result: RGB(${result.r.toFixed(3)}, ${result.g.toFixed(3)}, ${result.b.toFixed(3)})`);
-            return result;
+            return { color: result };
         }
 
         // Handle named colors - expanded list
@@ -586,36 +585,38 @@ export class StyleService {
             console.log(`🎨 COLOR DEBUG: Found named color: ${colorLower}`);
             const result = namedColors[colorLower];
             console.log(`🎨 COLOR DEBUG: Named color result: RGB(${result.r.toFixed(3)}, ${result.g.toFixed(3)}, ${result.b.toFixed(3)})`);
-            return result;
+            return { color: result };
         }
 
         // Handle rgb() and rgba() formats
         if (colorLower.startsWith('rgb(') || colorLower.startsWith('rgba(')) {
             console.log(`🎨 COLOR DEBUG: Parsing RGB(A) color: ${background}`);
             const result = this.parseRgbColor(colorLower);
-            console.log(`🎨 COLOR DEBUG: RGB(A) color result: RGB(${result.r.toFixed(3)}, ${result.g.toFixed(3)}, ${result.b.toFixed(3)})`);
+            console.log(`🎨 COLOR DEBUG: RGB(A) color result: RGB(${result.color.r.toFixed(3)}, ${result.color.g.toFixed(3)}, ${result.color.b.toFixed(3)}), A=${result.alpha}`);
             return result;
         }
 
         // Fallback to default
         console.log(`🎨 COLOR DEBUG: Unknown color format: ${background}, using default`);
-        return new Color3(0.2, 0.2, 0.3);
+        return { color: new Color3(0.2, 0.2, 0.3) };
     }
 
-    private parseRgbColor(rgb: string): Color3 {
+    private parseRgbColor(rgb: string): { color: Color3, alpha?: number } {
         // Extract the RGB values from the string
         const values = rgb.replace(/rgba?\(|\)/g, '').split(',').map(v => v.trim());
 
         if (values.length < 3) {
-            return new Color3(0.2, 0.2, 0.3); // Default for invalid format
+            return { color: new Color3(0.2, 0.2, 0.3) }; // Default for invalid format
         }
 
         // Convert RGB values (0-255) to normalized values (0-1)
         const r = parseInt(values[0], 10) / 255;
         const g = parseInt(values[1], 10) / 255;
         const b = parseInt(values[2], 10) / 255;
+        const a = values.length >= 4 ? parseFloat(values[3]) : undefined;
 
-        return new Color3(r, g, b);
+        console.log(`🎨 COLOR DEBUG: Parsed RGB(A): R=${r}, G=${g}, B=${b}, A=${a}`);
+        return { color: new Color3(r, g, b), alpha: a };
     }
 
     private parseHexColor(hex: string): Color3 {

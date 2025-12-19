@@ -3,7 +3,7 @@ import { BabylonDOM } from '../interfaces/dom.types';
 import { BabylonRender } from '../interfaces/render.types';
 import { DOMElement } from '../../../types/dom-element';
 import { StyleRule } from '../../../types/style-rule';
-import { Mesh } from '@babylonjs/core';
+import { Mesh, Color3 } from '@babylonjs/core';
 
 /**
  * Service responsible for applying materials and visual properties to elements
@@ -28,19 +28,29 @@ export class ElementMaterialService {
         // Get opacity
         const opacity = render.actions.style.parseOpacity(style?.opacity);
 
-        // Get background color
-        let backgroundColor;
+        // Get background color data (includes color and optional alpha)
+        let backgroundData;
         if (style?.background) {
-            backgroundColor = render.actions.style.parseBackgroundColor(style.background);
+            backgroundData = render.actions.style.parseBackgroundColor(style.background);
         }
 
         // Create and apply material
-        if (backgroundColor) {
+        if (backgroundData) {
+            const finalOpacity = backgroundData.alpha !== undefined ? backgroundData.alpha : opacity;
             const material = render.actions.mesh.createMaterial(
                 `${element.id || mesh.name}-material`,
-                backgroundColor,
+                backgroundData.color,
                 undefined,
-                opacity
+                finalOpacity
+            );
+            mesh.material = material;
+        } else if (style?.background === 'transparent') {
+            // Explicitly handle transparent background
+            const material = render.actions.mesh.createMaterial(
+                `${element.id || mesh.name}-material`,
+                new Color3(0, 0, 0),
+                undefined,
+                0 // Fully transparent
             );
             mesh.material = material;
         }

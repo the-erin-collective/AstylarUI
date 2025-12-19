@@ -4351,9 +4351,9 @@ export class SiteDataService {
           left: '5%',
           width: '90%',
           height: '90%',
-          background: 'rgba(240, 240, 240, 0.9)',
-          borderRadius: '8px',
-          padding: '20px'
+          background: 'rgba(230, 230, 230, 1)',
+          borderRadius: '12px',
+          padding: '24px'
         },
 
         // Table with column definitions
@@ -4363,50 +4363,52 @@ export class SiteDataService {
           left: '0%',
           width: '100%',
           height: '80%',
-          background: 'rgba(255, 255, 255, 0.95)',
-          borderWidth: '2px',
-          borderColor: '#333333',
+          background: '#ffffff',
+          borderWidth: '3px',
+          borderColor: '#2c3e50',
           borderStyle: 'solid',
-          borderRadius: '4px'
+          borderRadius: '8px'
         },
 
         // Caption styling
         {
           selector: '#table-caption',
-          background: 'rgba(0, 123, 255, 0.1)',
-          borderWidth: '1px',
-          borderColor: '#007bff',
+          background: 'rgba(52, 152, 219, 0.9)',
+          color: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#2980b9',
           borderStyle: 'solid',
-          borderRadius: '4px 4px 0 0',
-          padding: '10px'
+          borderRadius: '8px 8px 0 0',
+          padding: '12px'
         },
 
         // Header cells
         {
           selector: '.complete-th',
-          background: 'rgba(0, 123, 255, 0.2)',
-          borderWidth: '1px',
-          borderColor: '#007bff',
+          background: 'rgba(41, 128, 185, 0.95)',
+          color: '#ffffff',
+          borderWidth: '2px',
+          borderColor: '#2471a3',
           borderStyle: 'solid',
-          padding: '8px'
+          padding: '12px'
         },
 
         // Data cells
         {
           selector: '.complete-td',
-          background: 'rgba(255, 255, 255, 0.8)',
+          background: '#ffffff',
           borderWidth: '1px',
-          borderColor: '#dee2e6',
+          borderColor: '#bdc3c7',
           borderStyle: 'solid',
-          padding: '8px'
+          padding: '10px'
         },
 
         // Spanning cell highlight
         {
           selector: '.spanning-cell',
-          background: 'rgba(255, 193, 7, 0.3)',
-          borderWidth: '2px',
-          borderColor: '#ffc107',
+          background: 'rgba(241, 196, 15, 0.95)',
+          borderWidth: '3px',
+          borderColor: '#f39c12',
           borderStyle: 'solid'
         },
 

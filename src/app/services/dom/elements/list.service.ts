@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { DOMElement } from '../../../types/dom-element';
 import { StyleRule } from '../../../types/style-rule';
-import { Mesh } from '@babylonjs/core';
+import { Mesh, Color3 } from '@babylonjs/core';
 import { BabylonDOM } from '../interfaces/dom.types';
 import { BabylonRender } from '../interfaces/render.types';
 
@@ -193,13 +193,13 @@ export class ListService {
     const indicatorColor = listType === 'ul' ? '#3498db' : '#e74c3c'; // Blue for bullets, red for numbers
     console.log(`🎨 Applying ${listType} indicator color: ${indicatorColor}`);
     const parsedColor = render.actions.style.parseBackgroundColor(indicatorColor);
-    console.log(`🎨 Parsed color:`, parsedColor, `(r=${parsedColor.r}, g=${parsedColor.g}, b=${parsedColor.b})`);
+    console.log(`🎨 Parsed color:`, parsedColor, `(r=${parsedColor?.color.r}, g=${parsedColor?.color.g}, b=${parsedColor?.color.b})`);
 
     const indicatorMaterial = render.actions.mesh.createMaterial(
       `${listItemMesh.name}-indicator-material-${Date.now()}`, // Add timestamp to avoid caching
-      parsedColor,
+      parsedColor?.color || new Color3(0, 0, 0),
       undefined,
-      1.0
+      parsedColor?.alpha !== undefined ? parsedColor.alpha : 1.0
     );
     indicatorMesh.material = indicatorMaterial;
 
