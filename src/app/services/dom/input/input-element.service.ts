@@ -91,6 +91,7 @@ export class InputElementService {
         // Attach input events (click to focus, etc.)
         if (render.scene) {
             this.attachInputEvents(inputElement, render.scene);
+            this.ensureGlobalBlurListener(render.scene);
         }
 
         // Add validation rules if specified
@@ -416,6 +417,60 @@ export class InputElementService {
         }
     }
 
+    private globalBlurListenerAttached = false;
+
+    /**
+     * Ensures a global listener is attached to handle blur on click-outside
+     */
+    private ensureGlobalBlurListener(scene: BABYLON.Scene): void {
+        if (this.globalBlurListenerAttached) return;
+
+        scene.onPointerObservable.add((pointerInfo) => {
+            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+                const focusedElement = this.focusManager.getFocusedElement();
+
+                // If nothing is focused, nothing to do
+                if (!focusedElement) return;
+
+                const pickedMesh = pointerInfo.pickInfo?.pickedMesh;
+
+                // Check if we clicked on the focused element or any of its descendants
+                let isClickOnFocusedElement = false;
+
+                if (pickedMesh) {
+                    // Check direct match
+                    if (pickedMesh === focusedElement.mesh) {
+                        isClickOnFocusedElement = true;
+                    }
+                    // Check if it's the text mesh or cursor mesh associated with the input
+                    // Using metadata or parent hierarchy
+                    else if (pickedMesh.isDescendantOf(focusedElement.mesh)) {
+                        isClickOnFocusedElement = true;
+                    }
+                    // Check specific components referencing the input (like text mesh which is parented)
+                    else if (focusedElement.type === InputType.Text ||
+                        focusedElement.type === InputType.Password ||
+                        focusedElement.type === InputType.Email ||
+                        focusedElement.type === InputType.Number ||
+                        focusedElement.type === InputType.Textarea) {
+                        const textInput = focusedElement as TextInput;
+                        if (pickedMesh === textInput.textMesh || pickedMesh === textInput.cursorMesh) {
+                            isClickOnFocusedElement = true;
+                        }
+                    }
+                }
+
+                // If click was NOT on the focused element, blur it
+                if (!isClickOnFocusedElement) {
+                    // console.log('[GlobalBlur] Click outside focused element detected. Blurring:', focusedElement.element.id);
+                    this.blurInputElement(focusedElement);
+                }
+            }
+        });
+
+        this.globalBlurListenerAttached = true;
+    }
+
     /**
      * Cleanup all resources
      */
@@ -423,5 +478,6 @@ export class InputElementService {
         this.inputElements.forEach(input => this.disposeInputElement(input));
         this.inputElements.clear();
         this.focusManager.cleanup();
+        this.globalBlurListenerAttached = false;
     }
 }

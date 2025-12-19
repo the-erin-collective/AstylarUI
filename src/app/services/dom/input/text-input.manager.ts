@@ -234,8 +234,16 @@ export class TextInputManager {
      */
     handleBlur(textInput: TextInput): void {
         // If no content, show placeholder again
-        if (!textInput.textContent && textInput.placeholder && textInput.textMesh) {
-            textInput.textMesh.isVisible = true;
+        if (!textInput.textContent && textInput.placeholder) {
+            // Force update display to re-render placeholder text
+            // This ensures textMesh is recreated with placeholder content if it was disposed
+            // or if it was just hidden, invisible.
+            if (this.activeRender) {
+                this.updateTextDisplay(textInput, this.activeRender, textInput.style);
+            }
+            if (textInput.textMesh) {
+                textInput.textMesh.isVisible = true;
+            }
         }
 
         // Hide cursor
@@ -522,6 +530,13 @@ export class TextInputManager {
 
         inputMesh.material = material;
         inputMesh.isPickable = true; // Enable clicking
+
+        // Add cursor style metadata locally as well to ensure it persists
+        inputMesh.metadata = {
+            ...(inputMesh.metadata || {}),
+            cursor: 'text',
+            textInput: undefined // Will be set in createTextInput
+        };
 
         return inputMesh;
     }

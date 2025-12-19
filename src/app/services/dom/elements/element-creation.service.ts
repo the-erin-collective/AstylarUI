@@ -74,6 +74,14 @@ export class ElementCreationService {
             console.log(`[ElementCreation] Applying HOVER styles for ${element.id}`);
         }
 
+        // Logic to fix cursor for checkboxes and radio buttons
+        // They default to 'text' because they are 'input' elements, but should be 'pointer'
+        if (element.type === 'input' && (element.inputType === 'checkbox' || element.inputType === 'radio')) {
+            if (style.cursor === 'text' || !style.cursor) {
+                style.cursor = 'pointer';
+            }
+        }
+
         // Determine mesh ID
         const meshId = element.id || dom.actions.generateElementId(parent?.name || 'root', element.type, 0, element.class);
 
