@@ -170,7 +170,7 @@ export class BabylonMeshService {
     });
   }
 
-  createMaterial(name: string, diffuseColor: Color3, emissiveColor?: Color3): StandardMaterial {
+  createMaterial(name: string, diffuseColor: Color3, emissiveColor?: Color3, opacity: number = 1.0): StandardMaterial {
     if (!this.scene) {
       throw new Error('Mesh service not initialized');
     }
@@ -188,7 +188,21 @@ export class BabylonMeshService {
     
     material.roughness = 0;
 
-    material.fillMode = Material.TriangleFillMode;
+    //material.fillMode = Material.TriangleFillMode;
+
+    // Apply opacity/transparency - always set alpha
+    material.alpha = opacity;
+    
+    // Enhanced transparency settings for better rendering
+    if (opacity < 1.0) {
+      material.transparencyMode = Material.MATERIAL_ALPHABLEND;
+      material.separateCullingPass = true;
+      material.useAlphaFromDiffuseTexture = false;
+      console.log(`🎨 Material transparency applied: ${name} opacity=${opacity} (${Math.round(opacity * 100)}%)`);
+    } else {
+      material.transparencyMode = Material.MATERIAL_OPAQUE;
+      console.log(`🎨 Material opaque: ${name} opacity=${opacity}`);
+    }
 
     return material;
   }

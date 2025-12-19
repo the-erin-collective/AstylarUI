@@ -40,6 +40,11 @@ export interface StyleRule {
   marginRight?: string;
   marginBottom?: string;
   marginLeft?: string;
+  // Transparency support
+  opacity?: string;
+  // Z-index/layering support
+  zIndex?: string;
+  'z-index'?: string;
 }
 
 export interface SiteData {
@@ -149,8 +154,9 @@ export class BabylonDOMService {
     const rootStyle = this.findStyleBySelector('root', styles);
     if (rootStyle?.background) {
       const backgroundColor = this.parseBackgroundColor(rootStyle.background);
-      material = this.meshService.createMaterial('root-body-material', backgroundColor);
-      console.log('Applied root background color:', rootStyle.background, '-> parsed:', backgroundColor);
+      const opacity = this.parseOpacity(rootStyle.opacity);
+      material = this.meshService.createMaterial('root-body-material', backgroundColor, undefined, opacity);
+      console.log('Applied root background color:', rootStyle.background, '-> parsed:', backgroundColor, 'opacity:', opacity);
     } else {
       material = this.meshService.createMaterial('root-body-material', new Color3(0.8, 0.1, 0.1));
       console.log('No root background style found, using test red color');
@@ -191,8 +197,18 @@ export class BabylonDOMService {
     // Create the mesh
     const mesh = this.meshService.createPlane(element.id || `element-${Date.now()}`, dimensions.width, dimensions.height);
 
+    // Calculate Z position based on z-index
+    const zIndex = this.parseZIndex(style?.zIndex || style?.['z-index']);
+    const zPosition = this.calculateZPosition(zIndex);
+    
+    console.log(`🎯 Z-positioning for ${element.id}:`, {
+      zIndex: zIndex,
+      zPosition: zPosition,
+      hasZIndexStyle: !!(style?.zIndex || style?.['z-index'])
+    });
+    
     // Position relative to parent (parent's coordinate system)
-    this.meshService.positionMesh(mesh, dimensions.x, dimensions.y, 0.01);
+    this.meshService.positionMesh(mesh, dimensions.x, dimensions.y, zPosition);
 
     // Parent the mesh so it inherits parent's transformations
     this.meshService.parentMesh(mesh, parent);
@@ -215,12 +231,15 @@ export class BabylonDOMService {
         borderProperties.width
       );
       
-      // Position border frames around the element (slightly above element for visibility)
+      // Calculate Z position for borders (slightly above element for visibility)
+      const borderZPosition = zPosition + 0.0001; // Borders slightly in front of element
+      
+      // Position border frames around the element
       this.meshService.positionBorderFrames(
         borderMeshes,
         dimensions.x,
         dimensions.y,
-        0.1, // Base Z position same as element - positioning logic will add offset
+        borderZPosition,
         dimensions.width,
         dimensions.height,
         borderProperties.width
@@ -232,9 +251,12 @@ export class BabylonDOMService {
       // });
       
       // Apply border material to all frames with consistent rendering
+      const borderOpacity = this.parseOpacity(elementStyles?.normal?.opacity);
       const borderMaterial = this.meshService.createMaterial(
         `${element.id}-border-material`,
-        borderProperties.color
+        borderProperties.color,
+        undefined,
+        borderOpacity
       );
       
       // DO NOT override emissive color - keep materials consistent
@@ -300,15 +322,18 @@ export class BabylonDOMService {
     // Choose the appropriate style based on hover state
     const activeStyle = isHovered && elementStyles.hover ? elementStyles.hover : elementStyles.normal;
     
+    // Parse opacity from the active style
+    const opacity = this.parseOpacity(activeStyle?.opacity);
+    
     let material;
     if (activeStyle?.background) {
       const backgroundColor = this.parseBackgroundColor(activeStyle.background);
-      material = this.meshService.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, backgroundColor);
-      console.log(`Applied ${element.id} ${isHovered ? 'hover' : 'normal'} background color:`, activeStyle.background, '-> parsed:', backgroundColor);
+      material = this.meshService.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, backgroundColor, undefined, opacity);
+      console.log(`Applied ${element.id} ${isHovered ? 'hover' : 'normal'} background color:`, activeStyle.background, '-> parsed:', backgroundColor, 'opacity:', opacity);
     } else {
       const defaultColor = this.getColorForElement(element);
-      material = this.meshService.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, defaultColor);
-      console.log(`No background style for ${element.id} ${isHovered ? 'hover' : 'normal'} state, using default color`);
+      material = this.meshService.createMaterial(`${element.id}-material-${isHovered ? 'hover' : 'normal'}`, defaultColor, undefined, opacity);
+      console.log(`No background style for ${element.id} ${isHovered ? 'hover' : 'normal'} state, using default color, opacity:`, opacity);
     }
     
     mesh.material = material;
@@ -386,6 +411,10 @@ export class BabylonDOMService {
     const borderStyle = isHovered && hoverStyle?.borderStyle ? hoverStyle.borderStyle :
                        isHovered && hoverStyle?.['border-style'] ? hoverStyle['border-style'] :
                        normalStyle?.borderStyle || normalStyle?.['border-style'];
+
+    // Parse opacity from the active style
+    const activeStyle = isHovered && hoverStyle ? hoverStyle : normalStyle;
+    const opacity = this.parseOpacity(activeStyle?.opacity);
     
     const borderProperties = {
       width: this.parseBorderWidth(borderWidth),
@@ -393,15 +422,17 @@ export class BabylonDOMService {
       style: borderStyle || 'solid'
     };
     
-    console.log(`Applying border material for ${elementId}, isHovered: ${isHovered}, borderWidth: ${borderProperties.width}, borderColor:`, borderProperties.color);
+    console.log(`Applying border material for ${elementId}, isHovered: ${isHovered}, borderWidth: ${borderProperties.width}, borderColor:`, borderProperties.color, 'opacity:', opacity);
     
     if (borderProperties.width > 0) {
       const borderMaterial = this.meshService.createMaterial(
         `${elementId}-border-material-${isHovered ? 'hover' : 'normal'}`,
-        borderProperties.color
+        borderProperties.color,
+        undefined,
+        opacity
       );
       borderMesh.material = borderMaterial;
-      console.log(`Applied ${elementId} border ${isHovered ? 'hover' : 'normal'} color:`, borderProperties.color);
+      console.log(`Applied ${elementId} border ${isHovered ? 'hover' : 'normal'} color:`, borderProperties.color, 'opacity:', opacity);
     } else {
       console.log(`Border width is 0 for ${elementId}, skipping material application`);
     }
@@ -715,6 +746,18 @@ export class BabylonDOMService {
     return { width, height, x, y, padding, margin };
   }
 
+  private calculateZPosition(zIndex: number): number {
+    // Base Z position for elements (slightly in front of the root background)
+    const baseZ = 0.01;
+    
+    // Z-index scale factor - increase to 0.01 for much larger separation
+    const zScale = 0.01;
+    
+    // Calculate final Z position: base + (zIndex * scale)
+    // Positive z-index moves toward camera, negative moves away from camera
+    return baseZ + (zIndex * zScale);
+  }
+
   private getElementInfo(elementId: string): { padding?: { top: number; right: number; bottom: number; left: number } } | null {
     // Get element dimension info for padding calculations
     const elementDimensions = this.elementDimensions.get(elementId);
@@ -730,6 +773,22 @@ export class BabylonDOMService {
 
   private parsePercentageValue(value: string): number {
     return parseFloat(value.replace('%', ''));
+  }
+
+  private parseOpacity(opacityValue: string | undefined): number {
+    if (!opacityValue) return 1.0;
+    
+    const opacity = parseFloat(opacityValue);
+    // Clamp opacity between 0.0 and 1.0
+    return Math.max(0.0, Math.min(1.0, opacity));
+  }
+
+  private parseZIndex(zIndexValue: string | undefined): number {
+    if (!zIndexValue) return 0;
+    
+    const zIndex = parseInt(zIndexValue, 10);
+    // Return parsed integer, allow negative values for behind elements
+    return isNaN(zIndex) ? 0 : zIndex;
   }
 
   private getColorForElement(element: DOMElement): Color3 {

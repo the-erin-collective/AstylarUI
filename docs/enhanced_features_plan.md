@@ -22,18 +22,23 @@ This plan outlines the strategic development of DOM elements and styling capabil
    - ✅ Hover support with color changes
    - ✅ CamelCase property support (borderWidth vs border-width)
 
-2. **Padding & Margin** 🚧 **IN PROGRESS**
-   - `padding` (all sides, individual sides)
-   - `margin` (spacing between elements)
-   - Implementation: Adjust positioning calculations in `calculateDimensions`
+2. **Padding & Margin** ✅ **COMPLETED**
+   - ✅ `padding` (all sides, individual sides)
+   - ✅ `margin` (spacing between elements)
+   - ✅ Implementation: Adjust positioning calculations in `calculateDimensions`
 
-3. **Opacity/Transparency**
-   - `opacity` property (0.0 to 1.0)
-   - Implementation: Modify material alpha channel in mesh service
+3. **Opacity/Transparency** ✅ **COMPLETED**
+   - ✅ `opacity` property (0.0 to 1.0)
+   - ✅ Implementation: Modify material alpha channel in mesh service
+   - ✅ Support for both element and border opacity
+   - ✅ Added parseOpacity function with value clamping
 
-4. **Z-Index/Layering**
-   - `z-index` for element stacking order
-   - Implementation: Adjust Z positioning in `positionMesh`
+4. **Z-Index/Layering** ✅ **COMPLETED**
+   - ✅ `z-index` for element stacking order  
+   - ✅ `zIndex` and `z-index` property support
+   - ✅ Implementation: Adjust Z positioning in `positionMesh` with calculated scaling
+   - ✅ Added parseZIndex function and calculateZPosition method
+   - ✅ Border positioning updated to respect z-index layering
 
 ### Phase 2: Advanced Styling (Medium)
 
