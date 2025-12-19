@@ -1,164 +1,95 @@
-# Angular 20 Signals-First Application
+# AstylarUI
 
-A modern Angular 20 application built with **zoneless architecture**, **Server-Side Rendering (SSR)**, and **signals-first state management**.
+AstylarUI is a signals-first Angular 20 application with zoneless change detection, SSR via Express, and BabylonJS-based 3D rendering helpers. It demonstrates modern Angular patterns (signals, computed, NgRx Signals store) and a pure-renderer approach.
 
-## 🚀 Features
+## Quick Links
+- Source: repository root
+- App entry: [src/app/app.ts](src/app/app.ts#L1)
+- SSR entry: [src/main.server.ts](src/main.server.ts#L1)
+- Server: [src/server.ts](src/server.ts#L1)
 
-- **Angular 20** - Latest version with cutting-edge features
-- **Zoneless Architecture** - Uses Angular's experimental zoneless change detection for better performance
-- **Server-Side Rendering (SSR)** - Enabled for better SEO and initial load performance
-- **Signals-First Approach** - Leverages Angular signals for reactive state management
-- **NgRx Signals Store** - Modern state management with NgRx Signals (beta)
-- **TypeScript** - Full TypeScript support with strict mode
-- **SCSS** - Modern styling with SCSS preprocessor
-- **Responsive Design** - Mobile-first responsive design
+## Key Features
+- Angular 20 with signals-first components
+- Zoneless change detection for explicit updates
+- Server-Side Rendering (SSR) via Express
+- NgRx Signals-based store patterns
+- BabylonJS utilities for DPR-aware 3D rendering
 
-## 🛠 Technology Stack
-
-- **Framework**: Angular 20
-- **Language**: TypeScript 5.8
-- **State Management**: NgRx Signals 20.0.0-beta.0
-- **Styling**: SCSS
-- **Build Tool**: Angular CLI 20
-- **Server**: Express.js (SSR)
-
-## 🔗 Dynamic Routing
-
-The application includes a dynamic routing system that demonstrates signals-based route parameter handling:
-
-### Route Structure
-```
-/site/:site-id
-```
-
-### Example URLs
-- `http://localhost:4201/site/dashboard`
-- `http://localhost:4201/site/analytics` 
-- `http://localhost:4201/site/settings`
-- `http://localhost:4201/site/profile`
-- `http://localhost:4201/site/admin-123`
-
-### Route Parameter Extraction
-The Site Component automatically reads the `site-id` parameter from the URL and makes it available as a signal:
-
-```typescript
-// Signal automatically updated when route changes
-protected siteId = signal<string>('');
-
-// Computed signal based on route parameter
-protected componentStatus = computed(() => 
-  this.siteId() ? 'Active - Site Loaded' : 'Waiting for Site ID'
-);
-```
-
-## 📋 What's Included
-
-### Core Components
-- **App Component** - Main application shell with signals integration
-- **Counter Store** - NgRx Signals store with computed signals and state mutations
-- **Todo Component** - Fully functional todo list demonstrating signal-based component state
-- **Site Component** - Dynamic routing component with route parameter extraction
-
-### State Management Features
-- ✅ Signal-based reactive state
-- ✅ Computed signals for derived state
-- ✅ Immutable state updates with NgRx Signals
-- ✅ Local component signals
-- ✅ Global application store
-
-### UI Features
-- 🎨 Modern gradient design
-- 📱 Responsive layout
-- 🔄 Real-time counter with history tracking
-- 📝 Interactive todo list with filtering
-- 📊 Live statistics and computed values
-- 🔗 Dynamic routing with parameter extraction
-
-## 🚦 Getting Started
-
-### Prerequisites
-- Node.js 18+ 
+## Requirements
+- Node.js 18+ (recommended)
 - npm 9+
 
-### Installation & Development
+## Getting Started
 
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+1. Install dependencies
 
-2. **Start development server**:
-   ```bash
-   npm start
-   ```
-   The app will be available at `http://localhost:4200`
+```bash
+npm install
+```
 
-3. **Build for production**:
-   ```bash
-   npm run build
-   ```
+2. Start development server
 
-4. **Run SSR server**:
-   ```bash
-   npm run serve:ssr:astylarui
-   ```
+```bash
+npm start
+```
 
-## 🏗 Project Structure
+The dev server runs the Angular app (default `http://localhost:4200`).
+
+3. Build for production
+
+```bash
+npm run build
+```
+
+4. Run the SSR server (after a server build)
+
+```bash
+npm run serve:ssr:astylarui
+```
+
+5. Run tests
+
+```bash
+npm test
+```
+
+## Project Structure (high level)
+
+See the `src/` layout for main areas:
 
 ```
 src/
-├── app/
-│   ├── components/
-│   │   ├── todo.component.ts      # Signal-based todo component
-│   │   └── site.component.ts      # Dynamic routing component
-│   ├── store/
-│   │   └── counter.store.ts       # NgRx Signals store
-│   ├── app.ts                     # Main app component
-│   ├── app.html                   # App template
-│   ├── app.scss                   # App styles
-│   ├── app.config.ts              # App configuration
-│   └── app.routes.ts              # Routing configuration
-├── main.ts                        # Bootstrap file
-├── main.server.ts                 # SSR bootstrap
-└── server.ts                      # Express server
+├── app/                     # Application code (components, services, store)
+│   ├── components/          # Signals-first components (home, site, todo)
+│   ├── services/            # BabylonJS, coordinate transforms, DOM helpers
+│   └── store/               # NgRx Signals stores and examples
+├── main.ts                  # Browser bootstrap
+├── main.server.ts           # SSR bootstrap
+└── server.ts                # Express SSR server
 ```
 
-## 🔧 Key Implementation Details
+Key files:
+- [src/app/app.config.ts](src/app/app.config.ts#L1) — zoneless configuration
+- [src/app/components/home.component.ts](src/app/components/home.component.ts#L1) — example component
+- [src/app/services/babylon-camera.service.ts](src/app/services/babylon-camera.service.ts#L1) — DPR-aware camera math
 
-### Signals Usage
-- **Local Signals**: `signal()` for component-level state
-- **Computed Signals**: `computed()` for derived values
-- **Signal Updates**: `.set()` and `.update()` for state mutations
+## Conventions
+- Components use `signal()` and `computed()` for local state.
+- Prefer injection via Angular DI (`inject(...)`) over direct imports for services.
+- Keep rendering logic explicit; avoid implicit defaults (see `src/app/services/dom/style-defaults.service.ts`).
 
-### NgRx Signals Store
-- **Store Definition**: `signalStore()` with features
-- **State Management**: `withState()` for initial state
-- **Computed Values**: `withComputed()` for derived state
-- **Actions**: `withMethods()` for state mutations
-- **State Updates**: `patchState()` for immutable updates
+## Development Notes
+- Use the provided npm scripts for build/dev/test.
+- SSR requires building the server bundle before running the Express server script.
+- BabylonJS utilities live in `src/app/services/` — preserve DPR-aware math when modifying rendering logic.
 
-### Zoneless Benefits
-- 🚀 Better performance - no Zone.js overhead
-- 🔄 Explicit change detection with signals
-- 📦 Smaller bundle size
-- 🛠 Better debugging experience
+## Contributing
+- Open an issue or submit a PR. Keep changes focused and prefer signal-based patterns.
 
-## 🎯 Future Enhancements
-
-- [ ] Add more complex state management examples
-- [ ] Implement signal-based HTTP client
-- [ ] Add signal-based forms
-- [ ] Create signal-based routing guards
-- [ ] Add signal-based animations
-- [ ] Implement signal-based error handling
-
-## 📚 Learning Resources
-
-- [Angular Signals Guide](https://angular.dev/guide/signals)
-- [NgRx Signals Documentation](https://ngrx.io/guide/signals)
-- [Angular SSR Guide](https://angular.dev/guide/ssr)
-- [Zoneless Angular](https://angular.dev/guide/experimental/zoneless)
+## License
+See the repository `LICENSE` file.
 
 ---
 
-**Built with ❤️ using Angular 20 and modern web technologies**
+If you want, I can also add a short badge header, or expand the Development Notes with exact CLI examples for building and serving SSR locally.
+```bash
