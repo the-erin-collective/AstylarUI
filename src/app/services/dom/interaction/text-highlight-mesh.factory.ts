@@ -203,15 +203,19 @@ export class TextHighlightMeshFactory {
 
       // Calculate center position directly from start and end positions
       // Map from text content coordinate system to text mesh coordinate system
-      // Note: The mesh X-axis appears to be inverted (Left is +X), so we negate the calculated center X
-      const centerX = -(((startXWorld + endXWorld) / 2) - (textWidth / 2));
+      // With World X+ being Left and the text mesh rotated 180 degrees on Z,
+      // the local X+ aligns with World Right (Visual Right).
+      // Visual Left is at local -halfWidth, Visual Right is at local +halfWidth.
+      const centerX = ((startXWorld + endXWorld) / 2) - (textWidth / 2);
 
       const topOffsetCss = line.top - minTop;
       const heightCss = Math.max(line.bottom - line.top, line.height ?? 0);
       const heightWorld = Math.max(heightCss * scale, MIN_SEGMENT_HEIGHT);
       const topOffsetWorld = topOffsetCss * scale;
       // Convert from top-left origin (text metrics) to center origin (text mesh)
-      const centerY = halfHeight - topOffsetWorld - (heightWorld / 2);
+      // With 180 degree rotation, local Y+ aligns with World Down (Visual Down).
+      // Visual Top is at local -halfHeight, Visual Bottom is at local +halfHeight.
+      const centerY = (topOffsetWorld + (heightWorld / 2)) - halfHeight;
 
       // Debug logging for calculated positions
       console.log(`[TextHighlight] Line ${line.index}: widthCss=${widthCss}, startXWorld=${startXWorld}, endXWorld=${endXWorld}, centerX=${centerX}, centerY=${centerY}`);

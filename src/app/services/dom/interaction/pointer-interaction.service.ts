@@ -117,9 +117,21 @@ export class PointerInteractionService {
         continue;
       }
 
+      // Check if this mesh is registered
       const entry = this.textInteractionRegistry.getByMesh(pickedMesh);
       if (entry) {
         return entry.mesh;
+      }
+
+      // Check if this is an input mesh that has a child text mesh
+      if (pickedMesh.metadata?.textInput) {
+        const textInput = pickedMesh.metadata.textInput;
+        if (textInput.textMesh) {
+          const entry = this.textInteractionRegistry.getByMesh(textInput.textMesh);
+          if (entry) {
+            return entry.mesh;
+          }
+        }
       }
 
       if (pickedMesh === directMesh) {
@@ -183,11 +195,14 @@ export class PointerInteractionService {
     const halfWidth = width / 2;
     const halfHeight = height / 2;
 
-    // Fixed coordinate transformation to match text rendering coordinate system
-    // The mesh local coordinates appear to be flipped relative to the text texture (Left click = +X)
-    // So we need to invert the normalized X coordinate
-    const normalizedX = 1 - clamp((localPoint.x + halfWidth) / width, 0, 1);
-    const normalizedY = clamp((halfHeight - localPoint.y) / height, 0, 1);
+    // Coordinate transformation to match text rendering coordinate system
+    // With World X+ being Left and the text mesh rotated 180 degrees on Z,
+    // the local X+ aligns with World Right (Visual Right).
+    // So (local.x + halfWidth) / width correctly maps Visual Left to 0 and Visual Right to 1.
+    const normalizedX = clamp((localPoint.x + halfWidth) / width, 0, 1);
+    // Similarly, with 180 degree rotation, local Y+ aligns with World Down (Visual Down).
+    // So (local.y + halfHeight) / height correctly maps Visual Top to 0 and Visual Bottom to 1.
+    const normalizedY = clamp((localPoint.y + halfHeight) / height, 0, 1);
 
     const cssMetrics = entry.metrics?.css;
     const cssWidth = cssMetrics?.totalWidth ?? 0;

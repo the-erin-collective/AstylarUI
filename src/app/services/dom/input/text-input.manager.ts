@@ -9,7 +9,10 @@ import { TextCanvasRendererService } from '../../text/text-canvas-renderer.servi
 import { StyleRule } from '../../../types/style-rule';
 import { BabylonRender } from '../interfaces/render.types';
 import { BabylonMeshService } from '../../babylon-mesh.service';
-import { TextLayoutMetrics, TextStyleProperties } from '../../../types/text-rendering';
+import { TextLayoutMetrics, TextStyleProperties, StoredTextLayoutMetrics } from '../../../types/text-rendering';
+import { TextInteractionRegistryService } from '../../dom/interaction/text-interaction-registry.service';
+import { TextSelectionControllerService } from '../../dom/interaction/text-selection-controller.service';
+import { Subscription } from 'rxjs';
 
 /**
  * Service responsible for managing text input fields
@@ -18,13 +21,21 @@ import { TextLayoutMetrics, TextStyleProperties } from '../../../types/text-rend
     providedIn: 'root'
 })
 export class TextInputManager {
+    private selectionSubscription: Subscription | null = null;
+    private inputs: Map<string, TextInput> = new Map();
+    private activeRender: BabylonRender | null = null;
+
     constructor(
         private cursorRenderer: TextCursorRenderer,
         private textRenderingService: TextRenderingService,
         private textSelectionService: TextSelectionService,
         private textCanvasRenderer: TextCanvasRendererService,
-        private babylonMeshService: BabylonMeshService
-    ) { }
+        private babylonMeshService: BabylonMeshService,
+        private textInteractionRegistry: TextInteractionRegistryService,
+        private textSelectionController: TextSelectionControllerService
+    ) {
+        this.setupSelectionSync();
+    }
 
     /**
      * Creates a text input element
@@ -39,8 +50,8 @@ export class TextInputManager {
         // Create input field background
         const inputMesh = this.createInputBackground(element, render, style, worldDimensions);
 
-        // Setup interaction for click-to-position
-        this.setupInteraction(inputMesh, render);
+        // Interaction is now handled by the global PointerInteractionService
+        // and synchronized via setupSelectionSync.
 
         // Initialize cursor state
         const cursorState: CursorState = {
@@ -109,7 +120,43 @@ export class TextInputManager {
             this.updateTextDisplay(textInput, render, style);
         }
 
+        // Store in local map
+        this.inputs.set(element.id!, textInput);
+        this.activeRender = render;
+
         return textInput;
+    }
+
+    /**
+     * Sets up synchronization with global selection state
+     */
+    private setupSelectionSync(): void {
+        this.selectionSubscription = this.textSelectionController.selection$.subscribe(state => {
+            if (!state.elementId) return;
+
+            const textInput = this.inputs.get(state.elementId);
+            if (!textInput || !this.activeRender) return;
+
+            // Only sync if focused
+            if (!textInput.focused) return;
+
+            // Sync indices
+            if (state.range) {
+                textInput.selectionStart = state.range.start;
+                textInput.selectionEnd = state.range.end;
+                textInput.cursorState.selectionStart = state.range.start;
+                textInput.cursorState.selectionEnd = state.range.end;
+                textInput.cursorState.selectionActive = state.hasSelection;
+            }
+
+            if (state.focusIndex !== null) {
+                textInput.cursorPosition = state.focusIndex;
+                textInput.cursorState.position = state.focusIndex;
+            }
+
+            // Update visual cursor
+            this.updateCursorPosition(textInput, this.activeRender, textInput.style);
+        });
     }
 
     /**
@@ -270,24 +317,71 @@ export class TextInputManager {
 
             textMesh.parent = textInput.mesh;
             textMesh.position.z = -0.15; // Slightly in front
-            textMesh.isPickable = false;
+            textMesh.isPickable = true;
             textMesh.renderingGroupId = 2; // Ensure it renders on top
 
             // Rotate the text mesh 180 degrees around the Z axis to fix horizontal flipping without affecting vertical orientation
             // Only apply this rotation to text input meshes
             textMesh.rotation.z = Math.PI;
 
-            // Align text to left edge
-            // Calculate offset based on texture width and input width
+            // Align text mesh based on textAlign style
+            const textAlign = (textStyle.textAlign || 'left').toLowerCase();
             const inputWidth = textInput.mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
-            // For left alignment: position text with its left edge near input's left edge
-            // Use world units for padding (scale-aware)
-            const padding = 1.5 * scale; // Left padding in world units
-            textMesh.position.x = (inputWidth / 2) - (textureWidth / 2) - padding;
+            const padding = 1.5 * scale; // Standard padding in world units
+
+            if (textAlign === 'right') {
+                // Right alignment in a +X=Left system: position near -inputWidth/2 (Right side)
+                // Pos=World Center of text. Right visual edge is at Pos - W_t/2 (in a +X=Left system).
+                // We want visual Right edge at -inputWidth/2 + padding.
+                // Pos - W_t/2 = -inputWidth/2 + padding  =>  Pos = -inputWidth/2 + W_t/2 + padding
+                textMesh.position.x = -(inputWidth / 2) + (textureWidth / 2) + padding;
+            } else if (textAlign === 'center' || textAlign === 'middle') {
+                textMesh.position.x = 0;
+            } else {
+                // Left alignment (default) in a +X=Left system: position near +inputWidth/2 (Left side)
+                // Pos=World Center of text. Left visual edge is at Pos + W_t/2 (in a +X=Left system).
+                // We want visual Left edge at inputWidth/2 - padding.
+                // Pos + W_t/2 = inputWidth/2 - padding  =>  Pos = inputWidth/2 - W_t/2 - padding
+                textMesh.position.x = (inputWidth / 2) - (textureWidth / 2) - padding;
+            }
 
             // Store world-space texture width for cursor positioning
             textInput.textureWidth = textureWidth;
             textInput.textMesh = textMesh;
+
+            // Register with text interaction registry for drag selection
+            const storedMetrics: StoredTextLayoutMetrics = {
+                scale: pixelScale,
+                css: textInput.textLayoutMetrics,
+                world: {
+                    totalWidth: textureWidth,
+                    totalHeight: textureHeight,
+                    lineHeight: textInput.textLayoutMetrics.lineHeight * (textureHeight / textInput.textLayoutMetrics.totalHeight),
+                    ascent: textInput.textLayoutMetrics.ascent * (textureHeight / textInput.textLayoutMetrics.totalHeight),
+                    descent: textInput.textLayoutMetrics.descent * (textureHeight / textInput.textLayoutMetrics.totalHeight),
+                    lines: textInput.textLayoutMetrics.lines.map((line: any) => ({
+                        ...line,
+                        top: line.top * (textureHeight / textInput.textLayoutMetrics.totalHeight),
+                        bottom: line.bottom * (textureHeight / textInput.textLayoutMetrics.totalHeight),
+                        width: line.width * (textureWidth / textInput.textLayoutMetrics.totalWidth),
+                        height: line.height * (textureHeight / textInput.textLayoutMetrics.totalHeight)
+                    })),
+                    characters: textInput.textLayoutMetrics.characters.map((char: any) => ({
+                        ...char,
+                        x: char.x * (textureWidth / textInput.textLayoutMetrics.totalWidth),
+                        width: char.width * (textureWidth / textInput.textLayoutMetrics.totalWidth),
+                        advance: char.advance * (textureWidth / textInput.textLayoutMetrics.totalWidth)
+                    }))
+                }
+            };
+
+            this.textInteractionRegistry.register(
+                textInput.element.id!,
+                textMesh,
+                style,
+                storedMetrics,
+                textToRender
+            );
 
         } catch (error) {
             console.error('Error creating text input mesh:', error);
@@ -326,77 +420,6 @@ export class TextInputManager {
         inputMesh.isPickable = true; // Enable clicking
 
         return inputMesh;
-    }
-
-    /**
-     * Sets up interaction handlers for the input mesh
-     */
-    private setupInteraction(mesh: BABYLON.Mesh, render: BabylonRender): void {
-        mesh.actionManager = new BABYLON.ActionManager(render.scene);
-        mesh.actionManager.registerAction(
-            new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, (evt) => {
-                const textInput = mesh.metadata?.textInput as TextInput;
-                if (!textInput || !textInput.textLayoutMetrics || !render.scene) return;
-
-                // Only process if focused or aiming to focus
-                // Assuming focusing logic happens elsewhere/concurrently, but we process position here.
-
-                const pickInfo = render.scene.pick(render.scene.pointerX, render.scene.pointerY, (m) => m === mesh);
-                if (pickInfo && pickInfo.hit && pickInfo.pickedPoint) {
-                    // Convert world point to local space
-                    const matrix = mesh.computeWorldMatrix(true);
-                    const localPoint = BABYLON.Vector3.TransformCoordinates(pickInfo.pickedPoint, matrix.clone().invert());
-
-                    const scale = render.actions.camera.getPixelToWorldScale();
-                    const inputWidth = mesh.getBoundingInfo().boundingBox.extendSize.x * 2;
-                    const padding = 1.5 * scale;
-                    // Use stored texture width or fallback
-                    const textWidth = textInput.textureWidth !== undefined ? textInput.textureWidth : (textInput.textLayoutMetrics.totalWidth * scale / 1.0); // Assuming ratio 1 if unknown
-
-                    // Calculate visual components
-                    const textMeshPosition = (inputWidth / 2) - (textWidth / 2) - padding;
-                    const textLeftEdgeX = textMeshPosition + (textWidth / 2);
-
-                    // Calculate distance from start
-                    // Start is at textLeftEdgeX (Local +X)
-                    // Move Right means Decrease X
-                    // Distance = Start - Pick
-                    let distanceWorld = textLeftEdgeX - localPoint.x;
-
-                    // Cap distance to valid range (0 to Width)
-                    // Actually let's allow slight overshoot to snap to nearest
-
-                    // Calculate ratio
-                    const widthCorrectionRatio = (textInput.textLayoutMetrics.totalWidth > 0 && textInput.textureWidth !== undefined)
-                        ? (textInput.textureWidth / scale) / textInput.textLayoutMetrics.totalWidth
-                        : 1.0;
-
-                    // Convert World Distance -> Metric Visual Distance
-                    // DistanceWorld = MetricCSS * Scale * Ratio
-                    // MetricCSS = DistanceWorld / (Scale * Ratio)
-
-                    const metricVisualX = distanceWorld / (scale * widthCorrectionRatio);
-
-                    // Get index
-                    const newIndex = this.textSelectionService.getCharacterIndexAtPosition(metricVisualX, textInput.textLayoutMetrics);
-
-                    console.log('[TextInputManager] Clicked at localX:', localPoint.x, 'Dist:', distanceWorld, 'Index:', newIndex);
-
-                    // Update state
-                    textInput.cursorPosition = newIndex;
-                    textInput.cursorState.position = newIndex;
-
-                    // Clear selection unless shift is held (handled elsewhere? For now just set pos)
-                    textInput.cursorState.selectionActive = false;
-                    textInput.selectionStart = newIndex;
-                    textInput.selectionEnd = newIndex;
-
-                    // Update visuals
-                    this.updateCursorPosition(textInput, render, textInput.style);
-                    this.updateSelectionHighlight(textInput, render, textInput.style);
-                }
-            })
-        );
     }
 
     /**
@@ -471,36 +494,9 @@ export class TextInputManager {
 
         // Use the provided render to compute correct pixel-to-world scale
         this.updateCursorPosition(textInput, render, style);
-        this.updateSelectionHighlight(textInput, render, style);
     }
 
-    /**
-     * Updates or creates text selection highlighting
-     */
-    updateSelectionHighlight(textInput: TextInput, render: BabylonRender, style: StyleRule): void {
-        // Remove existing selection meshes
-        if (textInput.selectionMeshes) {
-            this.textSelectionService.disposeSelectionMeshes(textInput.selectionMeshes);
-            textInput.selectionMeshes = [];
-        }
 
-        // Only create selection if there's an active selection and we have layout metrics
-        if (!textInput.cursorState.selectionActive ||
-            textInput.selectionStart === textInput.selectionEnd ||
-            !textInput.textLayoutMetrics) {
-            return;
-        }
-
-        // Use text selection service for accurate selection highlighting
-        textInput.selectionMeshes = this.textSelectionService.createSelectionHighlight(
-            textInput.selectionStart,
-            textInput.selectionEnd,
-            textInput.textLayoutMetrics,
-            textInput.mesh,
-            render.scene!,
-            render.actions.camera.getPixelToWorldScale()
-        );
-    }
 
     /**
      * Inserts text at the current cursor position
@@ -543,9 +539,83 @@ export class TextInputManager {
         // Update display
         this.updateTextDisplay(textInput, render, style);
 
-        // Update cursor position and selection
+        // Update cursor position
         this.updateCursorPosition(textInput, render, style);
-        this.updateSelectionHighlight(textInput, render, style);
+
+        // Clear global selection state
+        this.textSelectionController.clearSelection();
+    }
+
+    /**
+     * Selects all text in the input
+     */
+    selectAll(textInput: TextInput): void {
+        const textLength = textInput.textContent.length;
+        textInput.selectionStart = 0;
+        textInput.selectionEnd = textLength;
+        textInput.cursorPosition = textLength;
+        textInput.cursorState.selectionActive = true;
+        textInput.cursorState.selectionStart = 0;
+        textInput.cursorState.selectionEnd = textLength;
+        textInput.cursorState.position = textLength;
+
+        // Sync with global controller
+        if (textInput.textMesh) {
+            const entry = this.textInteractionRegistry.getByMesh(textInput.textMesh);
+            if (entry) {
+                // Approximate a select-all by moving from start to end
+                this.textSelectionController.beginSelection(entry, { x: 0, y: 0 });
+                this.textSelectionController.updateSelection(entry, { x: 999999, y: 0 }); // Far right
+                this.textSelectionController.finalizeSelection();
+            }
+        }
+
+        if (this.activeRender) {
+            this.updateCursorPosition(textInput, this.activeRender, textInput.style);
+        }
+    }
+
+    /**
+     * Copies selected text to clipboard
+     */
+    async copy(textInput: TextInput): Promise<void> {
+        if (!textInput.cursorState.selectionActive || textInput.selectionStart === textInput.selectionEnd) {
+            return;
+        }
+
+        const start = Math.min(textInput.selectionStart, textInput.selectionEnd);
+        const end = Math.max(textInput.selectionStart, textInput.selectionEnd);
+        const selectedText = textInput.textContent.substring(start, end);
+
+        try {
+            await navigator.clipboard.writeText(selectedText);
+            console.log('[TextInputManager] Copied to clipboard:', selectedText);
+        } catch (err) {
+            console.error('[TextInputManager] Clipboard copy failed:', err);
+        }
+    }
+
+    /**
+     * Pastes text from clipboard at cursor/selection
+     */
+    async paste(textInput: TextInput, render: BabylonRender, style: StyleRule): Promise<void> {
+        try {
+            const pastedText = await navigator.clipboard.readText();
+            if (pastedText) {
+                this.insertTextAtCursor(textInput, pastedText, render, style);
+                console.log('[TextInputManager] Pasted from clipboard:', pastedText);
+            }
+        } catch (err) {
+            console.error('[TextInputManager] Clipboard paste failed:', err);
+        }
+    }
+
+    /**
+     * Cuts selected text to clipboard
+     */
+    async cut(textInput: TextInput, render: BabylonRender, style: StyleRule): Promise<void> {
+        await this.copy(textInput);
+        this.deleteCharacter(textInput, 0, render, style); // direction 0 handles selection deletion
     }
 
     /**
@@ -593,9 +663,11 @@ export class TextInputManager {
         // Update display
         this.updateTextDisplay(textInput, render, style);
 
-        // Update cursor position and selection
+        // Update cursor position
         this.updateCursorPosition(textInput, render, style);
-        this.updateSelectionHighlight(textInput, render, style);
+
+        // Clear global selection state
+        this.textSelectionController.clearSelection();
     }
 
     /**

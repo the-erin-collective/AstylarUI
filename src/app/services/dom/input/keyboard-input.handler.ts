@@ -114,8 +114,32 @@ export class KeyboardInputHandler {
                 break;
 
             default:
+                // Handle Ctrl/Cmd shortcuts
+                if (event.ctrlKey || event.metaKey) {
+                    const key = event.key.toLowerCase();
+                    switch (key) {
+                        case 'c':
+                            this.textInputManager.copy(textInput);
+                            event.preventDefault();
+                            break;
+                        case 'v':
+                            this.textInputManager.paste(textInput, render, style);
+                            event.preventDefault();
+                            break;
+                        case 'x':
+                            this.textInputManager.cut(textInput, render, style);
+                            event.preventDefault();
+                            break;
+                        case 'a':
+                            this.textInputManager.selectAll(textInput);
+                            event.preventDefault();
+                            break;
+                    }
+                    break;
+                }
+
                 // Insert printable characters
-                if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+                if (event.key.length === 1 && !event.altKey) {
                     this.textInputManager.insertTextAtCursor(textInput, event.key, render, style);
                     event.preventDefault();
                 }
