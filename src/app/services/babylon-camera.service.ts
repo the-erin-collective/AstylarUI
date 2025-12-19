@@ -159,48 +159,48 @@ export class BabylonCameraService {
     // Border Z position - significantly in front of the main element
     const borderZ = centerZ + 0.01; // Much larger offset to ensure visibility and avoid Z-fighting
     
-    // Calculate border positions using consistent edge coordinates
+    // Calculate border positions - borders "grow inward" with outer edge aligned to element edge
     const borderPositions = {
-      // Top border: centered horizontally, positioned above element
+      // Top border: positioned so its bottom edge aligns with element's top edge
       top: this.snapToPixelBoundary({
         x: snappedCenter.x,
-        y: elementBounds.top - (snappedBorderWidth / 3),
+        y: elementBounds.top - (snappedBorderWidth / 2),
         z: borderZ
       }),
       
-      // Bottom border: centered horizontally, positioned below element  
+      // Bottom border: positioned so its top edge aligns with element's bottom edge
       bottom: this.snapToPixelBoundary({
         x: snappedCenter.x,
-        y: elementBounds.bottom + (snappedBorderWidth / 3),
+        y: elementBounds.bottom + (snappedBorderWidth / 2),
         z: borderZ
       }),
       
-      // Left border: positioned at the left edge of the horizontal borders
+      // Left border: positioned so its right edge aligns with element's left edge
       left: this.snapToPixelBoundary({
-        x: elementBounds.left - (snappedBorderWidth  ),
+        x: elementBounds.left + (snappedBorderWidth / 2),
         y: snappedCenter.y,
         z: borderZ
       }),
       
-      // Right border: positioned at the right edge of the horizontal borders
+      // Right border: positioned so its left edge aligns with element's right edge
       right: this.snapToPixelBoundary({
-        x: elementBounds.right + (snappedBorderWidth ),
+        x: elementBounds.right - (snappedBorderWidth / 2),
         y: snappedCenter.y,
         z: borderZ
       })
     };
     
-    // Calculate border mesh dimensions - ensuring clean corner joints with slight overlap
+    // Calculate border mesh dimensions - borders grow inward and fit within element boundaries
     const borderDimensions = {
-      // Horizontal borders (top & bottom) span element width + one border width for better corner coverage
+      // Horizontal borders (top & bottom) reduced by border width to fit perfectly between vertical borders
       horizontal: {
-        width: elementWidth + snappedBorderWidth,
+        width: elementWidth - snappedBorderWidth,
         height: snappedBorderWidth
       },
-      // Vertical borders (left & right) span element height only (no overlap with horizontal)
+      // Vertical borders (left & right) span element height minus border thickness to avoid corner overlap
       vertical: {
         width: snappedBorderWidth,
-        height: elementHeight
+        height: elementHeight - (snappedBorderWidth * 2)
       }
     };
     
