@@ -166,7 +166,7 @@ export class PointerInteractionService {
 
       if (scene && nativeEvent && typeof nativeEvent.clientX === 'number' && typeof nativeEvent.clientY === 'number') {
         const ray = scene.createPickingRay(nativeEvent.clientX, nativeEvent.clientY, Matrix.Identity(), scene.activeCamera);
-        const hit = ray.intersectsMesh(entry.mesh);
+        const hit = ray.intersectsMesh(entry.mesh as any);
 
         if (hit.hit && hit.pickedPoint) {
           pickedPoint = hit.pickedPoint;

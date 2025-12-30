@@ -198,7 +198,7 @@ export class SiteComponent {
     // Subscribe to route parameter changes
     this.route.paramMap.subscribe(params => {
       const id = params.get('siteId');
-      this.siteId.set(id || 'unknown');
+      this.siteId.set(id || 'dashboard');
     });
 
     // Initialize Babylon.js after render, but only in browser

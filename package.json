@@ -1,15 +1,48 @@
 {
   "name": "astylarui",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "A 3D UI rendering library that renders HTML-like structures in BabylonJS scenes",
+  "main": "dist/lib/index.js",
+  "module": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js",
+      "default": "./dist/lib/index.js"
+    }
+  },
+  "files": [
+    "dist/lib",
+    "README.md"
+  ],
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:lib": "tsc -p tsconfig.lib.json",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:astylarui": "node dist/astylarui/server/server.mjs"
+    "serve:ssr:astylarui": "node dist/astylarui/server/server.mjs",
+    "prepublishOnly": "npm run build:lib"
   },
-  "private": true,
+  "keywords": [
+    "babylonjs",
+    "3d",
+    "ui",
+    "rendering",
+    "angular",
+    "webgl"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/the-erin-collective/AstylarUI"
+  },
+  "license": "GPL-3.0",
+  "peerDependencies": {
+    "@angular/core": "^20.0.0",
+    "@babylonjs/core": "^8.0.0"
+  },
   "dependencies": {
     "@angular/cdk": "^20.0.5",
     "@angular/common": "^20.0.0",

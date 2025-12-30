@@ -1,175 +1,235 @@
-import { Component, signal, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink, Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID, OnDestroy } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { SiteDataService } from '../services/site-data.service';
+import { AstylarService, AstylarRenderResult } from '../../lib';
 
+/**
+ * HomeComponent - Demonstrates the library API usage
+ * 
+ * This component uses the AstylarService library API
+ * instead of directly injecting services like SiteComponent does.
+ * 
+ * Usage: Navigate to / to see the default dashboard rendered via the library.
+ */
 @Component({
   selector: 'app-home',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   template: `
-    <div class="home-container">
-      <header class="hero">
-        <h1>{{ greeting() }}</h1>
-        <p class="subtitle">A modern Angular 20 application with signals, zoneless change detection, and SSR</p>
-      </header>
-
-      <nav class="navigation">
-        <a routerLink="/todo" class="nav-link">
-          <div class="nav-card">
-            <h3>Todo App</h3>
-            <p>Interactive todo list with signals</p>
-          </div>
-        </a>
-        
-        <a routerLink="/text-test" class="nav-link">
-          <div class="nav-card">
-            <h3>Text Selection Test</h3>
-            <p>Test text selection and clipboard functionality</p>
-          </div>
-        </a>
-
-        <div class="nav-section">
-          <h3>Sites</h3>
-          <div class="sites-grid">
-            @for(site of availableSites(); track site) {
-              <a 
-                [routerLink]="'/site/' + site" 
-                class="nav-link"
-                (mouseenter)="onSiteHover(site)"
-                (mouseleave)="onSiteHover(null)"
-              >
-                <div class="nav-card">
-                  <h3>{{ site }}</h3>
-                  @if(hoveredSite() === site && hoveredSiteDescription()) {
-                    <p class="site-description">{{ hoveredSiteDescription() }}</p>
-                  }
-                </div>
-              </a>
-            }
+    <div class="fullscreen-container">
+      <canvas #babylonCanvas class="babylon-canvas" 
+              [style.display]="sceneLoaded() ? 'block' : 'none'"></canvas>
+      @if (!sceneLoaded()) {
+        <div class="loading-overlay">
+          <div class="loading-content">
+            <h2>🌐 Loading 3D Scene...</h2>
+            <p>Initializing via <strong>AstylarService</strong> for site: <strong>{{ siteId() }}</strong></p>
+            <div class="loading-spinner"></div>
           </div>
         </div>
-      </nav>
+      }
+      @if (sceneLoaded()) {
+        <div class="controls-overlay">
+          <div class="controls-info">
+            <span class="site-indicator">{{ siteId() }} (AstylarService API)</span>
+            <span class="controls-text">🖱️ Click & drag to rotate • Scroll to zoom</span>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
-    .home-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    .hero {
-      text-align: center;
-      margin-bottom: 3rem;
-    }
-
-    .hero h1 {
-      font-size: 3rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .subtitle {
-      font-size: 1.25rem;
-      color: #6b7280;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
-    .navigation {
-      display: grid;
-      gap: 2rem;
-    }
-
-    .nav-link {
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .nav-card {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      border: 1px solid #e5e7eb;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    .nav-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-      border-color: #667eea;
-    }
-
-    .nav-card h3 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin: 0 0 0.5rem 0;
-      color: #1f2937;
-    }
-
-    .nav-card p {
-      color: #6b7280;
+    :host {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
       margin: 0;
-      line-height: 1.5;
+      padding: 0;
+      overflow: hidden;
+      z-index: 1000;
     }
-
-    .nav-section h3 {
-      font-size: 1.75rem;
+    
+    .fullscreen-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    
+    .babylon-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+      outline: none;
+      border: none;
+      margin: 0;
+      padding: 0;
+      cursor: default;
+      background: #000;
+    }
+    
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+    }
+    
+    .loading-content {
+      text-align: center;
+      color: white;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .loading-content h2 {
+      margin: 0 0 15px 0;
+      font-size: 28px;
+      font-weight: 300;
+    }
+    
+    .loading-content p {
+      margin: 0 0 25px 0;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .controls-overlay {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      pointer-events: none;
+      z-index: 1002;
+    }
+    
+    .controls-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 25px;
+      backdrop-filter: blur(10px);
+      font-size: 14px;
+    }
+    
+    .site-indicator {
       font-weight: 600;
-      margin: 0 0 1.5rem 0;
-      color: #1f2937;
+      text-transform: uppercase;
+      color: #4CAF50;
+      letter-spacing: 1px;
     }
-
-    .sites-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 1.5rem;
+    
+    .controls-text {
+      opacity: 0.8;
     }
-
-    .site-description {
-      font-size: 0.9rem;
-      color: #4b5563;
-      margin-top: 0.5rem;
+    
+    /* Hide scrollbars */
+    .fullscreen-container::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .fullscreen-container {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   `]
 })
-export class HomeComponent {
-  private router = inject(Router);
+export class HomeComponent implements OnDestroy {
+  private platformId = inject(PLATFORM_ID);
+  private astylarService = inject(AstylarService);
   private siteDataService = inject(SiteDataService);
-  
-  // Local signals for app-level state
-  protected name = signal('Angular 20 Signals App');
-  protected isSiteRoute = signal(false);
-  protected hoveredSite = signal<string | null>(null);
-  
-  // Computed signals
-  protected greeting = computed(() => `Hello from ${this.name()}!`);
-  protected availableSites = computed(() => this.siteDataService.getAllSiteNames());
-  protected hoveredSiteDescription = computed(() => {
-    const siteName = this.hoveredSite();
-    if (!siteName) return null;
-    return this.siteDataService.getSiteMeta(siteName)?.description || null;
-  });
-  
+  private route = inject(ActivatedRoute);
+
+  // ViewChild for canvas element
+  private babylonCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('babylonCanvas');
+
+  // Render result from library
+  private renderResult: AstylarRenderResult | null = null;
+
+  // Signal for site ID - defaults to 'dashboard' for home page
+  protected siteId = signal<string>('dashboard');
+
+  // Signal to track if scene is loaded
+  protected sceneLoaded = signal<boolean>(false);
+
   constructor() {
-    // Track route changes to determine if we're on a site route
-    this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe((event: NavigationEnd) => {
-        this.isSiteRoute.set(event.url.startsWith('/site/'));
-      });
-      
-    // Check initial route
-    this.isSiteRoute.set(this.router.url.startsWith('/site/'));
+    // Initialize Babylon.js after render, but only in browser
+    afterNextRender(() => {
+      if (isPlatformBrowser(this.platformId)) {
+        this.initializeWithLibrary();
+      }
+    });
   }
-  
-  onSiteHover(siteName: string | null): void {
-    this.hoveredSite.set(siteName);
+
+  /**
+   * Initialize the scene using the AstylarService.render()
+   */
+  private initializeWithLibrary(): void {
+    const canvas = this.babylonCanvas().nativeElement;
+    const siteId = this.siteId();
+
+    // Get site data
+    const siteData = this.siteDataService.getSiteData(siteId);
+    if (!siteData) {
+      console.error(`No site data found for: ${siteId}`);
+      return;
+    }
+
+    console.log(`🚀 Initializing home page with AstylarService.render() for site: ${siteId}`);
+
+    // Use the library service to render!
+    // This is the main demonstration: this.astylarService.render(canvas, siteData)
+    this.renderResult = this.astylarService.render(canvas, siteData);
+
+    // The render function returns the scene
+    console.log('✅ Scene created via AstylarService:', this.renderResult.scene);
+
+    // Set scene loaded after initialization
+    this.sceneLoaded.set(true);
+  }
+
+  ngOnDestroy(): void {
+    // Cleanup using the library's dispose method
+    if (this.renderResult) {
+      this.renderResult.dispose();
+      this.renderResult = null;
+    }
   }
 }
