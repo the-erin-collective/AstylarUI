@@ -59,13 +59,13 @@ export class AstylarService {
      * @param canvas - The HTML canvas element to render to
      * @param siteData - The site data describing the UI structure and styles
      * @param options - Optional configuration options
-     * @returns AstylarRenderResult with scene, engine, and control methods
+     * @returns The initialized BabylonJS Scene
      */
     render(
         canvas: HTMLCanvasElement,
         siteData: SiteData,
         options?: AstylarRenderOptions
-    ): AstylarRenderResult {
+    ): Scene {
         // Create Babylon.js engine
         const engine = new Engine(canvas, true, {
             preserveDrawingBuffer: true,
@@ -160,21 +160,16 @@ export class AstylarService {
             this.babylonDOMService.createSiteFromData(siteData);
         });
 
-        // Return control object
-        return {
-            scene,
-            engine,
-            dispose: () => {
-                window.removeEventListener('resize', resizeHandler);
-                this.babylonDOMService.cleanup();
-                this.babylonCameraService.cleanup();
-                this.babylonMeshService.cleanup();
-                scene.dispose();
-                engine.dispose();
-            },
-            update: (newSiteData: SiteData) => {
-                this.babylonDOMService.createSiteFromData(newSiteData);
-            }
-        };
+        // Set up cleanup on scene disposal
+        scene.onDisposeObservable.add(() => {
+            window.removeEventListener('resize', resizeHandler);
+            this.babylonDOMService.cleanup();
+            this.babylonCameraService.cleanup();
+            this.babylonMeshService.cleanup();
+            engine.dispose();
+        });
+
+        // Return the scene directly
+        return scene;
     }
 }

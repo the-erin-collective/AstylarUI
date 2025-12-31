@@ -1,6 +1,7 @@
 import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Scene } from '@babylonjs/core';
 import { SiteDataService } from '../services/site-data.service';
 import { AstylarService, AstylarRenderResult } from '../../lib';
 
@@ -199,8 +200,8 @@ export class HomeComponent implements OnDestroy {
   // ViewChild for canvas element
   private babylonCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('babylonCanvas');
 
-  // Render result from library
-  private renderResult: AstylarRenderResult | null = null;
+  // Scene from library
+  private scene: Scene | null = null;
 
   // Signal for site ID
   protected siteId = signal<string>('dashboard');
@@ -235,14 +236,14 @@ export class HomeComponent implements OnDestroy {
 
     console.log(`🚀 Initializing with AstylarService.render() for site: ${siteId}`);
 
-    this.renderResult = this.astylarService.render(canvas, siteData);
+    this.scene = this.astylarService.render(canvas, siteData);
     this.sceneLoaded.set(true);
   }
 
   ngOnDestroy(): void {
-    if (this.renderResult) {
-      this.renderResult.dispose();
-      this.renderResult = null;
+    if (this.scene) {
+      this.scene.dispose();
+      this.scene = null;
     }
   }
 }

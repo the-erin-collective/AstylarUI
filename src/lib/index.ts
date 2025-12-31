@@ -7,6 +7,7 @@
  */
 
 // Main service and types
+import { Scene } from '@babylonjs/core';
 export { AstylarService } from './astylar';
 export type { AstylarRenderResult, AstylarRenderOptions } from './astylar';
 
@@ -25,9 +26,20 @@ export const astylar = {
      * Renders a 3D UI scene using the Astylar library.
      * Note: This must be captured during component construction or field initialization.
      */
-    get render(): (canvas: HTMLCanvasElement, siteData: SiteData, options?: AstylarRenderOptions) => AstylarRenderResult {
+    get render(): (canvas: HTMLCanvasElement, siteData: SiteData, options?: AstylarRenderOptions) => Scene {
         const service = inject(AstylarService);
         return service.render.bind(service);
+    },
+
+    /**
+     * Updates an existing 3D UI scene with new site data.
+     */
+    update(siteData: SiteData) {
+        const service = inject(AstylarService);
+        const babylonDOMService = (service as any).babylonDOMService;
+        if (babylonDOMService) {
+            babylonDOMService.createSiteFromData(siteData);
+        }
     }
 };
 
