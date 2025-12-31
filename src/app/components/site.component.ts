@@ -10,7 +10,7 @@ import { Astylar } from '../../lib';
  * while using the new AstylarService library API.
  */
 @Component({
-  selector: 'app-home',
+  selector: 'app-site',
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
@@ -191,7 +191,7 @@ import { Astylar } from '../../lib';
     }
   `]
 })
-export class HomeComponent implements OnDestroy {
+export class SiteComponent implements OnDestroy {
   private platformId = inject(PLATFORM_ID);
   private astylar = inject(Astylar);
   private siteDataService = inject(SiteDataService);

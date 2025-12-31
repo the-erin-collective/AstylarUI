@@ -5,13 +5,13 @@ import { SiteDataService } from '../services/site-data.service';
 
 /**
  * ExamplesComponent - Gallery component identical to LandingComponent
- * but links to the functional /demo/:siteId routes.
+ * but links to the functional /site/:siteId routes.
  */
 @Component({
-    selector: 'app-examples',
-    standalone: true,
-    imports: [CommonModule, RouterLink],
-    template: `
+  selector: 'app-examples',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  template: `
     <div class="app-container">
       <main class="app-main">
         <section class="router-section">
@@ -26,7 +26,7 @@ import { SiteDataService } from '../services/site-data.service';
                 🏠 Home
               </a>
               @for (siteName of availableSites(); track siteName) {
-                <a [routerLink]="['/demo', siteName]" 
+                <a [routerLink]="['/site', siteName]" 
                    class="site-link demo-link"
                    (mouseenter)="onSiteHover(siteName)"
                    (mouseleave)="onSiteLeave()">
@@ -53,7 +53,7 @@ import { SiteDataService } from '../services/site-data.service';
       </main>
     </div>
   `,
-    styles: [`
+  styles: [`
     :host {
       display: block;
       width: 100%;
@@ -269,72 +269,72 @@ import { SiteDataService } from '../services/site-data.service';
   `]
 })
 export class ExamplesComponent {
-    private siteDataService = inject(SiteDataService);
-    protected hoveredSite = signal<string | null>(null);
+  private siteDataService = inject(SiteDataService);
+  protected hoveredSite = signal<string | null>(null);
 
-    protected availableSites = computed(() => this.siteDataService.getAllSiteNames());
+  protected availableSites = computed(() => this.siteDataService.getAllSiteNames());
 
-    protected hoveredSiteDescription = computed(() => {
-        const siteName = this.hoveredSite();
-        if (!siteName) return null;
-        return this.siteDataService.getSiteMeta(siteName)?.description || null;
-    });
+  protected hoveredSiteDescription = computed(() => {
+    const siteName = this.hoveredSite();
+    if (!siteName) return null;
+    return this.siteDataService.getSiteMeta(siteName)?.description || null;
+  });
 
-    protected onSiteHover(siteName: string): void {
-        this.hoveredSite.set(siteName);
-    }
+  protected onSiteHover(siteName: string): void {
+    this.hoveredSite.set(siteName);
+  }
 
-    protected onSiteLeave(): void {
-        this.hoveredSite.set(null);
-    }
+  protected onSiteLeave(): void {
+    this.hoveredSite.set(null);
+  }
 
-    protected getSiteDisplayName(siteName: string): string {
-        const siteDisplayNames: Record<string, string> = {
-            'dashboard': 'Dashboard Site',
-            'lists': 'Lists Site',
-            'settings': 'Settings Site',
-            'images': 'Images Site',
-            'links': 'Links Site',
-            'about': 'About Site',
-            'flexbox-advanced': 'Advanced Flexbox Site',
-            'flexbox': 'Flexbox Site',
-            'flexwrap': 'Flex Wrap Site',
-            'flexgrowshrink': 'Flex Grow/Shrink Site',
-            'flexgap': 'Flex Gap Site',
-            'flexbox-align-content': 'Align Content Site',
-            'flexbox-flex-item-sizing': 'Flex Item Sizing Site',
-            'flexbox-align-self': 'Align Self Site',
-            'flexbox-order': 'Flexbox-order Site',
-            'flexbox-debug-simple': 'Flexbox-debug-simple Site',
-            'flex-test': 'Flex-test Site',
-            'tabletest': 'Tabletest Site',
-            'tablecomplex': 'Tablecomplex Site'
-        };
-        return siteDisplayNames[siteName] || `${siteName.charAt(0).toUpperCase() + siteName.slice(1)} Site`;
-    }
+  protected getSiteDisplayName(siteName: string): string {
+    const siteDisplayNames: Record<string, string> = {
+      'dashboard': 'Dashboard Site',
+      'lists': 'Lists Site',
+      'settings': 'Settings Site',
+      'images': 'Images Site',
+      'links': 'Links Site',
+      'about': 'About Site',
+      'flexbox-advanced': 'Advanced Flexbox Site',
+      'flexbox': 'Flexbox Site',
+      'flexwrap': 'Flex Wrap Site',
+      'flexgrowshrink': 'Flex Grow/Shrink Site',
+      'flexgap': 'Flex Gap Site',
+      'flexbox-align-content': 'Align Content Site',
+      'flexbox-flex-item-sizing': 'Flex Item Sizing Site',
+      'flexbox-align-self': 'Align Self Site',
+      'flexbox-order': 'Flexbox-order Site',
+      'flexbox-debug-simple': 'Flexbox-debug-simple Site',
+      'flex-test': 'Flex-test Site',
+      'tabletest': 'Tabletest Site',
+      'tablecomplex': 'Tablecomplex Site'
+    };
+    return siteDisplayNames[siteName] || `${siteName.charAt(0).toUpperCase() + siteName.slice(1)} Site`;
+  }
 
-    protected getSiteIcon(siteName: string): string {
-        const icons: Record<string, string> = {
-            'dashboard': '📊',
-            'lists': '📜',
-            'settings': '⚙️',
-            'images': '🖼️',
-            'links': '🔗',
-            'about': 'ℹ️',
-            'flexbox-advanced': '🛠️',
-            'flexbox': '📐',
-            'flexwrap': '🔄',
-            'flexgrowshrink': '📏',
-            'flexgap': '📊',
-            'flexbox-align-content': '📜',
-            'flexbox-flex-item-sizing': '📐',
-            'flexbox-align-self': '🎯',
-            'flexbox-order': '🌐',
-            'flexbox-debug-simple': '🌐',
-            'flex-test': '🌐',
-            'tabletest': '🌐',
-            'tablecomplex': '🌐'
-        };
-        return icons[siteName] || '🌐';
-    }
+  protected getSiteIcon(siteName: string): string {
+    const icons: Record<string, string> = {
+      'dashboard': '📊',
+      'lists': '📜',
+      'settings': '⚙️',
+      'images': '🖼️',
+      'links': '🔗',
+      'about': 'ℹ️',
+      'flexbox-advanced': '🛠️',
+      'flexbox': '📐',
+      'flexwrap': '🔄',
+      'flexgrowshrink': '📏',
+      'flexgap': '📊',
+      'flexbox-align-content': '📜',
+      'flexbox-flex-item-sizing': '📐',
+      'flexbox-align-self': '🎯',
+      'flexbox-order': '🌐',
+      'flexbox-debug-simple': '🌐',
+      'flex-test': '🌐',
+      'tabletest': '🌐',
+      'tablecomplex': '🌐'
+    };
+    return icons[siteName] || '🌐';
+  }
 }
