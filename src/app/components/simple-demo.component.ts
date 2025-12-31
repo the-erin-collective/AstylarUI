@@ -1,8 +1,6 @@
-import { Component, ElementRef, viewChild, inject, afterNextRender, OnDestroy, PLATFORM_ID, signal } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { Scene } from '@babylonjs/core';
-import { Astylar, SiteData, SiteComponent } from '../../lib';
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { SiteData, SiteComponent } from '../../lib';
 
 @Component({
   selector: 'app-simple-demo',
