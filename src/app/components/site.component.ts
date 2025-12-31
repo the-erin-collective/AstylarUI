@@ -242,7 +242,11 @@ export class SiteComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     if (this.scene) {
-      this.scene.dispose();
+      console.log(`[SiteComponent] Destroying site: ${this.siteId()}`);
+      const engine = this.scene.getEngine();
+      if (engine) {
+        engine.dispose();
+      }
       this.scene = null;
     }
   }

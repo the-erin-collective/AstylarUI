@@ -162,11 +162,17 @@ export class Astylar {
 
         // Set up cleanup on scene disposal
         scene.onDisposeObservable.add(() => {
+            console.log('[Astylar] Scene disposing, cleaning up services...');
             window.removeEventListener('resize', resizeHandler);
             this.babylonDOMService.cleanup();
             this.babylonCameraService.cleanup();
             this.babylonMeshService.cleanup();
-            engine.dispose();
+
+            // Dispose engine only if it's not already in the process of disposing
+            if (engine && !engine.isDisposed) {
+                console.log('[Astylar] Disposing engine');
+                engine.dispose();
+            }
         });
 
         // Return the scene directly

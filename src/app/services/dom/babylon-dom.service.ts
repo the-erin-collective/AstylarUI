@@ -149,7 +149,9 @@ export class BabylonDOMService {
 
   private clearElements(): void {
     this.elements.forEach(mesh => {
-      mesh.dispose();
+      if (mesh && !mesh.isDisposed) {
+        mesh.dispose();
+      }
     });
     this.elements.clear();
     this.hoverStates.clear();
@@ -158,11 +160,15 @@ export class BabylonDOMService {
 
     // Clear text rendering context
     this.textMeshes.forEach(mesh => {
-      mesh.dispose();
+      if (mesh && !mesh.isDisposed) {
+        mesh.dispose();
+      }
     });
     this.textMeshes.clear();
     this.textTextures.forEach(texture => {
-      texture.dispose();
+      if (texture && !(texture as any).isDisposed) {
+        texture.dispose();
+      }
     });
     this.textTextures.clear();
     this.textContent.clear();
