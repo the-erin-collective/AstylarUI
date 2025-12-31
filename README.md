@@ -19,25 +19,27 @@ npm install astylarui
 
 ## Usage
 
-The primary way to use the library is via the `AstylarService`.
+The primary way to use the library is via the `Astylar` service.
 
 ### 1. Simple Rendering
 
 In your Angular component:
 
 ```typescript
-import { Component, ElementRef, viewChild, inject, afterNextRender } from '@angular/core';
-import { AstylarService } from 'astylarui';
+import { Component, ElementRef, viewChild, inject, afterNextRender, OnDestroy } from '@angular/core';
+import { Scene } from '@babylonjs/core';
+import { Astylar } from 'astylarui';
 
 @Component({
   selector: 'app-3d-ui',
+  standalone: true,
   template: `<canvas #myCanvas></canvas>`,
   styles: [`canvas { width: 100%; height: 100%; }`]
 })
-export class My3DUIComponent {
-  private astylar = inject(AstylarService);
+export class My3DUIComponent implements OnDestroy {
+  private astylar = inject(Astylar);
   private canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('myCanvas');
-  private renderResult?: any;
+  private scene: Scene | null = null;
 
   constructor() {
     afterNextRender(() => {
@@ -48,30 +50,48 @@ export class My3DUIComponent {
   render() {
     const siteData = {
       root: {
-        type: 'div',
-        styles: { backgroundColor: '#1e3c72', width: '100%', height: '100%' },
+        type: 'div' as const,
+        id: 'main-root',
+        styles: { backgroundColor: '#1e3c72', width: '100vw', height: '100vh' },
         children: [
-          { type: 'h1', text: 'Hello 3D World!', styles: { color: 'white', marginTop: '50px' } }
+          { 
+            type: 'h1' as const, 
+            id: 'main-title',
+            textContent: 'Hello 3D World!', 
+            styles: { color: 'white', marginTop: 20 } 
+          }
         ]
       },
       styles: []
     };
 
-    this.renderResult = this.astylar.render(this.canvas().nativeElement, siteData);
+    this.scene = this.astylar.render(this.canvas().nativeElement, siteData as any);
   }
 
   ngOnDestroy() {
-    this.renderResult?.dispose();
+    // Dispose the engine to clean up all resources
+    if (this.scene) {
+      this.scene.getEngine().dispose();
+      this.scene = null;
+    }
   }
 }
 ```
 
-### 2. Updating content
+### 2. Using the Component (Angular Only)
 
-You can update the scene without re-initializing the engine:
+You can also use the `<astylar-render>` component directly in your templates:
 
-```typescript
-this.renderResult.update(newSiteData);
+```html
+<!-- Via siteId -->
+<astylar-render siteId="dashboard"></astylar-render>
+
+<!-- Via direct siteData -->
+<astylar-render [siteData]="myCustomData"></astylar-render>
+
+<!-- Using an external canvas -->
+<canvas #externalCanvas></canvas>
+<astylar-render [canvas]="externalCanvas" [siteData]="myCustomData"></astylar-render>
 ```
 
 ## Developing AstylarUI

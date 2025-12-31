@@ -9,7 +9,7 @@
 // Main service and types
 import { Scene } from '@babylonjs/core';
 export { Astylar } from './astylar';
-export type { AstylarRenderResult, AstylarRenderOptions } from './astylar';
+export type { AstylarRenderOptions } from './astylar';
 
 /**
  * Functional API wrapper for the Astylar library.

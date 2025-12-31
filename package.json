@@ -2,14 +2,14 @@
   "name": "astylarui",
   "version": "0.1.0",
   "description": "A 3D UI rendering library that renders HTML-like structures in BabylonJS scenes",
-  "main": "dist/lib/index.js",
-  "module": "dist/lib/index.js",
-  "types": "dist/lib/index.d.ts",
+  "main": "dist/lib/lib/index.js",
+  "module": "dist/lib/lib/index.js",
+  "types": "dist/lib/lib/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/lib/index.d.ts",
-      "import": "./dist/lib/index.js",
-      "default": "./dist/lib/index.js"
+      "types": "./dist/lib/lib/index.d.ts",
+      "import": "./dist/lib/lib/index.js",
+      "default": "./dist/lib/lib/index.js"
     }
   },
   "files": [
@@ -20,7 +20,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "build:lib": "tsc -p tsconfig.lib.json",
+    "build:lib": "if exist dist\\lib rmdir /s /q dist\\lib && tsc -p tsconfig.lib.json",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:astylarui": "node dist/astylarui/server/server.mjs",

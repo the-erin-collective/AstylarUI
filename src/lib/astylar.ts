@@ -15,19 +15,6 @@ import { StyleDefaultsService } from '../app/services/dom/style-defaults.service
 import { SiteData } from '../app/types/site-data';
 import { BabylonRender } from '../app/services/dom/interfaces/render.types';
 
-/**
- * Result returned from the render function
- */
-export interface AstylarRenderResult {
-    /** The BabylonJS scene */
-    scene: Scene;
-    /** The BabylonJS engine */
-    engine: Engine;
-    /** Dispose all resources and cleanup */
-    dispose(): void;
-    /** Update the scene with new site data */
-    update(siteData: SiteData): void;
-}
 
 /**
  * Configuration options for rendering

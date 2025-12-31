@@ -1,27 +1,28 @@
-import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID, OnDestroy } from '@angular/core';
+import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID, OnDestroy, input } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Scene } from '@babylonjs/core';
 import { SiteDataService } from '../services/site-data.service';
-import { Astylar } from '../../lib';
+import { Astylar, SiteData } from '../../lib';
 
 /**
  * HomeComponent - Reproduces the visual style of the original SiteComponent
  * while using the new AstylarService library API.
  */
 @Component({
-  selector: 'app-site',
+  selector: 'astylar-render',
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="fullscreen-container">
+    <div class="fullscreen-container" [style.display]="canvas() ? 'contents' : 'block'">
       <canvas #babylonCanvas class="babylon-canvas" 
+              *ngIf="!canvas()"
               [style.display]="sceneLoaded() ? 'block' : 'none'"></canvas>
       @if (!sceneLoaded()) {
         <div class="loading-overlay">
           <div class="loading-content">
             <h2>🌐 Loading 3D Scene...</h2>
-            <p>Initializing Babylon.js for site: <strong>{{ siteId() }}</strong></p>
+            <p>Initializing Babylon.js {{ siteId() ? 'for site: ' + siteId() : ''}}</p>
             <div class="loading-spinner"></div>
           </div>
         </div>
@@ -197,14 +198,19 @@ export class SiteComponent implements OnDestroy {
   private siteDataService = inject(SiteDataService);
   private route = inject(ActivatedRoute);
 
-  // ViewChild for canvas element
-  private babylonCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('babylonCanvas');
+  // Inputs
+  siteData = input<SiteData>();
+  canvas = input<HTMLCanvasElement>();
+  siteIdInput = input<string>(undefined, { alias: 'siteId' });
+
+  // ViewChild for canvas element (optional if external canvas is provided)
+  private babylonCanvas = viewChild<ElementRef<HTMLCanvasElement>>('babylonCanvas');
 
   // Scene from library
   private scene: Scene | null = null;
 
-  // Signal for site ID
-  protected siteId = signal<string>('dashboard');
+  // Internal site ID signal
+  protected siteId = signal<string | undefined>(undefined);
 
   // Signal to track if scene is loaded
   protected sceneLoaded = signal<boolean>(false);
@@ -216,6 +222,14 @@ export class SiteComponent implements OnDestroy {
       this.siteId.set(rawSiteId);
     }
 
+    // Synchronize siteIdInput with internal siteId
+    afterNextRender(() => {
+      const inputId = this.siteIdInput();
+      if (inputId) {
+        this.siteId.set(inputId);
+      }
+    });
+
     // Initialize Babylon.js after render, but only in browser
     afterNextRender(() => {
       if (isPlatformBrowser(this.platformId)) {
@@ -225,19 +239,40 @@ export class SiteComponent implements OnDestroy {
   }
 
   private initializeWithLibrary(): void {
-    const canvas = this.babylonCanvas().nativeElement;
-    const siteId = this.siteId();
+    // 1. Resolve Canvas
+    const canvasInput = this.canvas();
+    const internalCanvas = this.babylonCanvas();
+    const canvas = canvasInput || internalCanvas?.nativeElement;
 
-    const siteData = this.siteDataService.getSiteData(siteId);
-    if (!siteData) {
-      console.error(`No site data found for: ${siteId}`);
+    if (!canvas) {
+      console.error('No canvas element available for rendering');
       return;
     }
 
-    console.log(`🚀 Initializing with Astylar.render() for site: ${siteId}`);
+    // 2. Resolve Site Data
+    const siteDataInput = this.siteData();
+    if (siteDataInput) {
+      console.log('🚀 Initializing with Astylar.render() using provided siteData input');
+      this.scene = this.astylar.render(canvas, siteDataInput);
+      this.sceneLoaded.set(true);
+      return;
+    }
 
-    this.scene = this.astylar.render(canvas, siteData);
-    this.sceneLoaded.set(true);
+    // 3. Fallback to Site ID lookup (from input or route)
+    const siteId = this.siteId() || this.siteIdInput();
+
+    if (siteId) {
+      const siteData = this.siteDataService.getSiteData(siteId);
+      if (siteData) {
+        console.log(`🚀 Initializing with Astylar.render() for resolved siteId: ${siteId}`);
+        this.scene = this.astylar.render(canvas, siteData);
+        this.sceneLoaded.set(true);
+        return;
+      }
+      console.error(`No site data available for siteId: ${siteId}`);
+    } else {
+      console.error('No siteId or siteData provided for rendering');
+    }
   }
 
   ngOnDestroy(): void {
