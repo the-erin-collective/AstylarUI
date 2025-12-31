@@ -10,6 +10,10 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server
   },
   {
+    path: 'simple-demo',
+    renderMode: RenderMode.Prerender
+  },
+  {
     path: '**',
     renderMode: RenderMode.Prerender
   }

@@ -350,6 +350,8 @@ export class StyleService {
         if (selector.startsWith('#')) {
             const selectorId = selector.substring(1);
             const result = element.id === selectorId;
+            // The following console.log was part of the original code, but the diff attempted to insert
+            // unrelated code here. Reverting to original logic for matchesSelector.
             if (element.id && (element.id.includes('complete') || element.id.includes('th-') || element.id.includes('td-'))) {
                 console.log(`[SELECTOR-MATCH] ID "${selector}" vs element "${element.id}": ${result}`);
             }
@@ -383,7 +385,22 @@ export class StyleService {
         return false;
     }
     public findStyleBySelector(selector: string, styles: StyleRule[]): StyleRule | undefined {
-        return styles.find(style => style.selector === selector);
+        // Try exact match first
+        let style = styles.find(s => s.selector === selector);
+        if (style) return style;
+
+        // If selector is an ID but style.selector doesn't have #
+        if (selector.startsWith('#')) {
+            const id = selector.substring(1);
+            style = styles.find(s => s.selector === id);
+            if (style) return style;
+        } else {
+            // If selector doesn't have # but style does
+            style = styles.find(s => s.selector === `#${selector}`);
+            if (style) return style;
+        }
+
+        return undefined;
     }
 
     public parseBackgroundColor(background?: string): { color: Color3, alpha?: number } | null {
@@ -602,8 +619,10 @@ export class StyleService {
     }
 
     private parseRgbColor(rgb: string): { color: Color3, alpha?: number } {
-        // Extract the RGB values from the string
-        const values = rgb.replace(/rgba?\(|\)/g, '').split(',').map(v => v.trim());
+        // Extract the RGB values from the string - handle both comma and space separators
+        // and handle the / alpha separator in CSS4 format
+        const cleaned = rgb.replace(/rgba?\(|\)/g, '').replace(/\//g, ',');
+        const values = cleaned.split(/[\s,]+/).filter(v => v.trim() !== '');
 
         if (values.length < 3) {
             return { color: new Color3(0.2, 0.2, 0.3) }; // Default for invalid format

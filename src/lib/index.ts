@@ -43,6 +43,9 @@ export const astylar = {
     }
 };
 
+// Component exports
+export { SiteComponent } from '../app/components/site.component';
+
 // Types for consumers
 export type { SiteData } from '../app/types/site-data';
 export type { StyleRule } from '../app/types/style-rule';

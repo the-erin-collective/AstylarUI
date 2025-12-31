@@ -16,17 +16,14 @@ export class RootService {
       throw new Error('Canvas not found when setting root-body elementDimensions');
     }
 
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    const cssWidth = canvas.width * devicePixelRatio;
-    const cssHeight = canvas.height * devicePixelRatio;
+    const cssWidth = canvas.clientWidth || 1920;
+    const cssHeight = canvas.clientHeight || 1080;
 
-    // Get viewport dimensions from camera service
+    // Get viewport dimensions from camera service (in world units)
     const { width: visibleWidth, height: visibleHeight } = render.actions.camera.calculateViewportDimensions();
 
-    const dprWidth = visibleWidth * devicePixelRatio;
-    const dprHeight = visibleHeight * devicePixelRatio;
-
-    const rootBody = render.actions.mesh.createPlane('root-body', dprWidth, dprHeight);
+    // Create the root plane matching the visible world dimensions
+    const rootBody = render.actions.mesh.createPlane('root-body', visibleWidth, visibleHeight);
 
     // Position at origin in the XY plane
     render.actions.mesh.positionMesh(rootBody, 0, 0, 0);
@@ -53,12 +50,14 @@ export class RootService {
     console.log('Created root body element (calculated full screen):', {
       position: rootBody.position,
       width: visibleWidth,
-      height: visibleHeight
+      height: visibleHeight,
+      cssWidth,
+      cssHeight
     });
 
     dom.context.elements.set('root-body', rootBody);
 
-    // Parse padding from root style
+    // Parse padding from root style using CSS pixels
     const rootPadding = this.parsePadding(rootStyle?.padding, cssWidth, cssHeight);
 
     dom.context.elementDimensions.set('root-body', {

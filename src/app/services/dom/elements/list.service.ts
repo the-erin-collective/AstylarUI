@@ -184,7 +184,7 @@ export class ListService {
     const indicatorOffsetPx = 12; // 12px padding between indicator and item
     const indicatorX = -halfWidth - (indicatorOffsetPx * scaleFactor);
     const indicatorY = 0;  // Center vertically with list item
-    const indicatorZ = 0.001; // Slightly in front
+    const indicatorZ = 0.005; // Firmly in front
 
     render.actions.mesh.positionMesh(indicatorMesh, indicatorX, indicatorY, indicatorZ);
     render.actions.mesh.parentMesh(indicatorMesh, listItemMesh);

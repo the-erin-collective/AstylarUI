@@ -7,13 +7,13 @@ import { Scene, FreeCamera, Vector3 } from '@babylonjs/core';
 export class BabylonCameraService {
   private camera?: FreeCamera;
 
-  constructor() {}
+  constructor() { }
 
   initialize(scene: Scene, canvas: HTMLCanvasElement): FreeCamera {
     const fov = this.getFOV(); // 60 degrees, or your preferred value
 
     // Set camera distance so visible world height == cssHeight
-    const cameraDistance = (canvas.height) / Math.tan(fov / 2 );
+    const cameraDistance = (canvas.height) / Math.tan(fov / 2);
 
     this.camera = new FreeCamera('camera', new Vector3(0, 0, cameraDistance), scene);
     this.camera.fov = fov;
@@ -48,53 +48,30 @@ export class BabylonCameraService {
     if (!this.camera) {
       throw new Error('Camera not initialized');
     }
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    const cameraDistance = Math.abs(this.camera.position.z); // Use actual camera distance
-    const fov = this.getFOV(); // Default FOV is about 60 degrees
-    
-      // Calculate width based on canvas aspect ratio
-    // IMPORTANT: Use CSS pixel dimensions for aspect ratio to account for DPR
+    const cameraDistance = Math.abs(this.camera.position.z);
+    const fov = this.getFOV();
+
+    // Calculate visible height in world units: height = 2 * distance * tan(fov/2)
+    // This is the physical height of the "frustum" at the target distance
+    const visibleHeight = 2 * cameraDistance * Math.tan(fov / 2);
+
     const scene = this.camera.getScene();
     const canvas = scene.getEngine().getRenderingCanvas();
 
-    // Calculate height based on FOV: height = 2 * distance * tan(fov/2)
-    const visibleHeight = 2 * cameraDistance * Math.tan(fov / 2) / devicePixelRatio;
-    
-    if(!canvas){
+    if (!canvas) {
       throw new Error("no canvas.");
     }
 
-    // Use the actual canvas dimensions for aspect ratio
-    // This is important because the canvas is sized in device pixels
+    // Use actual canvas pixel dimensions for aspect ratio
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
     const aspectRatio = canvasWidth / canvasHeight;
-    
+
     const visibleWidth = visibleHeight * aspectRatio;
 
     return { width: visibleWidth, height: visibleHeight };
   }
 
-  /**
-   * Calculate the correct scaling factor to convert CSS pixels to BabylonJS world units
-   * based on the current camera setup and canvas size
-   * 
-   * This method accounts for device pixel ratio (DPR) to ensure consistent rendering
-   * across different screen densities. The calculation divides by DPR to ensure that
-   * elements appear at the same physical size regardless of the device's pixel density.
-   * 
-   * IMPORTANT: This method returns the scale factor for converting CSS pixels to world units.
-   * CSS pixels are logical pixels that are independent of the device's physical pixel density.
-   * When working with percentages, always calculate them based on CSS pixels, then convert
-   * to world units using this scale factor.
-   */
-  /**
-   * Calculate the correct scaling factor to convert CSS pixels to BabylonJS world units
-   * based on the current camera setup and canvas size
-   * 
-   * This method accounts for device pixel ratio (DPR) to ensure consistent rendering
-   * across different screen densities.
-   */
   getPixelToWorldScale(): number {
     if (!this.camera) {
       throw new Error('Camera not initialized');
@@ -102,27 +79,24 @@ export class BabylonCameraService {
 
     const scene = this.camera.getScene();
     const canvas = scene.getEngine().getRenderingCanvas();
-    
-    // Check if canvas is properly sized
-    if (!canvas || canvas.width === 0 || canvas.height === 0) {
-      throw new Error("No canvas.");
+
+    if (!canvas || canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+      // Fallback for initialization phase
+      const { height: worldHeight } = this.calculateViewportDimensions();
+      return worldHeight / 1080; // Assuming 1080p fallback
     }
 
-    // Get canvas height in device pixels
-    const canvasHeight = canvas.height;
-         
+    // Get canvas height in CSS pixels (logical pixels)
+    const cssHeight = canvas.clientHeight;
+
     // Calculate viewport dimensions in world units
     const { height: worldHeight } = this.calculateViewportDimensions();
-    
-    // Calculate how many world units per CSS pixel
-    // For higher DPR, we need to DIVIDE by DPR to ensure consistent sizing
-    // This is the key adjustment that ensures elements appear at the same size regardless of DPR
-    const baseScale = worldHeight / canvasHeight;
-    const pixelToWorldScale = baseScale;
 
-    return pixelToWorldScale;
+    // Calculate how many world units per CSS pixel
+    // This ensures 1 CSS pixel maps to a consistent physical size regardless of DPR
+    return worldHeight / cssHeight;
   }
-  
+
   /**
    * Converts a percentage value to world units based on a container size in CSS pixels
    * This ensures consistent percentage calculations across different DPR values
@@ -134,12 +108,12 @@ export class BabylonCameraService {
   percentageToWorldUnits(percentage: number, containerSizeInCssPixels: number): number {
     // Calculate the size in CSS pixels
     const sizeInCssPixels = (percentage / 100) * containerSizeInCssPixels;
-    
+
     // Convert CSS pixels to world units
     const worldUnits = this.cssPixelsToWorldUnits(sizeInCssPixels);
-    
+
     console.log(`[DPR] Percentage to world units: ${percentage}% of ${containerSizeInCssPixels}px = ${sizeInCssPixels}px = ${worldUnits.toFixed(6)} world units`);
-    
+
     return worldUnits;
   }
 
@@ -153,14 +127,14 @@ export class BabylonCameraService {
    */
   snapToPixelBoundary(worldPosition: { x: number; y: number; z?: number }): { x: number; y: number; z: number } {
     const scale = this.getPixelToWorldScale();
-    
+
     // Convert to CSS pixels, round to integers, convert back to world units
     const pixelX = Math.round(worldPosition.x / scale);
     const pixelY = Math.round(worldPosition.y / scale);
-    
+
     const snappedX = pixelX * scale;
     const snappedY = pixelY * scale;
-    
+
     // Enhanced logging for DPR debugging
     console.log(`[DPR] Snapping to pixel boundary:
       - Original world position: (${worldPosition.x.toFixed(6)}, ${worldPosition.y.toFixed(6)})
@@ -168,7 +142,7 @@ export class BabylonCameraService {
       - Snapped world position: (${snappedX.toFixed(6)}, ${snappedY.toFixed(6)})
       - Difference: (${(snappedX - worldPosition.x).toFixed(6)}, ${(snappedY - worldPosition.y).toFixed(6)})
     `);
-    
+
     return {
       x: snappedX,
       y: snappedY,
@@ -186,12 +160,12 @@ export class BabylonCameraService {
    */
   snapBorderWidthToPixel(borderWidth: number): number {
     const scale = this.getPixelToWorldScale();
-    
+
     // Convert to CSS pixels, ensure minimum 1 pixel, convert back to world units
     const cssPixelWidth = borderWidth / scale;
     const roundedCssPixelWidth = Math.max(1, Math.round(cssPixelWidth)); // Minimum 1 CSS pixel
     const snappedWidth = roundedCssPixelWidth * scale;
-    
+
     // Enhanced logging for DPR debugging
     console.log(`[DPR] Snapping border width to pixel boundary:
       - Original border width: ${borderWidth.toFixed(6)} world units
@@ -200,7 +174,7 @@ export class BabylonCameraService {
       - Snapped border width: ${snappedWidth.toFixed(6)} world units
       - Scale factor: ${scale.toFixed(6)} world units per CSS pixel
     `);
-    
+
     return snappedWidth;
   }
 
@@ -213,11 +187,11 @@ export class BabylonCameraService {
    * It accounts for DPR by using the snapToPixelBoundary and snapBorderWidthToPixel methods.
    */
   calculateUnifiedBorderLayout(
-    centerX: number, 
-    centerY: number, 
-    centerZ: number, 
-    elementWidth: number, 
-    elementHeight: number, 
+    centerX: number,
+    centerY: number,
+    centerZ: number,
+    elementWidth: number,
+    elementHeight: number,
     borderWidth: number
   ): {
     snappedBorderWidth: number;
@@ -234,7 +208,7 @@ export class BabylonCameraService {
     };
   } {
     const scale = this.getPixelToWorldScale();
-    
+
     // Log input values for debugging
     console.log(`[DPR] calculateUnifiedBorderLayout input:
       - centerX: ${centerX.toFixed(6)} world units (${this.worldUnitsToCssPixels(centerX).toFixed(2)} CSS pixels)
@@ -244,13 +218,13 @@ export class BabylonCameraService {
       - borderWidth: ${borderWidth.toFixed(6)} world units (${this.worldUnitsToCssPixels(borderWidth).toFixed(2)} CSS pixels)
       - Scale: ${scale.toFixed(6)} world units per CSS pixel
     `);
-    
+
     // Single calculation of snapped border width - used everywhere
     const snappedBorderWidth = this.snapBorderWidthToPixel(borderWidth);
-    
+
     // Snap the element center to pixel boundaries
     const snappedCenter = this.snapToPixelBoundary({ x: centerX, y: centerY, z: centerZ });
-    
+
     // Calculate element boundaries using snapped coordinates
     const elementBounds = {
       left: snappedCenter.x - (elementWidth / 2),
@@ -258,10 +232,10 @@ export class BabylonCameraService {
       top: snappedCenter.y + (elementHeight / 2),
       bottom: snappedCenter.y - (elementHeight / 2)
     };
-    
+
     // Border Z position - significantly in front of the main element
     const borderZ = centerZ + 0.01; // Much larger offset to ensure visibility and avoid Z-fighting
-    
+
     // Calculate border positions - borders "grow inward" with outer edge aligned to element edge
     const borderPositions = {
       // Top border: positioned so its bottom edge aligns with element's top edge
@@ -270,21 +244,21 @@ export class BabylonCameraService {
         y: elementBounds.top - (snappedBorderWidth / 2),
         z: borderZ
       }),
-      
+
       // Bottom border: positioned so its top edge aligns with element's bottom edge
       bottom: this.snapToPixelBoundary({
         x: snappedCenter.x,
         y: elementBounds.bottom + (snappedBorderWidth / 2),
         z: borderZ
       }),
-      
+
       // Left border: positioned so its right edge aligns with element's left edge
       left: this.snapToPixelBoundary({
         x: elementBounds.left + (snappedBorderWidth / 2),
         y: snappedCenter.y,
         z: borderZ
       }),
-      
+
       // Right border: positioned so its left edge aligns with element's right edge
       right: this.snapToPixelBoundary({
         x: elementBounds.right - (snappedBorderWidth / 2),
@@ -292,7 +266,7 @@ export class BabylonCameraService {
         z: borderZ
       })
     };
-    
+
     // Calculate border mesh dimensions - borders grow inward and fit within element boundaries
     const borderDimensions = {
       // Horizontal borders (top & bottom) reduced by border width to fit perfectly between vertical borders
@@ -306,7 +280,7 @@ export class BabylonCameraService {
         height: elementHeight - (snappedBorderWidth * 2)
       }
     };
-    
+
     // Log output values for debugging
     console.log(`[DPR] calculateUnifiedBorderLayout output:
       - snappedBorderWidth: ${snappedBorderWidth.toFixed(6)} world units (${this.worldUnitsToCssPixels(snappedBorderWidth).toFixed(2)} CSS pixels)
@@ -321,7 +295,7 @@ export class BabylonCameraService {
           horizontal: width=${borderDimensions.horizontal.width.toFixed(6)}, height=${borderDimensions.horizontal.height.toFixed(6)} world units
           vertical: width=${borderDimensions.vertical.width.toFixed(6)}, height=${borderDimensions.vertical.height.toFixed(6)} world units
     `);
-    
+
     return {
       snappedBorderWidth,
       elementBounds,
@@ -343,12 +317,12 @@ export class BabylonCameraService {
   cssPixelsToWorldUnits(cssPixels: number): number {
     const pixelToWorldScale = this.getPixelToWorldScale();
     const worldUnits = cssPixels * pixelToWorldScale;
-    
+
     console.log(`[DPR] Converting ${cssPixels.toFixed(2)} CSS pixels to ${worldUnits.toFixed(6)} world units (scale: ${pixelToWorldScale.toFixed(6)})`);
-    
+
     return worldUnits;
   }
-  
+
   /**
    * Converts a container size in CSS pixels to world units, accounting for DPR
    * This is useful for ensuring consistent container sizing across different DPR values
@@ -359,9 +333,9 @@ export class BabylonCameraService {
   containerSizeToWorldUnits(containerSizeInCssPixels: number): number {
     // For container sizes, we need to ensure they're consistent across different DPR values
     const worldUnits = this.cssPixelsToWorldUnits(containerSizeInCssPixels);
-    
+
     console.log(`[DPR] Container size conversion: ${containerSizeInCssPixels.toFixed(2)} CSS pixels = ${worldUnits.toFixed(6)} world units`);
-    
+
     return worldUnits;
   }
 
@@ -375,9 +349,9 @@ export class BabylonCameraService {
   worldUnitsToCssPixels(worldUnits: number): number {
     const pixelToWorldScale = this.getPixelToWorldScale();
     const cssPixels = worldUnits / pixelToWorldScale;
-    
+
     console.log(`[DPR] Converting ${worldUnits.toFixed(6)} world units to ${cssPixels.toFixed(2)} CSS pixels (scale: ${pixelToWorldScale.toFixed(6)})`);
-    
+
     return cssPixels;
   }
 
@@ -388,25 +362,25 @@ export class BabylonCameraService {
   logDprInfo(): void {
     const devicePixelRatio = window.devicePixelRatio || 1;
     const pixelToWorldScale = this.getPixelToWorldScale();
-    
+
     console.log(`[DPR] Detailed DPR Information:
       - Device Pixel Ratio: ${devicePixelRatio}
       - Pixel to World Scale: ${pixelToWorldScale.toFixed(6)} world units per CSS pixel
       - 1 CSS pixel = ${pixelToWorldScale.toFixed(6)} world units
       - 1 world unit = ${(1 / pixelToWorldScale).toFixed(2)} CSS pixels
     `);
-    
+
     // Example conversions for common values
     console.log(`[DPR] Example conversions:
       - 100 CSS pixels = ${this.cssPixelsToWorldUnits(100).toFixed(6)} world units
       - 1 world unit = ${this.worldUnitsToCssPixels(1).toFixed(2)} CSS pixels
     `);
-    
+
     // Log viewport and canvas information
     if (this.camera) {
       const scene = this.camera.getScene();
       const canvas = scene.getEngine().getRenderingCanvas();
-      
+
       if (canvas) {
         console.log(`[DPR] Canvas information:
           - canvas.width: ${canvas.width}px (device pixels)
