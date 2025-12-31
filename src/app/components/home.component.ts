@@ -1,20 +1,17 @@
 import { Component, signal, inject, ElementRef, viewChild, afterNextRender, PLATFORM_ID, OnDestroy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SiteDataService } from '../services/site-data.service';
 import { AstylarService, AstylarRenderResult } from '../../lib';
 
 /**
- * HomeComponent - Demonstrates the library API usage
- * 
- * This component uses the AstylarService library API
- * instead of directly injecting services like SiteComponent does.
- * 
- * Usage: Navigate to / to see the default dashboard rendered via the library.
+ * HomeComponent - Reproduces the visual style of the original SiteComponent
+ * while using the new AstylarService library API.
  */
 @Component({
   selector: 'app-home',
-  imports: [CommonModule],
+  standalone: true,
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="fullscreen-container">
       <canvas #babylonCanvas class="babylon-canvas" 
@@ -23,7 +20,7 @@ import { AstylarService, AstylarRenderResult } from '../../lib';
         <div class="loading-overlay">
           <div class="loading-content">
             <h2>🌐 Loading 3D Scene...</h2>
-            <p>Initializing via <strong>AstylarService</strong> for site: <strong>{{ siteId() }}</strong></p>
+            <p>Initializing Babylon.js for site: <strong>{{ siteId() }}</strong></p>
             <div class="loading-spinner"></div>
           </div>
         </div>
@@ -31,7 +28,10 @@ import { AstylarService, AstylarRenderResult } from '../../lib';
       @if (sceneLoaded()) {
         <div class="controls-overlay">
           <div class="controls-info">
-            <span class="site-indicator">{{ siteId() }} (AstylarService API)</span>
+            <div class="left-section">
+              <a routerLink="/" class="back-link">🏡</a>
+              <span class="site-indicator">{{ siteId() }}</span>
+            </div>
             <span class="controls-text">🖱️ Click & drag to rotate • Scroll to zoom</span>
           </div>
         </div>
@@ -149,6 +149,25 @@ import { AstylarService, AstylarRenderResult } from '../../lib';
       font-size: 14px;
     }
     
+    .left-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .back-link {
+      color: white;
+      text-decoration: none;
+      font-size: 18px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      pointer-events: auto;
+    }
+
+    .back-link:hover {
+      opacity: 1;
+    }
+
     .site-indicator {
       font-weight: 600;
       text-transform: uppercase;
@@ -183,13 +202,19 @@ export class HomeComponent implements OnDestroy {
   // Render result from library
   private renderResult: AstylarRenderResult | null = null;
 
-  // Signal for site ID - defaults to 'dashboard' for home page
+  // Signal for site ID
   protected siteId = signal<string>('dashboard');
 
   // Signal to track if scene is loaded
   protected sceneLoaded = signal<boolean>(false);
 
   constructor() {
+    // Watch route params for dynamic site loading
+    const rawSiteId = this.route.snapshot.paramMap.get('siteId');
+    if (rawSiteId) {
+      this.siteId.set(rawSiteId);
+    }
+
     // Initialize Babylon.js after render, but only in browser
     afterNextRender(() => {
       if (isPlatformBrowser(this.platformId)) {
@@ -198,35 +223,23 @@ export class HomeComponent implements OnDestroy {
     });
   }
 
-  /**
-   * Initialize the scene using the AstylarService.render()
-   */
   private initializeWithLibrary(): void {
     const canvas = this.babylonCanvas().nativeElement;
     const siteId = this.siteId();
 
-    // Get site data
     const siteData = this.siteDataService.getSiteData(siteId);
     if (!siteData) {
       console.error(`No site data found for: ${siteId}`);
       return;
     }
 
-    console.log(`🚀 Initializing home page with AstylarService.render() for site: ${siteId}`);
+    console.log(`🚀 Initializing with AstylarService.render() for site: ${siteId}`);
 
-    // Use the library service to render!
-    // This is the main demonstration: this.astylarService.render(canvas, siteData)
     this.renderResult = this.astylarService.render(canvas, siteData);
-
-    // The render function returns the scene
-    console.log('✅ Scene created via AstylarService:', this.renderResult.scene);
-
-    // Set scene loaded after initialization
     this.sceneLoaded.set(true);
   }
 
   ngOnDestroy(): void {
-    // Cleanup using the library's dispose method
     if (this.renderResult) {
       this.renderResult.dispose();
       this.renderResult = null;

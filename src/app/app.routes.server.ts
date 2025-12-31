@@ -6,9 +6,8 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Prerender
   },
   {
-    path: 'site/:site-id',
-    renderMode: RenderMode.Server,
-    // Dynamic routes should use Server-side rendering, not prerendering
+    path: 'site/:siteId',
+    renderMode: RenderMode.Server
   },
   {
     path: '**',

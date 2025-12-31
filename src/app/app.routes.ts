@@ -1,12 +1,11 @@
 import { Routes } from '@angular/router';
+import { LandingComponent } from './components/landing.component';
 import { HomeComponent } from './components/home.component';
 import { TodoComponent } from './components/todo.component';
-import { SiteComponent } from './components/site.component';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent, title: 'Home' },
-  { path: 'site', component: SiteComponent, title: 'Site' },
-  { path: 'site/:siteId', component: SiteComponent, title: 'Site Details' },
+  { path: '', component: LandingComponent, title: 'AstylarUI - Demo Gallery' },
+  { path: 'site/:siteId', component: HomeComponent, title: 'AstylarUI Demo' },
   { path: 'todo', component: TodoComponent, title: 'Todo List' },
   { path: '**', redirectTo: '' }
 ];
