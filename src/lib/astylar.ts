@@ -45,7 +45,7 @@ export interface AstylarRenderOptions {
  * AstylarService - Provides an API for rendering 3D UI scenes
  */
 @Injectable({ providedIn: 'root' })
-export class AstylarService {
+export class Astylar {
     private babylonDOMService = inject(BabylonDOMService);
     private babylonCameraService = inject(BabylonCameraService);
     private babylonMeshService = inject(BabylonMeshService);

@@ -8,7 +8,7 @@
 
 // Main service and types
 import { Scene } from '@babylonjs/core';
-export { AstylarService } from './astylar';
+export { Astylar } from './astylar';
 export type { AstylarRenderResult, AstylarRenderOptions } from './astylar';
 
 /**
@@ -17,9 +17,9 @@ export type { AstylarRenderResult, AstylarRenderOptions } from './astylar';
  * using a more direct functional style.
  */
 import { inject } from '@angular/core';
-import { AstylarService } from './astylar';
+import { Astylar } from './astylar';
 import type { SiteData } from '../app/types/site-data';
-import type { AstylarRenderOptions, AstylarRenderResult } from './astylar';
+import type { AstylarRenderOptions } from './astylar';
 
 export const astylar = {
     /**
@@ -27,7 +27,7 @@ export const astylar = {
      * Note: This must be captured during component construction or field initialization.
      */
     get render(): (canvas: HTMLCanvasElement, siteData: SiteData, options?: AstylarRenderOptions) => Scene {
-        const service = inject(AstylarService);
+        const service = inject(Astylar);
         return service.render.bind(service);
     },
 
@@ -35,7 +35,7 @@ export const astylar = {
      * Updates an existing 3D UI scene with new site data.
      */
     update(siteData: SiteData) {
-        const service = inject(AstylarService);
+        const service = inject(Astylar);
         const babylonDOMService = (service as any).babylonDOMService;
         if (babylonDOMService) {
             babylonDOMService.createSiteFromData(siteData);

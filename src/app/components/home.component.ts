@@ -3,7 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Scene } from '@babylonjs/core';
 import { SiteDataService } from '../services/site-data.service';
-import { AstylarService, AstylarRenderResult } from '../../lib';
+import { Astylar } from '../../lib';
 
 /**
  * HomeComponent - Reproduces the visual style of the original SiteComponent
@@ -193,7 +193,7 @@ import { AstylarService, AstylarRenderResult } from '../../lib';
 })
 export class HomeComponent implements OnDestroy {
   private platformId = inject(PLATFORM_ID);
-  private astylarService = inject(AstylarService);
+  private astylar = inject(Astylar);
   private siteDataService = inject(SiteDataService);
   private route = inject(ActivatedRoute);
 
@@ -234,9 +234,9 @@ export class HomeComponent implements OnDestroy {
       return;
     }
 
-    console.log(`🚀 Initializing with AstylarService.render() for site: ${siteId}`);
+    console.log(`🚀 Initializing with Astylar.render() for site: ${siteId}`);
 
-    this.scene = this.astylarService.render(canvas, siteData);
+    this.scene = this.astylar.render(canvas, siteData);
     this.sceneLoaded.set(true);
   }
 
