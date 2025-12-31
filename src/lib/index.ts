@@ -10,6 +10,27 @@
 export { AstylarService } from './astylar';
 export type { AstylarRenderResult, AstylarRenderOptions } from './astylar';
 
+/**
+ * Functional API wrapper for the Astylar library.
+ * This can be used in Angular components to render 3D scenes 
+ * using a more direct functional style.
+ */
+import { inject } from '@angular/core';
+import { AstylarService } from './astylar';
+import type { SiteData } from '../app/types/site-data';
+import type { AstylarRenderOptions, AstylarRenderResult } from './astylar';
+
+export const astylar = {
+    /**
+     * Renders a 3D UI scene using the Astylar library.
+     * Note: This must be captured during component construction or field initialization.
+     */
+    get render(): (canvas: HTMLCanvasElement, siteData: SiteData, options?: AstylarRenderOptions) => AstylarRenderResult {
+        const service = inject(AstylarService);
+        return service.render.bind(service);
+    }
+};
+
 // Types for consumers
 export type { SiteData } from '../app/types/site-data';
 export type { StyleRule } from '../app/types/style-rule';
