@@ -116,4 +116,4 @@ npm run build
 
 ## License
 License: AGPL-3.0
-Copyright (c) 2025 The Erin Collective
+Copyright (c) 2026 alizzycraft

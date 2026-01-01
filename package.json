@@ -36,6 +36,9 @@
     "angular",
     "webgl"
   ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/the-erin-collective/AstylarUI"
