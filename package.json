@@ -1,5 +1,5 @@
 {
-  "name": "astylarui",
+  "name": "@the-erin-collective/astylarui",
   "version": "0.1.0",
   "description": "A 3D UI rendering library that renders HTML-like structures in BabylonJS scenes",
   "main": "dist/lib/lib/index.js",
