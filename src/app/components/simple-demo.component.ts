@@ -15,39 +15,39 @@ import { SiteData, SiteComponent } from '../../lib';
   `,
   styles: [`
     :host {
-  display: block;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  z - index: 1000;
-}
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      z-index: 1000;
+    }
     
-    .fullscreen - container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100 %;
-  height: 100 %;
-  background: #000;
-  overflow: hidden;
-}
+    .fullscreen-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+    }
     
-    .babylon - canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100 % !important;
-  height: 100 % !important;
-  display: block;
-  outline: none;
-  border: none;
-}
-`]
+    .babylon-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+      outline: none;
+      border: none;
+    }
+  `]
 })
 export class SimpleDemoComponent {
   protected readonly SIMPLE_SITE_DATA: SiteData = {

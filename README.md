@@ -115,5 +115,5 @@ npm run build
 ---
 
 ## License
-License: GPL-3.0
+License: AGPL-3.0
 Copyright (c) 2025 The Erin Collective
