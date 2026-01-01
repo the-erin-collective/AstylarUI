@@ -1,5 +1,5 @@
 {
-  "name": "@the-erin-collective/astylarui",
+  "name": "astylarui",
   "version": "0.1.0",
   "description": "A 3D UI rendering library that renders HTML-like structures in BabylonJS scenes",
   "main": "dist/lib/lib/index.js",
@@ -37,7 +37,7 @@
     "webgl"
   ],
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public"
   },
   "repository": {
     "type": "git",
