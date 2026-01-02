@@ -1,11 +1,15 @@
 // Table and anchor element types (clarified for type safety)
 export type DOMElementType =
-  | 'div' | 'section' | 'article' | 'header' | 'footer' | 'nav' | 'main'
-  | 'ul' | 'ol' | 'li'
+  | 'div' | 'section' | 'article' | 'header' | 'footer' | 'nav' | 'main' | 'aside' | 'address' | 'figure' | 'figcaption' | 'hgroup'
+  | 'ul' | 'ol' | 'li' | 'dl' | 'dt' | 'dd' | 'menu'
   | 'table' | 'thead' | 'tbody' | 'tfoot' | 'tr' | 'td' | 'th' | 'caption' | 'col' | 'colgroup'
   | 'a' | 'area' // anchor types
-  | 'img' | 'span' | 'input' | 'button' | 'form' | 'select' | 'textarea' | 'label' | 'option'
-  | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p'; // text elements
+  | 'img' | 'span' | 'input' | 'button' | 'form' | 'select' | 'textarea' | 'label' | 'option' | 'fieldset' | 'legend' | 'datalist' | 'output' | 'optgroup'
+  | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'p' | 'br' | 'wbr' | 'hr'
+  | 'b' | 'strong' | 'i' | 'em' | 'cite' | 'var' | 'dfn' | 'u' | 'ins' | 's' | 'strike' | 'del' | 'code' | 'kbd' | 'samp' | 'pre'
+  | 'small' | 'sub' | 'sup' | 'blockquote' | 'q' | 'abbr' | 'mark'
+  | 'details' | 'summary' | 'dialog' // interactive
+  | 'canvas' | 'iframe' | 'embed' | 'object' | 'video' | 'audio' | 'map' | 'param' | 'source' | 'track'; // media
 
 export interface DOMElement {
   id?: string;

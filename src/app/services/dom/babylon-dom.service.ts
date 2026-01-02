@@ -9,6 +9,7 @@ import { RootService } from './elements/root.service';
 import { ListService } from './elements/list.service';
 import { ElementService } from './elements/element.service';
 import { StyleService } from './style.service';
+import { StyleDefaultsService } from './style-defaults.service';
 import { BabylonRender } from './interfaces/render.types';
 import { TableService } from './elements/table.service';
 import { DOMElement } from '../../types/dom-element';
@@ -48,6 +49,7 @@ export class BabylonDOMService {
     private elementService: ElementService,
     private styleService: StyleService,
     private tableService: TableService,
+    private styleDefaults: StyleDefaultsService,
     private positioningIntegration: PositioningIntegrationService,
     private textRenderingService: TextRenderingService,
     private textInteractionRegistry: TextInteractionRegistryService,
@@ -452,7 +454,12 @@ export class BabylonDOMService {
     }
 
     // Validate element type supports text content
-    const textSupportedTypes = ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th', 'a', 'button'];
+    const textSupportedTypes = [
+      'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th', 'a', 'button',
+      'b', 'strong', 'i', 'em', 'u', 'small', 'sub', 'sup', 'code', 'pre', 'blockquote',
+      'label', 'figcaption', 'cite', 'abbr', 'mark', 'q', 'del', 'ins', 's', 'strike',
+      'kbd', 'samp', 'var', 'dfn', 'address', 'dt', 'dd', 'caption', 'legend', 'summary', 'details'
+    ];
     if (!textSupportedTypes.includes(element.type)) {
       console.warn(`⚠️ Element type '${element.type}' may not be optimal for text content`);
     }
@@ -470,9 +477,18 @@ export class BabylonDOMService {
    * @returns Merged style rule with text properties
    */
   private getInheritedTextStyle(element: DOMElement, styles: StyleRule[]): StyleRule {
-    // Start with default text style
+    // Start with global defaults
     let inheritedStyle: StyleRule = {
       selector: element.id ? `#${element.id}` : element.type,
+      ...this.styleDefaults.getGlobalDefaultStyle()
+    };
+
+    // Apply element type defaults (this now handles h1-h6, a, semantic tags etc.)
+    const typeDefaults = this.styleDefaults.getElementTypeDefaults(element.type);
+    inheritedStyle = { ...inheritedStyle, ...typeDefaults };
+
+    // Explicitly ensure text properties are present if not set by defaults
+    const fallbackTextStyles: Partial<StyleRule> = {
       fontFamily: 'Arial, sans-serif',
       fontSize: '16px',
       fontWeight: 'normal',
@@ -486,20 +502,8 @@ export class BabylonDOMService {
       textTransform: 'none'
     };
 
-    // Apply element type defaults
-    if (element.type === 'h1') {
-      inheritedStyle.fontSize = '32px';
-      inheritedStyle.fontWeight = 'bold';
-    } else if (element.type === 'h2') {
-      inheritedStyle.fontSize = '24px';
-      inheritedStyle.fontWeight = 'bold';
-    } else if (element.type === 'h3') {
-      inheritedStyle.fontSize = '20px';
-      inheritedStyle.fontWeight = 'bold';
-    } else if (element.type === 'a') {
-      inheritedStyle.color = '#0066cc';
-      inheritedStyle.textDecoration = 'underline';
-    }
+    // Merge fallbacks only for missing properties
+    inheritedStyle = { ...fallbackTextStyles, ...inheritedStyle };
 
     // Apply class styles
     if (element.class) {
@@ -620,6 +624,10 @@ export class BabylonDOMService {
         offsetXPx = (-parentWidthPx / 2) + effectivePadding.left + (textWidthPx / 2);
         break;
     }
+
+    // FLIP X-AXIS FIX: The project uses a flipped coordinate system where Left is Positive
+    // So we negate the calculated standard offset
+    offsetXPx = -offsetXPx;
 
     // Clamp horizontal offset so text stays within content box
     const halfParentWidthPx = parentWidthPx / 2;

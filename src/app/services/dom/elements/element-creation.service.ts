@@ -310,20 +310,97 @@ export class ElementCreationService {
             console.log(`[ElementCreation] Processing standard children for ${parentElement?.id}`);
             console.log(`[ElementCreation] Children array check: isArray=${Array.isArray(children)}, length=${children.length}`);
 
-            // Standard flow for non-flex containers
+            // Standard flow for non-flex containers (Vertical Stacking)
             try {
-                console.log(`[ElementCreation] Starting standard for-loop. Length: ${children.length}`);
+                console.log(`[ElementCreation] Starting standard layout loop. Children: ${children.length}`);
+
+                // 1. Get Parent Dimensions
+                let parentHeight = 0;
+                let parentWidth = 0; // Needed for future alignment fixes
+                let paddingTop = 0;
+
+                // Try to get dimensions from context first (more accurate for layout)
+                if (parentElement && parentElement.id && dom.context.elementDimensions.has(parentElement.id)) {
+                    const dims = dom.context.elementDimensions.get(parentElement.id)!;
+                    parentHeight = dims.height;
+                    parentWidth = dims.width;
+                    paddingTop = dims.padding.top;
+                } else {
+                    // Fallback to mesh bounds
+                    const scale = render.actions.camera.getPixelToWorldScale();
+                    const bounds = parent.getBoundingInfo().boundingBox;
+                    parentHeight = (bounds.maximum.y - bounds.minimum.y) / scale;
+                    parentWidth = (bounds.maximum.x - bounds.minimum.x) / scale;
+                    // Default padding if not known
+                    paddingTop = 0;
+                }
+
+                // 2. Initialize Cursor (Y position)
+                // Babylon Y is Up. Top of container is +Height/2.
+                // We start at Top - Padding.
+                let cursorY = (parentHeight / 2) - paddingTop;
+
+                // Scale factor for converting logical pixels to world units
+                const scaleFactor = render.actions.camera.getPixelToWorldScale();
+
                 for (let i = 0; i < children.length; i++) {
                     const child = children[i];
                     console.log(`[ElementCreation] Loop index ${i}: child=${child ? child.id : 'undefined'}`);
 
                     if (!child) {
-                        console.warn(`[ElementCreation] Child at index ${i} is undefined/null`);
                         continue;
                     }
 
                     console.log(`[ElementCreation] Creating child ${child.type}#${child.id}`);
                     const childMesh = this.createElement(dom, render, child, parent, styles);
+
+                    // 3. Measure Child
+                    let childHeight = 0;
+                    if (child.id && dom.context.elementDimensions.has(child.id)) {
+                        childHeight = dom.context.elementDimensions.get(child.id)!.height;
+                    } else {
+                        // Fallback measure
+                        const bounds = childMesh.getBoundingInfo().boundingBox;
+                        childHeight = (bounds.maximum.y - bounds.minimum.y) / scaleFactor;
+                    }
+
+                    // 4. Calculate Position for Vertical Stacking
+                    // Child Center Y = CursorY - (ChildHeight / 2)
+
+                    // Parse Margins from Style
+                    const elementStyle = child.id ? dom.context.elementStyles.get(child.id) : undefined;
+                    const childStyle = elementStyle?.normal || ({} as any);
+                    const parseMargin = (val: any) => {
+                        if (typeof val === 'number') return val;
+                        if (typeof val === 'string' && val && val.endsWith('px')) return parseFloat(val);
+                        if (typeof val === 'string' && val && val.endsWith('em')) return parseFloat(val) * 16;
+                        return 0; // Default to 0 instead of 10 if not specified
+                    };
+
+                    // Handle margin shorthand or specific properties
+                    // Safe access with any cast or optional chaining
+                    const marginTop = parseMargin(childStyle.marginTop) || parseMargin(childStyle.margin?.split(' ')[0]) || 0;
+                    const marginBottom = parseMargin(childStyle.marginBottom) || parseMargin(childStyle.margin?.split(' ')[2] || childStyle.margin?.split(' ')[0]) || 0;
+
+                    // Move cursor down by margin top
+                    cursorY -= marginTop;
+
+                    const childCenterY = cursorY - (childHeight / 2);
+
+                    // Apply Position
+                    render.actions.mesh.positionMesh(
+                        childMesh,
+                        childMesh.position.x,
+                        childCenterY * scaleFactor,
+                        childMesh.position.z
+                    );
+
+                    console.log(`[Layout] Stacked ${child.id} at Y=${childCenterY} (Height: ${childHeight}, Margins: ${marginTop}/${marginBottom})`);
+
+                    // 5. Update Cursor
+                    // Move cursor to bottom of this child
+                    cursorY -= childHeight;
+                    cursorY -= marginBottom;
 
                     // Recursively process grandchildren
                     if (child.children && child.children.length > 0) {

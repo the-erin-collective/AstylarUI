@@ -27,71 +27,89 @@ const globalDefaultStyle: Partial<StyleRule> = {
 };
 
 const defaults: { [key: string]: Partial<StyleRule> } = {
-    div: {
-        // No difference from global default
-    },
-    section: {
-        background: '#34495e', // Default section background (dark blue-gray)
-    },
-    article: {
-        background: '#27ae60', // Default article background (green)
-    },
-    header: {
-        background: '#3498db', // Default header background (blue)
-    },
-    footer: {
-        // No difference from global default
-    },
-    nav: {
-        // No difference from global default
-    },
-    main: {
-        // No difference from global default
-    },
+    // === SECTIONS & STRUCTURE ===
+    div: {}, // Generic container
+    section: { background: '#34495e' }, // Default section background (dark blue-gray)
+    article: { background: '#27ae60' }, // Default article background (green)
+    header: { background: '#3498db' }, // Default header background (blue)
+    footer: { display: 'block' },
+    nav: { display: 'block' },
+    main: { display: 'block' },
+    aside: { display: 'block' },
+    address: { display: 'block', fontStyle: 'italic' },
+    figure: { display: 'block', margin: '1em 40px' },
+    figcaption: { display: 'block' },
+    hgroup: { display: 'block' },
+
+    // === TYPOGRAPHY & TEXT ===
+    h1: { fontSize: '32px', fontWeight: 'bold', display: 'block', margin: '0.67em 0' },
+    h2: { fontSize: '24px', fontWeight: 'bold', display: 'block', margin: '0.83em 0' },
+    h3: { fontSize: '18.72px', fontWeight: 'bold', display: 'block', margin: '1em 0' },
+    h4: { fontSize: '16px', fontWeight: 'bold', display: 'block', margin: '1.33em 0' },
+    h5: { fontSize: '13.28px', fontWeight: 'bold', display: 'block', margin: '1.67em 0' },
+    h6: { fontSize: '10.72px', fontWeight: 'bold', display: 'block', margin: '2.33em 0' },
+    p: { display: 'block', margin: '1em 0' },
+    span: { display: 'inline' },
+    b: { fontWeight: 'bold' },
+    strong: { fontWeight: 'bold' },
+    i: { fontStyle: 'italic' },
+    em: { fontStyle: 'italic' },
+    cite: { fontStyle: 'italic' },
+    var: { fontStyle: 'italic' },
+    dfn: { fontStyle: 'italic' },
+    u: { textDecoration: 'underline' },
+    ins: { textDecoration: 'underline' },
+    s: { textDecoration: 'line-through' },
+    strike: { textDecoration: 'line-through' },
+    del: { textDecoration: 'line-through' },
+    code: { fontFamily: 'monospace' },
+    kbd: { fontFamily: 'monospace' },
+    samp: { fontFamily: 'monospace' },
+    pre: { display: 'block', fontFamily: 'monospace', whiteSpace: 'pre', margin: '1em 0' },
+    small: { fontSize: '0.83em' },
+    sub: { verticalAlign: 'sub', fontSize: '0.83em' },
+    sup: { verticalAlign: 'super', fontSize: '0.83em' },
+    blockquote: { display: 'block', margin: '1em 40px', fontStyle: 'italic' },
+    q: { display: 'inline' }, // quotes handled by renderer if possible
+    abbr: { textDecoration: 'underline dotted' },
+    mark: { background: 'yellow', color: 'black' },
+    br: {},
+    wbr: {},
+
+    // === LISTS ===
     ul: {
         display: 'block',
         listStyleType: 'disc',
         paddingLeft: '40px',
-        marginTop: '16px', // 1em → 16px
-        marginBottom: '16px', // 1em → 16px
+        marginTop: '16px',
+        marginBottom: '16px',
     },
     ol: {
         display: 'block',
         listStyleType: 'decimal',
         paddingLeft: '40px',
-        marginTop: '16px', // 1em → 16px
-        marginBottom: '16px', // 1em → 16px
+        marginTop: '16px',
+        marginBottom: '16px',
     },
-    li: {
-        display: 'list-item',
-    },
-    img: {
-        display: 'inline-block',
-        borderStyle: 'none',
-        // width/height: auto by default
-        objectFit: 'fill', // CSS default
-    },
-    table: {
-        display: 'table',
-        width: 'auto',
-    },
-    thead: {
-        display: 'table-header-group',
-    },
-    tbody: {
-        display: 'table-row-group',
-    },
-    tfoot: {
-        display: 'table-footer-group',
-    },
-    tr: {
-        display: 'table-row',
-    },
+    li: { display: 'list-item' },
+    dl: { display: 'block', marginTop: '1em', marginBottom: '1em' },
+    dt: { display: 'block', fontWeight: 'bold' },
+    dd: { display: 'block', marginLeft: '40px' },
+    menu: { display: 'block', listStyleType: 'disc', marginTop: '1em', marginBottom: '1em' },
+
+    // === TABLES ===
+    table: { display: 'table', width: 'auto' },
+    thead: { display: 'table-header-group' },
+    tbody: { display: 'table-row-group' },
+    tfoot: { display: 'table-footer-group' },
+    tr: { display: 'table-row' },
     th: {
         display: 'table-cell',
         borderWidth: '1px',
         borderStyle: 'solid',
         borderColor: '#888',
+        fontWeight: 'bold',
+        textAlign: 'center'
     },
     td: {
         display: 'table-cell',
@@ -99,63 +117,28 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         borderStyle: 'solid',
         borderColor: '#bbb',
     },
-    caption: {
-        display: 'table-caption',
-        background: '#f9e6ff', // Purple for caption
-    },
-    col: {
-        display: 'table-column',
-    },
-    colgroup: {
-        display: 'table-column-group',
-    },
-    a: {
-        display: 'inline-block',
-        background: '#1976d2', // Blue for normal anchor
-        borderRadius: '4px',
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: '#1976d2',
-        cursor: 'pointer',
-        // color: '#fff', // Not used, but would be default
-    },
-    'a:visited': {
-        background: '#6a1b9a', // Purple for visited
-    },
-    'a:hover': {
-        background: '#1565c0', // Darker blue for hover
-    },
-    area: {
-        display: 'inline-block',
-        background: '#ffb300', // Orange for area
-        borderRadius: '4px',
-    },
+    caption: { display: 'table-caption', background: '#f9e6ff', textAlign: 'center' },
+    col: { display: 'table-column' },
+    colgroup: { display: 'table-column-group' },
 
-    // CHECKBOX ELEMENTS
-    checkbox: {
-        display: 'inline-block',
-        background: '#ffffff',
+    // === FORMS ===
+    form: { display: 'block' },
+    label: { cursor: 'pointer', display: 'inline-block' },
+    fieldset: {
+        display: 'block',
+        margin: '0 2px',
+        padding: '0.35em 0.75em 0.625em',
         borderWidth: '2px',
-        borderStyle: 'solid',
-        borderColor: '#666666',
-        borderRadius: '4px',
-        width: '20px',
-        height: '20px',
-        cursor: 'pointer',
+        borderStyle: 'groove',
+        borderColor: '#e5e7eb'
     },
+    legend: { display: 'block', padding: '0 2px', fontWeight: 'bold' },
+    datalist: { display: 'none' },
+    output: { display: 'inline' },
+    optgroup: { display: 'block' },
+    option: { display: 'block' },
 
-    // RADIO BUTTON ELEMENTS
-    radio: {
-        display: 'inline-block',
-        background: '#ffffff',
-        borderWidth: '2px',
-        borderStyle: 'solid',
-        borderColor: '#666666',
-        borderRadius: '50%',                   // Circular
-        width: '20px',
-        height: '20px',
-        cursor: 'pointer',
-    },
+    // Inputs (Merged existing defaults)
     input: {
         fontSize: '16px',
         fontFamily: 'Arial',
@@ -180,7 +163,8 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         padding: '10px 20px',
         width: 'auto',
         height: '40px',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        textAlign: 'center'
     },
     select: {
         fontSize: '16px',
@@ -194,6 +178,94 @@ const defaults: { [key: string]: Partial<StyleRule> } = {
         padding: '8px',
         height: '40px'
     },
+    textarea: {
+        fontSize: '16px',
+        fontFamily: 'Arial',
+        color: '#2c3e50',
+        background: '#ffffff',
+        borderRadius: '4px',
+        borderWidth: '1px',
+        borderColor: '#bdc3c7',
+        borderStyle: 'solid',
+        padding: '8px',
+        cursor: 'text'
+    },
+    // Checkbox & Radio
+    checkbox: {
+        display: 'inline-block',
+        background: '#ffffff',
+        borderWidth: '2px',
+        borderStyle: 'solid',
+        borderColor: '#666666',
+        borderRadius: '4px',
+        width: '20px',
+        height: '20px',
+        cursor: 'pointer',
+    },
+    radio: {
+        display: 'inline-block',
+        background: '#ffffff',
+        borderWidth: '2px',
+        borderStyle: 'solid',
+        borderColor: '#666666',
+        borderRadius: '50%',
+        width: '20px',
+        height: '20px',
+        cursor: 'pointer',
+    },
+
+    // === MEDIA & EMBEDDED ===
+    img: {
+        display: 'inline-block',
+        borderStyle: 'none',
+        objectFit: 'fill',
+    },
+    canvas: { display: 'inline-block' },
+    iframe: { display: 'inline-block', borderWidth: '2px', borderStyle: 'solid' },
+    embed: { display: 'inline-block' },
+    object: { display: 'inline-block' },
+    video: { display: 'inline-block', background: '#000' }, // Placeholder visual
+    audio: { display: 'none' },
+    map: { display: 'inline' },
+    area: { display: 'none' },
+    param: { display: 'none' },
+    source: { display: 'none' },
+    track: { display: 'none' },
+
+    // === LINKS ===
+    a: {
+        display: 'inline-block',
+        background: '#1976d2', // Blue for normal anchor
+        borderRadius: '4px',
+        borderWidth: '1px',
+        borderStyle: 'solid', // Was solid
+        borderColor: '#1976d2',
+        cursor: 'pointer',
+        textDecoration: 'underline', // Added standard link decoration
+        color: '#ffffff' // Ensure text is visible on blue background
+    },
+    'a:visited': {
+        background: '#6a1b9a',
+    },
+    'a:hover': {
+        background: '#1565c0',
+        textDecoration: 'none'
+    },
+
+    // === DIVIDERS ===
+    hr: {
+        display: 'block',
+        height: '1px',
+        borderStyle: 'inset',
+        borderWidth: '1px',
+        margin: '0.5em auto',
+        width: '100%'
+    },
+
+    // === INTERACTIVE ===
+    details: { display: 'block' },
+    summary: { display: 'list-item', cursor: 'pointer' },
+    dialog: { display: 'none' }
 };
 
 @Injectable({
